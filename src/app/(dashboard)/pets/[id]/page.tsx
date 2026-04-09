@@ -1,0 +1,177 @@
+'use client'
+
+import { createClient } from '@/lib/supabase/client'
+import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { Breed, Pet } from '@/types'
+
+export default function PetDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const supabase = createClient()
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
+  })
+
+  const { data: pet, refetch } = useQuery({
+    queryKey: ['pet', params.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pets')
+        .select('*, breed:breeds(*)')
+        .eq('id', params.id)
+        .single()
+      return data as Pet & { breed: Breed }
+    },
+  })
+
+  const { data: breeds } = useQuery({
+    queryKey: ['breeds'],
+    queryFn: async () => {
+      const { data } = await supabase.from('breeds').select('id,name_ko').order('name_ko')
+      return data as Pick<Breed, 'id' | 'name_ko'>[]
+    },
+  })
+
+  useEffect(() => {
+    if (pet) {
+      setForm({
+        name: pet.name,
+        breed_id: pet.breed_id,
+        birth_year: String(pet.birth_year),
+        birth_month: String(pet.birth_month),
+        gender: pet.gender,
+        weight_kg: pet.weight_kg ? String(pet.weight_kg) : '',
+      })
+    }
+  }, [pet])
+
+  const handleSave = async () => {
+    setSaving(true)
+    await supabase.from('pets').update({
+      name: form.name,
+      breed_id: form.breed_id,
+      birth_year: parseInt(form.birth_year),
+      birth_month: parseInt(form.birth_month),
+      gender: form.gender,
+      weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+    }).eq('id', params.id)
+    await refetch()
+    setSaving(false)
+    setEditing(false)
+  }
+
+  const handleDelete = async () => {
+    if (!confirm(`${pet?.name}를 삭제할까요?`)) return
+    await supabase.from('pets').delete().eq('id', params.id)
+    router.push('/dashboard')
+  }
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  if (!pet) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
+
+  const age = calcPetAge(pet.birth_year, pet.birth_month)
+
+  return (
+    <div className="px-4 py-6 space-y-5">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => router.back()} className="text-gray-400">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">{pet.name}</h1>
+        <button
+          onClick={() => setEditing(e => !e)}
+          className={editing ? 'text-sm text-gray-400' : 'text-sm text-primary-600 font-semibold'}
+        >
+          {editing ? '취소' : '수정'}
+        </button>
+      </div>
+
+      {/* 프로필 카드 */}
+      {!editing ? (
+        <div className="card flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0">
+            {pet.photo_url
+              ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
+              : '🐾'}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-gray-900">{pet.name}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
+                {age.lifeStage}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mt-0.5">{pet.breed?.name_ko} · {age.displayText} · {pet.gender}</p>
+            {pet.weight_kg && <p className="text-sm text-gray-400 mt-0.5">{pet.weight_kg}kg</p>}
+          </div>
+        </div>
+      ) : (
+        /* 수정 폼 */
+        <div className="card space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">이름</label>
+            <input className="input" value={form.name} onChange={e => set('name', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">견종</label>
+            <select className="input" value={form.breed_id} onChange={e => set('breed_id', e.target.value)}>
+              {breeds?.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">태어난 년도</label>
+              <input className="input" type="number" value={form.birth_year}
+                onChange={e => set('birth_year', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">태어난 월</label>
+              <select className="input" value={form.birth_month} onChange={e => set('birth_month', e.target.value)}>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i+1} value={i+1}>{i+1}월</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">성별</label>
+            <div className="grid grid-cols-2 gap-2">
+              {['수컷', '암컷'].map(g => (
+                <button key={g} type="button" onClick={() => set('gender', g)}
+                  className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    form.gender === g ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {g === '수컷' ? '♂ 수컷' : '♀ 암컷'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">몸무게 (kg)</label>
+            <input className="input" type="number" step="0.1" value={form.weight_kg}
+              onChange={e => set('weight_kg', e.target.value)} />
+          </div>
+          <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
+            {saving ? '저장 중...' : '저장하기'}
+          </button>
+        </div>
+      )}
+
+      {/* 삭제 버튼 */}
+      {!editing && (
+        <button onClick={handleDelete}
+          className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors">
+          반려동물 삭제
+        </button>
+      )}
+    </div>
+  )
+}
