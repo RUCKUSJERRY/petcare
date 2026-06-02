@@ -1,7 +1,42 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Supabase 인증 호출이 이 시간을 넘기면 백엔드 장애로 간주한다.
+// (무료 Supabase 프로젝트가 비활성으로 일시정지되면 호스트가 응답하지 않아
+//  미들웨어가 그대로 멈추고 Vercel이 504 MIDDLEWARE_INVOCATION_TIMEOUT을 반환한다.)
+const AUTH_TIMEOUT_MS = 3000
+
+class AuthTimeoutError extends Error {}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new AuthTimeoutError('auth timeout')), ms)
+    ),
+  ])
+}
+
+// supabase-js의 getUser()는 네트워크 실패 시 예외를 던지지 않고
+// { error: AuthRetryableFetchError, status: 0 } 형태로 반환한다.
+// 이를 백엔드 장애로 간주한다. (세션 없음 등 정상적 인증 실패(status 400/401)는 제외)
+function isBackendUnavailable(error: { name?: string; status?: number } | null): boolean {
+  if (!error) return false
+  return (
+    error.name === 'AuthRetryableFetchError' ||
+    error.status === 0 ||
+    (typeof error.status === 'number' && error.status >= 500)
+  )
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // 장애 안내 페이지 자체는 인증 검사 없이 통과시킨다 (무한 루프 방지).
+  if (pathname === '/service-unavailable') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -25,9 +60,21 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
+  let user = null
+  try {
+    const result = await withTimeout(supabase.auth.getUser(), AUTH_TIMEOUT_MS)
+    if (isBackendUnavailable(result.error)) {
+      throw result.error
+    }
+    user = result.data.user
+  } catch (error) {
+    // 백엔드(Supabase) 연결 실패/타임아웃 → 504로 죽지 않고 안내 페이지를 보여준다.
+    console.error('[middleware] Supabase auth check failed:', error)
+    const url = request.nextUrl.clone()
+    url.pathname = '/service-unavailable'
+    // URL은 유지한 채 안내 화면만 렌더링(rewrite). 상태 코드는 503으로 명시.
+    return NextResponse.rewrite(url, { status: 503 })
+  }
 
   // 로그인 필요 경로 → 미로그인 시 /login으로
   const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/walk']
