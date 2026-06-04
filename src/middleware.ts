@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 로그인 필요 경로 → 미로그인 시 /login으로
-  const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/walk']
+  const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/walk', '/info', '/community']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {

@@ -57,3 +57,31 @@ export function safetyLabel(level: 'safe' | 'caution' | 'dangerous'): string {
 export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+/**
+ * 상대 시간 표시 ("방금 전", "3시간 전", "2일 전", 그 이상은 날짜)
+ */
+export function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const sec = Math.floor(diff / 1000)
+  if (sec < 60) return '방금 전'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min}분 전`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}시간 전`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day}일 전`
+  return new Date(iso).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+}
+
+/**
+ * 커뮤니티 카테고리 색상
+ */
+export function categoryColor(category: string): string {
+  return {
+    질문: 'bg-blue-100 text-blue-700',
+    자랑: 'bg-pink-100 text-pink-700',
+    정보공유: 'bg-primary-100 text-primary-700',
+    일상: 'bg-amber-100 text-amber-700',
+  }[category] ?? 'bg-gray-100 text-gray-700'
+}

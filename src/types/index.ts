@@ -81,3 +81,45 @@ export interface FoodSafetyResult {
   effectiveSafety: SafetyLevel
   breedNote: string | null  // 견종 예외가 있으면 표시
 }
+
+// ─── 커뮤니티 ────────────────────────────────────────────────
+
+export type PostCategory = '질문' | '자랑' | '정보공유' | '일상'
+
+export interface Profile {
+  id: string
+  display_name: string
+  avatar_url: string | null
+  created_at: string
+}
+
+export interface Post {
+  id: string
+  user_id: string
+  category: PostCategory
+  title: string
+  content: string
+  breed_id: string | null
+  image_url: string | null
+  like_count: number
+  created_at: string
+  updated_at: string
+}
+
+/** post_list 뷰: posts + 작성자/견종/댓글수 조인 결과 */
+export interface PostListItem extends Post {
+  author_name: string | null
+  author_avatar: string | null
+  breed_name: string | null
+  comment_count: number
+}
+
+export interface Comment {
+  id: string
+  post_id: string
+  user_id: string
+  content: string
+  created_at: string
+  // join
+  author?: Pick<Profile, 'display_name' | 'avatar_url'>
+}

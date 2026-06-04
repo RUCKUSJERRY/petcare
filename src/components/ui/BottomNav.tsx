@@ -6,9 +6,8 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', label: '홈', icon: '🏠' },
-  { href: '/foods', label: '음식', icon: '🥩' },
-  { href: '/health', label: '건강', icon: '🏥' },
-  { href: '/walk', label: '산책', icon: '🦮' },
+  { href: '/info', label: '정보', icon: '📚' },
+  { href: '/community', label: '커뮤니티', icon: '💬' },
   { href: '/pets', label: '내 아이', icon: '🐾' },
 ]
 
