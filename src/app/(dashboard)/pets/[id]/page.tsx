@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Breed, Pet } from '@/types'
+import { ImagePicker } from '@/components/ui/ImagePicker'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const supabase = createClient()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
   })
@@ -46,6 +48,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         gender: pet.gender,
         weight_kg: pet.weight_kg ? String(pet.weight_kg) : '',
       })
+      setPhotoUrl(pet.photo_url)
     }
   }, [pet])
 
@@ -58,6 +61,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       birth_month: parseInt(form.birth_month),
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+      photo_url: photoUrl,
     }).eq('id', params.id)
     await refetch()
     setSaving(false)
@@ -116,6 +120,10 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       ) : (
         /* 수정 폼 */
         <div className="card space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
+            <ImagePicker bucket="pet-photos" value={photoUrl} onUploaded={setPhotoUrl} shape="circle" />
+          </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">이름</label>
             <input className="input" value={form.name} onChange={e => set('name', e.target.value)} />

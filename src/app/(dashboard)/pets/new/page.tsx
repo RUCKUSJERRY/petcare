@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Breed } from '@/types'
+import { ImagePicker } from '@/components/ui/ImagePicker'
 
 export default function NewPetPage() {
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
   })
@@ -34,6 +36,7 @@ export default function NewPetPage() {
       birth_month: parseInt(form.birth_month),
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+      photo_url: photoUrl,
     })
     setSaving(false)
     if (!error) router.push('/dashboard')
@@ -53,6 +56,11 @@ export default function NewPetPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
+          <ImagePicker bucket="pet-photos" value={photoUrl} onUploaded={setPhotoUrl} shape="circle" />
+        </div>
+
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">이름 *</label>
           <input className="input" placeholder="예: 콩이" value={form.name}

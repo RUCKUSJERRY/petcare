@@ -15,7 +15,7 @@ export function ImagePicker({
   onError,
   shape = 'square',
 }: {
-  bucket: 'post-images' | 'avatars'
+  bucket: 'post-images' | 'avatars' | 'pet-photos'
   value: string | null
   onUploaded: (url: string | null) => void
   onError?: (msg: string) => void

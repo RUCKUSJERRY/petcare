@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
  * 경로 규칙: {bucket}/{userId}/{timestamp}.{ext}  (RLS: 본인 폴더만 쓰기)
  */
 export async function uploadImage(
-  bucket: 'post-images' | 'avatars',
+  bucket: 'post-images' | 'avatars' | 'pet-photos',
   file: File,
   userId: string
 ): Promise<string> {
