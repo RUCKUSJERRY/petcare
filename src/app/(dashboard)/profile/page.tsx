@@ -1,0 +1,108 @@
+'use client'
+
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { Profile } from '@/types'
+import { ImagePicker } from '@/components/ui/ImagePicker'
+
+export default function ProfilePage() {
+  const router = useRouter()
+  const supabase = createClient()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+  const [displayName, setDisplayName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+
+  useQuery({
+    queryKey: ['my-profile'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return null
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+      const profile = data as Profile | null
+      if (profile && !loaded) {
+        setDisplayName(profile.display_name)
+        setAvatarUrl(profile.avatar_url)
+        setLoaded(true)
+      }
+      return profile
+    },
+  })
+
+  const handleSave = async () => {
+    const name = displayName.trim()
+    if (!name) {
+      setError('닉네임을 입력해주세요')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error: updErr } = await supabase
+      .from('profiles')
+      .update({ display_name: name, avatar_url: avatarUrl })
+      .eq('id', user!.id)
+    setSaving(false)
+    if (updErr) {
+      setError('저장에 실패했어요. 다시 시도해주세요.')
+      return
+    }
+    setDone(true)
+    router.refresh()
+    setTimeout(() => setDone(false), 2000)
+  }
+
+  return (
+    <div className="px-4 py-6">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">프로필 편집</h1>
+      </div>
+
+      <div className="space-y-5">
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-2">프로필 사진</label>
+          <ImagePicker
+            bucket="avatars"
+            value={avatarUrl}
+            onUploaded={setAvatarUrl}
+            onError={setError}
+            shape="circle"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-1">닉네임</label>
+          <input
+            className="input"
+            placeholder="커뮤니티에 표시될 이름"
+            maxLength={20}
+            value={displayName}
+            onChange={e => setDisplayName(e.target.value)}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            커뮤니티 글·댓글에 이 이름이 표시돼요
+          </p>
+        </div>
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
+          {saving ? '저장 중...' : done ? '저장됐어요 ✓' : '저장하기'}
+        </button>
+      </div>
+    </div>
+  )
+}

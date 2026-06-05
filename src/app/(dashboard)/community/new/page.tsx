@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Pet, PostCategory } from '@/types'
+import { ImagePicker } from '@/components/ui/ImagePicker'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
@@ -13,6 +14,7 @@ export default function NewPostPage() {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [form, setForm] = useState({
     category: '' as PostCategory | '',
     title: '',
@@ -55,6 +57,7 @@ export default function NewPostPage() {
         title: form.title.trim(),
         content: form.content.trim(),
         breed_id: form.breed_id || null,
+        image_url: imageUrl,
       })
       .select('id')
       .single()
@@ -123,6 +126,19 @@ export default function NewPostPage() {
             value={form.content}
             onChange={e => set('content', e.target.value)}
             required
+          />
+        </div>
+
+        {/* 사진 (선택) */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-1">
+            사진 <span className="text-gray-400 font-normal">(선택)</span>
+          </label>
+          <ImagePicker
+            bucket="post-images"
+            value={imageUrl}
+            onUploaded={setImageUrl}
+            onError={setError}
           />
         </div>
 

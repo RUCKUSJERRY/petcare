@@ -77,6 +77,15 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         <p className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed pt-2">
           {post.content}
         </p>
+
+        {post.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.image_url}
+            alt=""
+            className="w-full rounded-xl object-cover mt-2"
+          />
+        )}
       </article>
 
       {/* 좋아요 */}

@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, timeAgo, categoryColor } from '@/lib/utils'
 import Link from 'next/link'
-import type { Pet } from '@/types'
+import type { Pet, PostListItem } from '@/types'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -13,14 +13,33 @@ export default async function DashboardPage() {
     .eq('user_id', user!.id)
     .order('created_at')
 
+  // 최근 커뮤니티 글 (위젯용)
+  const { data: recentPostsData } = await supabase
+    .from('post_list')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(3)
+  const recentPosts = (recentPostsData ?? []) as PostListItem[]
+
   return (
     <div className="px-4 py-6 space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">우리 아이들</h1>
-        <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
-          + 등록
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/profile"
+            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50"
+            aria-label="프로필 편집"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </Link>
+          <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
+            + 등록
+          </Link>
+        </div>
       </div>
 
       {/* 반려동물 카드 목록 */}
@@ -85,6 +104,33 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* 최근 커뮤니티 글 */}
+      {recentPosts.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500">커뮤니티 최근 글</h2>
+            <Link href="/community" className="text-xs text-primary-600 font-medium">
+              더보기 →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {recentPosts.map(post => (
+              <Link key={post.id} href={`/community/${post.id}`}>
+                <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${categoryColor(post.category)}`}>
+                    {post.category}
+                  </span>
+                  <span className="flex-1 min-w-0 truncate text-sm font-medium text-gray-800">
+                    {post.title}
+                  </span>
+                  <span className="text-xs text-gray-400 shrink-0">{timeAgo(post.created_at)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

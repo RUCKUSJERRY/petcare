@@ -70,8 +70,20 @@ export default async function CommunityPage({
                   )}
                 </div>
 
-                <h2 className="font-semibold text-gray-900 line-clamp-1">{post.title}</h2>
-                <p className="text-sm text-gray-500 line-clamp-2">{post.content}</p>
+                <div className="flex gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-semibold text-gray-900 line-clamp-1">{post.title}</h2>
+                    <p className="text-sm text-gray-500 line-clamp-2 mt-0.5">{post.content}</p>
+                  </div>
+                  {post.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={post.image_url}
+                      alt=""
+                      className="w-16 h-16 rounded-lg object-cover shrink-0"
+                    />
+                  )}
+                </div>
 
                 <div className="flex items-center gap-3 text-xs text-gray-400 pt-1">
                   <span>{post.author_name ?? '익명의 보호자'}</span>
