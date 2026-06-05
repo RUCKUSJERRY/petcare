@@ -14,6 +14,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
   })
@@ -122,7 +123,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         <div className="card space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
-            <ImagePicker bucket="pet-photos" value={photoUrl} onUploaded={setPhotoUrl} shape="circle" />
+            <ImagePicker
+              bucket="pet-photos"
+              value={photoUrl}
+              onUploaded={url => { setPhotoUrl(url); setPhotoError(null) }}
+              onError={setPhotoError}
+              shape="circle"
+            />
+            {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">이름</label>
