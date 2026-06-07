@@ -29,12 +29,15 @@ export interface Pet {
   breed?: Breed
 }
 
+export type FoodCategory = '육류' | '채소' | '과일' | '유제품' | '기타'
+
 export interface FoodItem {
   id: string
   name_ko: string
   safety_level: SafetyLevel
   reason: string | null
   caution: string | null
+  category: FoodCategory | null
 }
 
 export interface BreedFoodRule {
@@ -47,7 +50,9 @@ export interface BreedFoodRule {
 
 export interface HealthGuide {
   id: string
-  breed_id: string | null  // null = 모든 견종 공통
+  breed_id: string | null       // 특정 견종
+  size_category: SizeCategory | null  // 크기 그룹
+  // breed_id, size_category 모두 null = 전체 공통
   age_month_min: number
   age_month_max: number
   category: HealthCategory
@@ -57,7 +62,9 @@ export interface HealthGuide {
 
 export interface WalkGuide {
   id: string
-  breed_id: string | null
+  breed_id: string | null       // 특정 견종
+  size_category: SizeCategory | null  // 크기 그룹
+  // breed_id, size_category 모두 null = 전체 공통
   age_month_min: number
   age_month_max: number
   daily_minutes: number

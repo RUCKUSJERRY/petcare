@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { calcPetAge } from '@/lib/utils'
+import { calcPetAge, pickTopGuide } from '@/lib/utils'
 import type { WalkGuide, Pet } from '@/types'
 
 const intensityColor = (i: string) => ({
@@ -20,15 +20,21 @@ export default async function WalkPage() {
   const petGuides = await Promise.all(
     (pets ?? []).map(async (pet: Pet) => {
       const age = calcPetAge(pet.birth_year, pet.birth_month)
-      const { data: guides } = await supabase
+      const size = pet.breed?.size_category ?? null
+      const orFilter = [
+        `breed_id.eq.${pet.breed_id}`,
+        size ? `size_category.eq.${size}` : null,
+        `and(breed_id.is.null,size_category.is.null)`,
+      ].filter(Boolean).join(',')
+      const { data: candidates } = await supabase
         .from('walk_guides')
         .select('*')
-        .or(`breed_id.eq.${pet.breed_id},breed_id.is.null`)
+        .or(orFilter)
         .lte('age_month_min', age.months)
         .gte('age_month_max', age.months)
-        .limit(1)
-        .single()
-      return { pet, age, guide: guides as WalkGuide | null }
+      // 견종별 > 크기별 > 공통 우선순위로 1건 선택
+      const guide = pickTopGuide((candidates ?? []) as WalkGuide[], pet.breed_id, size)
+      return { pet, age, guide }
     })
   )
 

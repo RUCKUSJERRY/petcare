@@ -75,6 +75,41 @@ export function timeAgo(iso: string): string {
 }
 
 /**
+ * 가이드(건강/산책) 적용범위 우선순위 점수.
+ * 견종별(3) > 크기별(2) > 공통(1) > 비해당(0)
+ */
+export function guideMatchScore(
+  guide: { breed_id: string | null; size_category: string | null },
+  breedId: string,
+  sizeCategory: string | null
+): number {
+  if (guide.breed_id === breedId) return 3
+  if (guide.size_category && guide.size_category === sizeCategory) return 2
+  if (!guide.breed_id && !guide.size_category) return 1
+  return 0
+}
+
+/**
+ * 후보 가이드 중 우선순위가 가장 높은 1건 선택 (없으면 null).
+ */
+export function pickTopGuide<T extends { breed_id: string | null; size_category: string | null }>(
+  guides: T[],
+  breedId: string,
+  sizeCategory: string | null
+): T | null {
+  let best: T | null = null
+  let bestScore = 0
+  for (const g of guides) {
+    const s = guideMatchScore(g, breedId, sizeCategory)
+    if (s > bestScore) {
+      best = g
+      bestScore = s
+    }
+  }
+  return best
+}
+
+/**
  * 커뮤니티 카테고리 색상
  */
 export function categoryColor(category: string): string {
