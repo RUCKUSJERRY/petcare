@@ -61,7 +61,7 @@ export default async function DashboardPage() {
                   <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl flex-shrink-0">
                     {pet.photo_url ? (
                       <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-                    ) : '🐾'}
+                    ) : (pet.species === 'cat' ? '🐱' : '🐶')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
           {[
             { href: '/foods', emoji: '🥩', label: '음식 안전 정보', desc: '먹어도 되는 음식 확인' },
             { href: '/health', emoji: '🏥', label: '건강 가이드', desc: '나이별 주의 질환' },
-            { href: '/walk', emoji: '🦮', label: '산책 가이드', desc: '권장 운동량 확인' },
+            { href: '/walk', emoji: '🎾', label: '활동 가이드', desc: '권장 운동량 확인' },
             { href: '/pets/new', emoji: '➕', label: '반려동물 추가', desc: '새 아이 등록하기' },
           ].map(item => (
             <Link key={item.href} href={item.href}>

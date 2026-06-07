@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { Breed } from '@/types'
+import type { Breed, Species } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 
 export default function NewPetPage() {
@@ -14,17 +14,20 @@ export default function NewPetPage() {
   const [error, setError] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [species, setSpecies] = useState<Species>('dog')
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
   })
 
-  const { data: breeds } = useQuery({
-    queryKey: ['breeds'],
+  const { data: allBreeds } = useQuery({
+    queryKey: ['breeds-all'],
     queryFn: async () => {
-      const { data } = await supabase.from('breeds').select('id,name_ko').order('name_ko')
-      return (data ?? []) as Pick<Breed, 'id' | 'name_ko'>[]
+      const { data } = await supabase.from('breeds').select('id,name_ko,species').order('name_ko')
+      return (data ?? []) as Pick<Breed, 'id' | 'name_ko' | 'species'>[]
     },
   })
+  const breeds = (allBreeds ?? []).filter(b => b.species === species)
+  const breedLabel = species === 'dog' ? '견종' : '묘종'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,6 +43,7 @@ export default function NewPetPage() {
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
+      species,
     })
     setSaving(false)
     if (insErr) {
@@ -64,6 +68,23 @@ export default function NewPetPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
+          <label className="text-sm font-medium text-gray-700 block mb-1">종류 *</label>
+          <div className="grid grid-cols-2 gap-2">
+            {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
+              <button key={sp} type="button"
+                onClick={() => { setSpecies(sp); set('breed_id', '') }}
+                className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  species === sp
+                    ? 'bg-primary-500 text-white border-primary-500'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
           <ImagePicker
             bucket="pet-photos"
@@ -82,11 +103,11 @@ export default function NewPetPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">견종 *</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{breedLabel} *</label>
           <select className="input" value={form.breed_id}
             onChange={e => set('breed_id', e.target.value)} required>
-            <option value="">견종 선택</option>
-            {breeds?.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
+            <option value="">{breedLabel} 선택</option>
+            {breeds.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
           </select>
         </div>
 

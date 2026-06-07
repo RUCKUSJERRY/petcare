@@ -36,11 +36,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     },
   })
 
-  const { data: breeds } = useQuery({
-    queryKey: ['breeds'],
+  const { data: allBreeds } = useQuery({
+    queryKey: ['breeds-all'],
     queryFn: async () => {
-      const { data } = await supabase.from('breeds').select('id,name_ko').order('name_ko')
-      return data as Pick<Breed, 'id' | 'name_ko'>[]
+      const { data } = await supabase.from('breeds').select('id,name_ko,species').order('name_ko')
+      return (data ?? []) as Pick<Breed, 'id' | 'name_ko' | 'species'>[]
     },
   })
 
@@ -120,7 +120,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
             {pet.photo_url
               ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-              : '🐾'}
+              : (pet.species === 'cat' ? '🐱' : '🐶')}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -151,9 +151,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             <input className="input" value={form.name} onChange={e => set('name', e.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">견종</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{pet.species === 'cat' ? '묘종' : '견종'}</label>
             <select className="input" value={form.breed_id} onChange={e => set('breed_id', e.target.value)}>
-              {breeds?.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
+              {(allBreeds ?? []).filter(b => b.species === pet.species).map(b => (
+                <option key={b.id} value={b.id}>{b.name_ko}</option>
+              ))}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">

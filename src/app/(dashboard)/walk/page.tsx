@@ -33,7 +33,7 @@ export default async function WalkPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">산책 가이드</h1>
+      <h1 className="text-xl font-bold text-gray-900">활동 가이드</h1>
 
       {petGuides.length === 0 && (
         <div className="card text-center py-10 text-gray-400">

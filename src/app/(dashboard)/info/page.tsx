@@ -17,9 +17,9 @@ const sections = [
   },
   {
     href: '/walk',
-    icon: '🦮',
-    title: '산책 가이드',
-    desc: '견종과 나이별 적정 운동량과 팁',
+    icon: '🎾',
+    title: '활동 가이드',
+    desc: '종·나이별 적정 운동량과 산책·놀이 팁',
     accent: 'bg-green-50',
   },
 ]
@@ -30,7 +30,7 @@ export default function InfoPage() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">정보</h1>
         <p className="text-sm text-gray-500 mt-1">
-          우리 아이 맞춤 음식·건강·산책 정보를 확인하세요
+          우리 아이 맞춤 음식·건강·활동 정보를 확인하세요
         </p>
       </div>
 
