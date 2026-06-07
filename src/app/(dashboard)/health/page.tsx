@@ -17,7 +17,8 @@ export default async function HealthPage() {
     const age = calcPetAge(pet.birth_year, pet.birth_month)
     const size = pet.breed?.size_category ?? null
     const guides = allGuides
-      .filter(g => g.age_month_min <= age.months && g.age_month_max >= age.months)
+      .filter(g => g.species === pet.species &&
+        g.age_month_min <= age.months && g.age_month_max >= age.months)
       .filter(g => guideMatchScore(g, pet.breed_id, size) > 0) // 내 아이에 해당하는 것만
       // 견종별 > 크기별 > 공통 순으로 정렬
       .sort((a, b) => guideMatchScore(b, pet.breed_id, size) - guideMatchScore(a, pet.breed_id, size))

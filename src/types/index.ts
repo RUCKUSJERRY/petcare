@@ -4,6 +4,7 @@ export type SizeCategory = '소형' | '중형' | '대형'
 export type SafetyLevel = 'safe' | 'caution' | 'dangerous'
 export type Gender = '수컷' | '암컷'
 export type HealthCategory = '질환' | '검진' | '백신' | '중성화'
+export type Species = 'dog' | 'cat'
 
 export interface Breed {
   id: string
@@ -12,6 +13,7 @@ export interface Breed {
   size_category: SizeCategory
   avg_lifespan: number
   characteristics: string | null
+  species: Species
 }
 
 export interface Pet {
@@ -19,6 +21,7 @@ export interface Pet {
   user_id: string
   name: string
   breed_id: string
+  species: Species
   birth_year: number
   birth_month: number
   gender: Gender
@@ -31,14 +34,27 @@ export interface Pet {
 
 export type FoodCategory = '육류' | '채소' | '과일' | '유제품' | '기타'
 
+/** 음식 마스터 (종 무관) */
 export interface FoodItem {
   id: string
   name_ko: string
+  category: FoodCategory | null
+}
+
+/** 종별 음식 안전도 */
+export interface FoodSafety {
+  id: string
+  food_id: string
+  species: Species
   safety_level: SafetyLevel
   reason: string | null
   caution: string | null
-  category: FoodCategory | null
   source: string | null  // 데이터 근거 출처 (예: ASPCA, AKC)
+}
+
+/** 음식 + 특정 종 안전도 조인 결과 (UI용) */
+export interface FoodWithSafety extends FoodItem {
+  safety: FoodSafety | null
 }
 
 export interface BreedFoodRule {
@@ -51,6 +67,7 @@ export interface BreedFoodRule {
 
 export interface HealthGuide {
   id: string
+  species: Species
   breed_id: string | null       // 특정 견종
   size_category: SizeCategory | null  // 크기 그룹
   // breed_id, size_category 모두 null = 전체 공통
@@ -63,6 +80,7 @@ export interface HealthGuide {
 
 export interface WalkGuide {
   id: string
+  species: Species
   breed_id: string | null       // 특정 견종
   size_category: SizeCategory | null  // 크기 그룹
   // breed_id, size_category 모두 null = 전체 공통

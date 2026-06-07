@@ -23,7 +23,8 @@ export default async function WalkPage() {
     const size = pet.breed?.size_category ?? null
     // 나이대 매칭 후보를 메모리에서 필터
     const candidates = allGuides.filter(
-      g => g.age_month_min <= age.months && g.age_month_max >= age.months
+      g => g.species === pet.species &&
+        g.age_month_min <= age.months && g.age_month_max >= age.months
     )
     // 견종별 > 크기별 > 공통 우선순위로 1건 선택
     const guide = pickTopGuide(candidates, pet.breed_id, size)
