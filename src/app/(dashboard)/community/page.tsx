@@ -2,18 +2,24 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { categoryColor, timeAgo } from '@/lib/utils'
 import type { PostCategory, PostListItem } from '@/types'
+import { SearchBar } from './_components/SearchBar'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 const PAGE_SIZE = 20
+type SortKey = 'latest' | 'popular'
 
 function buildUrl(params: {
   category?: string | null
   mine?: boolean
+  sort?: SortKey
+  q?: string | null
   page?: number
 }) {
   const p = new URLSearchParams()
   if (params.category) p.set('category', params.category)
   if (params.mine) p.set('mine', 'true')
+  if (params.sort && params.sort !== 'latest') p.set('sort', params.sort)
+  if (params.q) p.set('q', params.q)
   if (params.page && params.page > 1) p.set('page', String(params.page))
   const qs = p.toString()
   return qs ? `/community?${qs}` : '/community'
@@ -22,7 +28,7 @@ function buildUrl(params: {
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: { category?: string; page?: string; mine?: string }
+  searchParams: { category?: string; page?: string; mine?: string; sort?: string; q?: string }
 }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,22 +36,37 @@ export default async function CommunityPage({
   const page = Math.max(1, parseInt(searchParams.page ?? '1') || 1)
   const offset = (page - 1) * PAGE_SIZE
   const mine = searchParams.mine === 'true'
+  const sort: SortKey = searchParams.sort === 'popular' ? 'popular' : 'latest'
+  const q = (searchParams.q ?? '').trim()
   const activeCategory = CATEGORIES.includes(searchParams.category as PostCategory)
     ? (searchParams.category as PostCategory)
     : null
 
-  let query = supabase
-    .from('post_list')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .range(offset, offset + PAGE_SIZE - 1)
+  let query = supabase.from('post_list').select('*')
+
+  if (sort === 'popular') {
+    query = query
+      .order('like_count', { ascending: false })
+      .order('created_at', { ascending: false })
+  } else {
+    query = query.order('created_at', { ascending: false })
+  }
 
   if (activeCategory) query = query.eq('category', activeCategory)
   if (mine && user) query = query.eq('user_id', user.id)
+  if (q) query = query.ilike('title', `%${q}%`)
+
+  query = query.range(offset, offset + PAGE_SIZE - 1)
 
   const { data } = await query
   const posts = (data ?? []) as PostListItem[]
   const hasNext = posts.length === PAGE_SIZE
+
+  // 검색바가 현재 필터를 유지하도록 base 파라미터 구성
+  const baseParams: Record<string, string> = {}
+  if (activeCategory) baseParams.category = activeCategory
+  if (mine) baseParams.mine = 'true'
+  if (sort !== 'latest') baseParams.sort = sort
 
   return (
     <div className="pb-6">
@@ -58,24 +79,35 @@ export default async function CommunityPage({
           </Link>
         </div>
 
+        {/* 검색바 */}
+        <div className="mb-3">
+          <SearchBar initialQuery={q} baseParams={baseParams} />
+        </div>
+
         {/* 카테고리 필터 */}
         <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
-          <FilterChip label="전체" href={buildUrl({ mine })} active={!activeCategory && !mine} />
+          <FilterChip label="전체" href={buildUrl({ mine, sort, q })} active={!activeCategory && !mine} />
           {CATEGORIES.map(c => (
             <FilterChip
               key={c}
               label={c}
-              href={buildUrl({ category: c, mine })}
+              href={buildUrl({ category: c, mine, sort, q })}
               active={activeCategory === c}
             />
           ))}
           {user && (
             <FilterChip
               label="내 글"
-              href={buildUrl({ category: activeCategory, mine: !mine })}
+              href={buildUrl({ category: activeCategory, mine: !mine, sort, q })}
               active={mine}
             />
           )}
+        </div>
+
+        {/* 정렬 토글 */}
+        <div className="flex gap-3 mt-2 text-sm">
+          <SortLink label="최신순" href={buildUrl({ category: activeCategory, mine, q, sort: 'latest' })} active={sort === 'latest'} />
+          <SortLink label="인기순" href={buildUrl({ category: activeCategory, mine, q, sort: 'popular' })} active={sort === 'popular'} />
         </div>
       </div>
 
@@ -83,7 +115,11 @@ export default async function CommunityPage({
       <div className="px-4 space-y-3 mt-1">
         {posts.length === 0 ? (
           <div className="card text-center py-12 text-gray-400">
-            {mine ? '아직 작성한 글이 없어요.' : '아직 글이 없어요. 첫 글을 남겨보세요! 🐾'}
+            {q
+              ? `'${q}' 검색 결과가 없어요.`
+              : mine
+              ? '아직 작성한 글이 없어요.'
+              : '아직 글이 없어요. 첫 글을 남겨보세요! 🐾'}
           </div>
         ) : (
           posts.map(post => (
@@ -132,7 +168,7 @@ export default async function CommunityPage({
         <div className="flex items-center justify-center gap-3 px-4 pt-4">
           {page > 1 && (
             <Link
-              href={buildUrl({ category: activeCategory, mine, page: page - 1 })}
+              href={buildUrl({ category: activeCategory, mine, sort, q, page: page - 1 })}
               className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
             >
               ← 이전
@@ -141,7 +177,7 @@ export default async function CommunityPage({
           <span className="text-sm text-gray-400">{page}페이지</span>
           {hasNext && (
             <Link
-              href={buildUrl({ category: activeCategory, mine, page: page + 1 })}
+              href={buildUrl({ category: activeCategory, mine, sort, q, page: page + 1 })}
               className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
             >
               다음 →
@@ -150,6 +186,17 @@ export default async function CommunityPage({
         </div>
       )}
     </div>
+  )
+}
+
+function SortLink({ label, href, active }: { label: string; href: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`font-medium transition-colors ${active ? 'text-primary-600' : 'text-gray-400'}`}
+    >
+      {label}
+    </Link>
   )
 }
 

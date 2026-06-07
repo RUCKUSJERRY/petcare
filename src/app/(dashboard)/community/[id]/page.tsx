@@ -7,6 +7,7 @@ import { LikeButton } from '../_components/LikeButton'
 import { CommentSection } from '../_components/CommentSection'
 import { DeletePostButton } from '../_components/DeletePostButton'
 import { BackButton } from '@/components/ui/BackButton'
+import { ImageLightbox } from '@/components/ui/ImageLightbox'
 
 export default async function PostDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient()
@@ -86,10 +87,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         </p>
 
         {post.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <ImageLightbox
             src={post.image_url}
-            alt=""
             className="w-full rounded-xl object-cover mt-2"
           />
         )}
