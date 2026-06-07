@@ -1,40 +1,28 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, guideMatchScore } from '@/lib/utils'
-import type { HealthGuide, Pet } from '@/types'
+import { getHealthGuides } from '@/lib/staticData'
+import type { Pet } from '@/types'
 
 export default async function HealthPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: pets } = await supabase
-    .from('pets')
-    .select('*, breed:breeds(*)')
-    .eq('user_id', user!.id)
+  const [{ data: pets }, allGuides] = await Promise.all([
+    supabase.from('pets').select('*, breed:breeds(*)').eq('user_id', user!.id),
+    getHealthGuides(), // 캐시된 전체 가이드 (DB 왕복 없음)
+  ])
 
-  // 각 반려동물의 현재 나이에 맞는 건강 가이드 조회
-  const petGuides = await Promise.all(
-    (pets ?? []).map(async (pet: Pet) => {
-      const age = calcPetAge(pet.birth_year, pet.birth_month)
-      const size = pet.breed?.size_category ?? null
-      const orFilter = [
-        `breed_id.eq.${pet.breed_id}`,
-        size ? `size_category.eq.${size}` : null,
-        `and(breed_id.is.null,size_category.is.null)`,
-      ].filter(Boolean).join(',')
-      const { data: guides } = await supabase
-        .from('health_guides')
-        .select('*')
-        .or(orFilter)
-        .lte('age_month_min', age.months)
-        .gte('age_month_max', age.months)
-      // 견종별 > 크기별 > 공통 순으로 정렬해 표시
-      const sorted = ((guides ?? []) as HealthGuide[]).sort(
-        (a, b) =>
-          guideMatchScore(b, pet.breed_id, size) - guideMatchScore(a, pet.breed_id, size)
-      )
-      return { pet, age, guides: sorted }
-    })
-  )
+  // 각 반려동물의 현재 나이에 맞는 건강 가이드 (메모리 필터)
+  const petGuides = (pets ?? []).map((pet: Pet) => {
+    const age = calcPetAge(pet.birth_year, pet.birth_month)
+    const size = pet.breed?.size_category ?? null
+    const guides = allGuides
+      .filter(g => g.age_month_min <= age.months && g.age_month_max >= age.months)
+      .filter(g => guideMatchScore(g, pet.breed_id, size) > 0) // 내 아이에 해당하는 것만
+      // 견종별 > 크기별 > 공통 순으로 정렬
+      .sort((a, b) => guideMatchScore(b, pet.breed_id, size) - guideMatchScore(a, pet.breed_id, size))
+    return { pet, age, guides }
+  })
 
   return (
     <div className="px-4 py-6 space-y-6">

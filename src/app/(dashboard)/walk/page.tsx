@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, pickTopGuide } from '@/lib/utils'
-import type { WalkGuide, Pet } from '@/types'
+import { getWalkGuides } from '@/lib/staticData'
+import type { Pet } from '@/types'
 
 const intensityColor = (i: string) => ({
   '가벼움': 'bg-blue-100 text-blue-700',
@@ -12,31 +13,22 @@ export default async function WalkPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: pets } = await supabase
-    .from('pets')
-    .select('*, breed:breeds(*)')
-    .eq('user_id', user!.id)
+  const [{ data: pets }, allGuides] = await Promise.all([
+    supabase.from('pets').select('*, breed:breeds(*)').eq('user_id', user!.id),
+    getWalkGuides(), // 캐시된 전체 가이드 (DB 왕복 없음)
+  ])
 
-  const petGuides = await Promise.all(
-    (pets ?? []).map(async (pet: Pet) => {
-      const age = calcPetAge(pet.birth_year, pet.birth_month)
-      const size = pet.breed?.size_category ?? null
-      const orFilter = [
-        `breed_id.eq.${pet.breed_id}`,
-        size ? `size_category.eq.${size}` : null,
-        `and(breed_id.is.null,size_category.is.null)`,
-      ].filter(Boolean).join(',')
-      const { data: candidates } = await supabase
-        .from('walk_guides')
-        .select('*')
-        .or(orFilter)
-        .lte('age_month_min', age.months)
-        .gte('age_month_max', age.months)
-      // 견종별 > 크기별 > 공통 우선순위로 1건 선택
-      const guide = pickTopGuide((candidates ?? []) as WalkGuide[], pet.breed_id, size)
-      return { pet, age, guide }
-    })
-  )
+  const petGuides = (pets ?? []).map((pet: Pet) => {
+    const age = calcPetAge(pet.birth_year, pet.birth_month)
+    const size = pet.breed?.size_category ?? null
+    // 나이대 매칭 후보를 메모리에서 필터
+    const candidates = allGuides.filter(
+      g => g.age_month_min <= age.months && g.age_month_max >= age.months
+    )
+    // 견종별 > 크기별 > 공통 우선순위로 1건 선택
+    const guide = pickTopGuide(candidates, pet.breed_id, size)
+    return { pet, age, guide }
+  })
 
   return (
     <div className="px-4 py-6 space-y-6">
