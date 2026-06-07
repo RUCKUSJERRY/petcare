@@ -38,6 +38,7 @@ export interface FoodItem {
   reason: string | null
   caution: string | null
   category: FoodCategory | null
+  source: string | null  // 데이터 근거 출처 (예: ASPCA, AKC)
 }
 
 export interface BreedFoodRule {
@@ -129,4 +130,26 @@ export interface Comment {
   created_at: string
   // join
   author?: Pick<Profile, 'display_name' | 'avatar_url'>
+}
+
+// ─── 내 아이 기록 ────────────────────────────────────────────
+
+export interface WeightLog {
+  id: string
+  pet_id: string
+  weight_kg: number
+  measured_on: string  // YYYY-MM-DD
+  note: string | null
+  created_at: string
+}
+
+export interface VaccinationRecord {
+  id: string
+  pet_id: string
+  vaccine_name: string
+  vaccinated_on: string   // YYYY-MM-DD
+  next_due_on: string | null
+  clinic: string | null
+  note: string | null
+  created_at: string
 }

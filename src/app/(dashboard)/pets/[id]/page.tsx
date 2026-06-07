@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Breed, Pet } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { WeightSection } from '../_components/WeightSection'
+import { VaccinationSection } from '../_components/VaccinationSection'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -192,6 +194,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             {saving ? '저장 중...' : '저장하기'}
           </button>
         </div>
+      )}
+
+      {/* 내 아이 기록 (조회 모드에서만) */}
+      {!editing && (
+        <>
+          <WeightSection petId={params.id} />
+          <VaccinationSection petId={params.id} />
+        </>
       )}
 
       {/* 삭제 에러 */}

@@ -191,11 +191,20 @@ export default function FoodsPage() {
                     주의: {food.caution}
                   </p>
                 )}
+                {food.source && (
+                  <p className="text-[11px] text-gray-400 text-right">출처: {food.source}</p>
+                )}
               </div>
             )
           })}
         </div>
       )}
+
+      {/* 면책 안내 */}
+      <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
+        ⓘ 본 정보는 ASPCA·AKC 등 공개 자료를 참고한 일반적인 안내이며, 개체별 건강 상태에 따라 다를 수 있어요.
+        이상 증상이 있거나 급여 여부가 불확실하면 반드시 수의사와 상담하세요.
+      </div>
     </div>
   )
 }

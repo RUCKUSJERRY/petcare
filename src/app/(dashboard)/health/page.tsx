@@ -40,6 +40,10 @@ export default async function HealthPage() {
     <div className="px-4 py-6 space-y-6">
       <h1 className="text-xl font-bold text-gray-900">건강 가이드</h1>
 
+      <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3">
+        ⓘ 일반적인 참고 정보예요. 우리 아이의 정확한 건강 상태와 진단은 수의사와 상담하세요.
+      </div>
+
       {petGuides.length === 0 ? (
         <div className="card text-center py-10 text-gray-400">
           반려동물을 먼저 등록해주세요
