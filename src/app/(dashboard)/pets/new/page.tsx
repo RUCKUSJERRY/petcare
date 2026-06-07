@@ -11,6 +11,7 @@ export default function NewPetPage() {
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -28,8 +29,9 @@ export default function NewPetPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
+    setError(null)
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('pets').insert({
+    const { error: insErr } = await supabase.from('pets').insert({
       user_id: user!.id,
       name: form.name,
       breed_id: form.breed_id,
@@ -40,7 +42,11 @@ export default function NewPetPage() {
       photo_url: photoUrl,
     })
     setSaving(false)
-    if (!error) router.push('/dashboard')
+    if (insErr) {
+      setError('등록에 실패했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
+    router.push('/dashboard')
   }
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
@@ -125,6 +131,7 @@ export default function NewPetPage() {
             value={form.weight_kg} onChange={e => set('weight_kg', e.target.value)} />
         </div>
 
+        {error && <p className="text-sm text-red-500">{error}</p>}
         <button type="submit" disabled={saving} className="btn-primary w-full py-3 mt-2">
           {saving ? '저장 중...' : '등록 완료'}
         </button>

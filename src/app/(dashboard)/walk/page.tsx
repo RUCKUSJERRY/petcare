@@ -36,6 +36,12 @@ export default async function WalkPage() {
     <div className="px-4 py-6 space-y-6">
       <h1 className="text-xl font-bold text-gray-900">산책 가이드</h1>
 
+      {petGuides.length === 0 && (
+        <div className="card text-center py-10 text-gray-400">
+          반려동물을 먼저 등록해주세요
+        </div>
+      )}
+
       {petGuides.map(({ pet, age, guide }) => (
         <div key={pet.id} className="card space-y-3">
           <div className="flex items-center gap-2">

@@ -84,8 +84,13 @@ export function CommentSection({
         ) : (
           comments.map(c => (
             <div key={c.id} className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm shrink-0">
-                🐶
+              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm shrink-0 overflow-hidden">
+                {c.author?.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span>🐶</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

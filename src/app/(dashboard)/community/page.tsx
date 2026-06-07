@@ -4,13 +4,32 @@ import { categoryColor, timeAgo } from '@/lib/utils'
 import type { PostCategory, PostListItem } from '@/types'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
+const PAGE_SIZE = 20
+
+function buildUrl(params: {
+  category?: string | null
+  mine?: boolean
+  page?: number
+}) {
+  const p = new URLSearchParams()
+  if (params.category) p.set('category', params.category)
+  if (params.mine) p.set('mine', 'true')
+  if (params.page && params.page > 1) p.set('page', String(params.page))
+  const qs = p.toString()
+  return qs ? `/community?${qs}` : '/community'
+}
 
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: { category?: string }
+  searchParams: { category?: string; page?: string; mine?: string }
 }) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const page = Math.max(1, parseInt(searchParams.page ?? '1') || 1)
+  const offset = (page - 1) * PAGE_SIZE
+  const mine = searchParams.mine === 'true'
   const activeCategory = CATEGORIES.includes(searchParams.category as PostCategory)
     ? (searchParams.category as PostCategory)
     : null
@@ -19,12 +38,14 @@ export default async function CommunityPage({
     .from('post_list')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(50)
+    .range(offset, offset + PAGE_SIZE - 1)
 
   if (activeCategory) query = query.eq('category', activeCategory)
+  if (mine && user) query = query.eq('user_id', user.id)
 
   const { data } = await query
   const posts = (data ?? []) as PostListItem[]
+  const hasNext = posts.length === PAGE_SIZE
 
   return (
     <div className="pb-6">
@@ -39,15 +60,22 @@ export default async function CommunityPage({
 
         {/* 카테고리 필터 */}
         <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
-          <FilterChip label="전체" href="/community" active={!activeCategory} />
+          <FilterChip label="전체" href={buildUrl({ mine })} active={!activeCategory && !mine} />
           {CATEGORIES.map(c => (
             <FilterChip
               key={c}
               label={c}
-              href={`/community?category=${encodeURIComponent(c)}`}
+              href={buildUrl({ category: c, mine })}
               active={activeCategory === c}
             />
           ))}
+          {user && (
+            <FilterChip
+              label="내 글"
+              href={buildUrl({ category: activeCategory, mine: !mine })}
+              active={mine}
+            />
+          )}
         </div>
       </div>
 
@@ -55,7 +83,7 @@ export default async function CommunityPage({
       <div className="px-4 space-y-3 mt-1">
         {posts.length === 0 ? (
           <div className="card text-center py-12 text-gray-400">
-            아직 글이 없어요. 첫 글을 남겨보세요! 🐾
+            {mine ? '아직 작성한 글이 없어요.' : '아직 글이 없어요. 첫 글을 남겨보세요! 🐾'}
           </div>
         ) : (
           posts.map(post => (
@@ -98,6 +126,29 @@ export default async function CommunityPage({
           ))
         )}
       </div>
+
+      {/* 페이지네이션 */}
+      {(page > 1 || hasNext) && (
+        <div className="flex items-center justify-center gap-3 px-4 pt-4">
+          {page > 1 && (
+            <Link
+              href={buildUrl({ category: activeCategory, mine, page: page - 1 })}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
+            >
+              ← 이전
+            </Link>
+          )}
+          <span className="text-sm text-gray-400">{page}페이지</span>
+          {hasNext && (
+            <Link
+              href={buildUrl({ category: activeCategory, mine, page: page + 1 })}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
+            >
+              다음 →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   )
 }

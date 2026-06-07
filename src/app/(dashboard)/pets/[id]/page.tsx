@@ -13,6 +13,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -55,7 +58,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   const handleSave = async () => {
     setSaving(true)
-    await supabase.from('pets').update({
+    setSaveError(null)
+    const { error } = await supabase.from('pets').update({
       name: form.name,
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
@@ -64,14 +68,23 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
     }).eq('id', params.id)
-    await refetch()
     setSaving(false)
+    if (error) {
+      setSaveError('저장에 실패했어요. 다시 시도해주세요.')
+      return
+    }
+    await refetch()
     setEditing(false)
   }
 
   const handleDelete = async () => {
-    if (!confirm(`${pet?.name}를 삭제할까요?`)) return
-    await supabase.from('pets').delete().eq('id', params.id)
+    setDeleteError(null)
+    const { error } = await supabase.from('pets').delete().eq('id', params.id)
+    if (error) {
+      setDeleteError('삭제에 실패했어요. 다시 시도해주세요.')
+      setShowDeleteModal(false)
+      return
+    }
     router.push('/dashboard')
   }
 
@@ -92,7 +105,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         </button>
         <h1 className="text-xl font-bold text-gray-900">{pet.name}</h1>
         <button
-          onClick={() => setEditing(e => !e)}
+          onClick={() => { setEditing(e => !e); setSaveError(null) }}
           className={editing ? 'text-sm text-gray-400' : 'text-sm text-primary-600 font-semibold'}
         >
           {editing ? '취소' : '수정'}
@@ -102,7 +115,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 프로필 카드 */}
       {!editing ? (
         <div className="card flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
             {pet.photo_url
               ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
               : '🐾'}
@@ -119,7 +132,6 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       ) : (
-        /* 수정 폼 */
         <div className="card space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
@@ -175,18 +187,52 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             <input className="input" type="number" step="0.1" value={form.weight_kg}
               onChange={e => set('weight_kg', e.target.value)} />
           </div>
+          {saveError && <p className="text-sm text-red-500">{saveError}</p>}
           <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
             {saving ? '저장 중...' : '저장하기'}
           </button>
         </div>
       )}
 
+      {/* 삭제 에러 */}
+      {deleteError && (
+        <p className="text-sm text-red-500 text-center">{deleteError}</p>
+      )}
+
       {/* 삭제 버튼 */}
       {!editing && (
-        <button onClick={handleDelete}
-          className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors">
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+        >
           반려동물 삭제
         </button>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <div className="text-center space-y-1">
+              <p className="font-bold text-gray-900 text-lg">{pet.name} 삭제</p>
+              <p className="text-sm text-gray-500">삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                className="py-3 rounded-xl bg-red-500 text-white text-sm font-semibold"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

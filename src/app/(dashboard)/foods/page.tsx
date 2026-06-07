@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import type { FoodItem } from '@/types'
+import type { BreedFoodRule, FoodItem } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
 type Filter = typeof FILTERS[number]
@@ -41,6 +41,7 @@ function cn(...c: (string | false | null | undefined)[]) {
 export default function FoodsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
+  const [breedFilter, setBreedFilter] = useState<string>('all')
   const supabase = createClient()
 
   const { data: foods, isLoading } = useQuery({
@@ -51,9 +52,46 @@ export default function FoodsPage() {
     },
   })
 
+  // 내 반려동물의 견종 ID 목록
+  const { data: myBreeds } = useQuery({
+    queryKey: ['my-breeds'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+      const { data } = await supabase
+        .from('pets')
+        .select('breed_id, breed:breeds(name_ko)')
+        .eq('user_id', user.id)
+      type Row = { breed_id: string; breed?: { name_ko: string } }
+      const rows = (data ?? []) as unknown as Row[]
+      const unique = Array.from(
+        new Map(rows.filter(r => r.breed_id).map(r => [r.breed_id, r.breed?.name_ko ?? ''])).entries()
+      ).map(([id, name]) => ({ id, name }))
+      return unique
+    },
+  })
+
+  // 선택된 견종의 음식 규칙
+  const { data: breedRules } = useQuery({
+    queryKey: ['breed-food-rules', breedFilter],
+    enabled: breedFilter !== 'all',
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('breed_food_rules')
+        .select('*')
+        .eq('breed_id', breedFilter)
+      return (data ?? []) as BreedFoodRule[]
+    },
+  })
+
+  const ruleMap = new Map<string, BreedFoodRule>(
+    (breedRules ?? []).map(r => [r.food_id, r])
+  )
+
   const filtered = (foods ?? []).filter(f => {
+    const effectiveSafety = ruleMap.get(f.id)?.override_safety ?? f.safety_level
     const matchSearch = f.name_ko.includes(search)
-    const matchFilter = filterMap[filter] === null || f.safety_level === filterMap[filter]
+    const matchFilter = filterMap[filter] === null || effectiveSafety === filterMap[filter]
     return matchSearch && matchFilter
   })
 
@@ -85,28 +123,77 @@ export default function FoodsPage() {
         ))}
       </div>
 
+      {/* 견종 필터 */}
+      {myBreeds && myBreeds.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium shrink-0">우리 아이 기준:</span>
+          <button
+            onClick={() => setBreedFilter('all')}
+            className={cn(
+              'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
+              breedFilter === 'all'
+                ? 'bg-primary-500 text-white border-primary-500'
+                : 'bg-white text-gray-600 border-gray-200'
+            )}
+          >
+            전체 기준
+          </button>
+          {myBreeds.map(b => (
+            <button
+              key={b.id}
+              onClick={() => setBreedFilter(b.id)}
+              className={cn(
+                'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
+                breedFilter === b.id
+                  ? 'bg-primary-500 text-white border-primary-500'
+                  : 'bg-white text-gray-600 border-gray-200'
+              )}
+            >
+              {b.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-12 text-gray-400">불러오는 중...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">검색 결과가 없어요</div>
       ) : (
         <div className="space-y-2">
-          {filtered.map(food => (
-            <div key={food.id} className={cn('rounded-2xl p-4 space-y-1.5', cardStyle[food.safety_level])}>
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-gray-900">{food.name_ko}</span>
-                <span className={cn('text-xs px-2.5 py-1 rounded-full font-semibold', badgeStyle[food.safety_level])}>
-                  {safetyLabel[food.safety_level]}
-                </span>
+          {filtered.map(food => {
+            const rule = ruleMap.get(food.id)
+            const effectiveSafety = rule?.override_safety ?? food.safety_level
+            const hasOverride = rule && rule.override_safety !== food.safety_level
+            return (
+              <div key={food.id} className={cn('rounded-2xl p-4 space-y-1.5', cardStyle[effectiveSafety])}>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-900">{food.name_ko}</span>
+                  <div className="flex items-center gap-1.5">
+                    {hasOverride && (
+                      <span className={cn('text-xs px-2 py-0.5 rounded-full line-through opacity-50', badgeStyle[food.safety_level])}>
+                        {safetyLabel[food.safety_level]}
+                      </span>
+                    )}
+                    <span className={cn('text-xs px-2.5 py-1 rounded-full font-semibold', badgeStyle[effectiveSafety])}>
+                      {safetyLabel[effectiveSafety]}
+                    </span>
+                  </div>
+                </div>
+                {food.reason && <p className="text-sm text-gray-600">{food.reason}</p>}
+                {rule?.note && (
+                  <p className={cn('text-xs px-2.5 py-1.5 rounded-lg font-medium', cautionBg[effectiveSafety])}>
+                    견종 주의: {rule.note}
+                  </p>
+                )}
+                {!rule?.note && food.caution && (
+                  <p className={cn('text-xs px-2.5 py-1.5 rounded-lg', cautionBg[effectiveSafety])}>
+                    주의: {food.caution}
+                  </p>
+                )}
               </div>
-              {food.reason && <p className="text-sm text-gray-600">{food.reason}</p>}
-              {food.caution && (
-                <p className={cn('text-xs px-2.5 py-1.5 rounded-lg', cautionBg[food.safety_level])}>
-                  주의: {food.caution}
-                </p>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
