@@ -2,8 +2,8 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
@@ -11,6 +11,7 @@ import { LogoutButton } from '@/components/ui/LogoutButton'
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
+  const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -18,7 +19,7 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  useQuery({
+  const { data: profile } = useQuery({
     queryKey: ['my-profile'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -28,15 +29,19 @@ export default function ProfilePage() {
         .select('*')
         .eq('id', user.id)
         .maybeSingle()
-      const profile = data as Profile | null
-      if (profile && !loaded) {
-        setDisplayName(profile.display_name)
-        setAvatarUrl(profile.avatar_url)
-        setLoaded(true)
-      }
-      return profile
+      return data as Profile | null
     },
   })
+
+  // 폼 초기값을 쿼리 데이터에서 동기화.
+  // queryFn이 캐시로 인해 재실행되지 않아도, 마운트 시 캐시된 데이터로 초기화됨.
+  useEffect(() => {
+    if (profile && !loaded) {
+      setDisplayName(profile.display_name)
+      setAvatarUrl(profile.avatar_url)
+      setLoaded(true)
+    }
+  }, [profile, loaded])
 
   const handleSave = async () => {
     const name = displayName.trim()
@@ -56,6 +61,10 @@ export default function ProfilePage() {
       setError('저장에 실패했어요. 다시 시도해주세요.')
       return
     }
+    // 저장된 값으로 캐시 갱신 → 재방문 시 폼이 최신 상태를 반영
+    queryClient.setQueryData<Profile | null>(['my-profile'], prev =>
+      prev ? { ...prev, display_name: name, avatar_url: avatarUrl } : prev
+    )
     setDone(true)
     router.refresh()
     setTimeout(() => setDone(false), 2000)
