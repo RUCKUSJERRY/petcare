@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
+import { deleteImageByUrl } from '@/lib/upload'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -60,6 +61,10 @@ export default function ProfilePage() {
     if (updErr) {
       setError('저장에 실패했어요. 다시 시도해주세요.')
       return
+    }
+    // 사진을 바꾼/지운 경우 기존 커밋 파일 정리(고아 방지)
+    if (profile?.avatar_url && profile.avatar_url !== avatarUrl) {
+      deleteImageByUrl(profile.avatar_url)
     }
     // 저장된 값으로 캐시 갱신 → 재방문 시 폼이 최신 상태를 반영
     queryClient.setQueryData<Profile | null>(['my-profile'], prev =>

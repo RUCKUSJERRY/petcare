@@ -5,6 +5,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useEffect } from 'react'
 import type { Pet } from '@/types'
 
 export function AppHeader() {
@@ -24,6 +25,13 @@ export function AppHeader() {
       return (data ?? []) as Pet[]
     },
   })
+
+  // 자가 복구: 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
+  useEffect(() => {
+    if (pets && selectedPetId && !pets.some(p => p.id === selectedPetId)) {
+      setSelectedPetId(null)
+    }
+  }, [pets, selectedPetId, setSelectedPetId])
 
   if (!pets || pets.length === 0) return null
 

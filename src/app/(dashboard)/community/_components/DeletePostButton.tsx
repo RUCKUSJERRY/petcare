@@ -1,10 +1,11 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { deleteImageByUrl } from '@/lib/upload'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export function DeletePostButton({ postId }: { postId: string }) {
+export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUrl?: string | null }) {
   const supabase = createClient()
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
@@ -21,6 +22,8 @@ export function DeletePostButton({ postId }: { postId: string }) {
       setShowModal(false)
       return
     }
+    // 첨부 이미지 정리(고아 방지)
+    if (imageUrl) deleteImageByUrl(imageUrl)
     router.push('/community')
     router.refresh()
   }

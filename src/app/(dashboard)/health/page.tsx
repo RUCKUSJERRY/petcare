@@ -6,6 +6,7 @@ import { calcPetAge, guideMatchScore, lifeStageColor } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { fetchHealthGuides } from '../_actions/guides'
 import type { HealthGuide, Pet } from '@/types'
 
 export default function HealthPage() {
@@ -28,11 +29,8 @@ export default function HealthPage() {
 
   const { data: allGuides, isLoading: guidesLoading } = useQuery({
     queryKey: ['health-guides'],
-    queryFn: async () => {
-      const { data } = await supabase.from('health_guides').select('*')
-      return (data ?? []) as HealthGuide[]
-    },
-    staleTime: 60 * 60 * 1000, // 1시간 캐시
+    queryFn: () => fetchHealthGuides(), // 서버 캐시(1시간) 공유
+    staleTime: 60 * 60 * 1000,
   })
 
   const isLoading = petsLoading || guidesLoading

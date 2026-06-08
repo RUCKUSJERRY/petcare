@@ -55,7 +55,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             >
               수정
             </Link>
-            <DeletePostButton postId={post.id} />
+            <DeletePostButton postId={post.id} imageUrl={post.image_url} />
           </div>
         )}
       </div>

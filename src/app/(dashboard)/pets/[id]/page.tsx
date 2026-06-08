@@ -4,15 +4,19 @@ import { createClient } from '@/lib/supabase/client'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import type { Breed, Pet } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { deleteImageByUrl } from '@/lib/upload'
 import { WeightSection } from '../_components/WeightSection'
 import { VaccinationSection } from '../_components/VaccinationSection'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -75,6 +79,10 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       setSaveError('저장에 실패했어요. 다시 시도해주세요.')
       return
     }
+    // 사진을 바꾼/지운 경우 기존 커밋 파일 정리(고아 방지)
+    if (pet?.photo_url && pet.photo_url !== photoUrl) {
+      deleteImageByUrl(pet.photo_url)
+    }
     await refetch()
     setEditing(false)
   }
@@ -87,6 +95,13 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       setShowDeleteModal(false)
       return
     }
+    // 사진 파일 정리
+    if (pet?.photo_url) deleteImageByUrl(pet.photo_url)
+    // 삭제한 아이가 선택돼 있었다면 해제하고, 펫 목록 캐시 무효화
+    if (selectedPetId === params.id) setSelectedPetId(null)
+    queryClient.invalidateQueries({
+      predicate: q => typeof q.queryKey[0] === 'string' && (q.queryKey[0] as string).startsWith('my-pets'),
+    })
     router.push('/dashboard')
   }
 

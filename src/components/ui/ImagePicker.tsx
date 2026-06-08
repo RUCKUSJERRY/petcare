@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { uploadImage, validateImage } from '@/lib/upload'
+import { deleteImageByUrl, uploadImage, validateImage } from '@/lib/upload'
 
 /**
  * 이미지 선택 + 업로드 + 미리보기 컴포넌트.
@@ -24,6 +24,8 @@ export function ImagePicker({
   const inputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [uploading, setUploading] = useState(false)
+  // 이 컴포넌트에서 업로드(아직 미저장)한 URL들. 교체/제거 시 즉시 정리한다.
+  const sessionUrls = useRef<Set<string>>(new Set())
 
   const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -40,6 +42,12 @@ export function ImagePicker({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('로그인이 필요해요')
       const url = await uploadImage(bucket, file, user.id)
+      // 이전 값이 이 세션에서 올린 미저장 파일이면 정리(고아 방지)
+      if (value && sessionUrls.current.has(value)) {
+        deleteImageByUrl(value)
+        sessionUrls.current.delete(value)
+      }
+      sessionUrls.current.add(url)
       onUploaded(url)
     } catch {
       onError?.('업로드에 실패했어요. 다시 시도해주세요.')
@@ -47,6 +55,15 @@ export function ImagePicker({
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
     }
+  }
+
+  const handleRemove = () => {
+    // 이 세션에서 올린 미저장 파일이면 정리. 저장된 원본은 페이지 저장 시 정리됨.
+    if (value && sessionUrls.current.has(value)) {
+      deleteImageByUrl(value)
+      sessionUrls.current.delete(value)
+    }
+    onUploaded(null)
   }
 
   const radius = shape === 'circle' ? 'rounded-full' : 'rounded-xl'
@@ -81,7 +98,7 @@ export function ImagePicker({
         {value && (
           <button
             type="button"
-            onClick={() => onUploaded(null)}
+            onClick={handleRemove}
             className="text-xs text-gray-400 hover:text-red-500"
           >
             제거

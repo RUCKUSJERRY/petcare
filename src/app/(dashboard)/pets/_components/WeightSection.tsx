@@ -164,26 +164,76 @@ export function WeightSection({ petId }: { petId: string }) {
   )
 }
 
-/** 의존성 없는 간단 SVG 선그래프 */
+/** 의존성 없는 SVG 체중 추이 차트 (y축 라벨·영역·기준선·최근값 강조) */
 function WeightChart({ logs }: { logs: WeightLog[] }) {
-  const W = 280, H = 80, pad = 8
+  const W = 300, H = 120
+  const padL = 34, padR = 10, padT = 12, padB = 20 // 좌측 y라벨/하단 날짜 여백
+  const innerW = W - padL - padR
+  const innerH = H - padT - padB
+
   const weights = logs.map(l => l.weight_kg)
-  const min = Math.min(...weights)
-  const max = Math.max(...weights)
+  const rawMin = Math.min(...weights)
+  const rawMax = Math.max(...weights)
+  // 위아래 약간의 여백을 둬 선이 가장자리에 붙지 않게
+  const span = rawMax - rawMin || 1
+  const min = rawMin - span * 0.15
+  const max = rawMax + span * 0.15
   const range = max - min || 1
-  const pts = logs.map((l, i) => {
-    const x = pad + (i / (logs.length - 1)) * (W - pad * 2)
-    const y = H - pad - ((l.weight_kg - min) / range) * (H - pad * 2)
-    return { x, y }
-  })
-  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+
+  const x = (i: number) => padL + (logs.length === 1 ? innerW / 2 : (i / (logs.length - 1)) * innerW)
+  const y = (w: number) => padT + (1 - (w - min) / range) * innerH
+
+  const pts = logs.map((l, i) => ({ x: x(i), y: y(l.weight_kg), w: l.weight_kg, d: l.measured_on }))
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  const area = `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${(padT + innerH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT + innerH).toFixed(1)} Z`
+
+  const last = pts[pts.length - 1]
+  const fmtDate = (d: string) => d.slice(5).replace('-', '.') // MM.DD
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-20" preserveAspectRatio="none">
-      <path d={path} fill="none" stroke="#2d8a42" strokeWidth="2" />
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 120 }}>
+      <defs>
+        <linearGradient id="wfill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2d8a42" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#2d8a42" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* y축 기준선 + 라벨 (최소/최대 실제값) */}
+      {[rawMax, rawMin].map((val, i) => {
+        const yy = y(val)
+        return (
+          <g key={i}>
+            <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3 3" />
+            <text x={padL - 6} y={yy + 3} textAnchor="end" fontSize="9" fill="#9ca3af">{val}kg</text>
+          </g>
+        )
+      })}
+
+      {/* 영역 + 선 */}
+      <path d={area} fill="url(#wfill)" />
+      <path d={line} fill="none" stroke="#2d8a42" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+      {/* 포인트 */}
       {pts.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#2d8a42" />
+        <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 3.5 : 2} fill="#2d8a42" />
       ))}
+
+      {/* 최근값 강조 라벨 */}
+      <text
+        x={Math.min(last.x, W - padR - 2)}
+        y={Math.max(last.y - 7, padT + 7)}
+        textAnchor="end"
+        fontSize="10"
+        fontWeight="700"
+        fill="#1f6e32"
+      >
+        {last.w}kg
+      </text>
+
+      {/* 시작/끝 날짜 */}
+      <text x={padL} y={H - 6} textAnchor="start" fontSize="9" fill="#9ca3af">{fmtDate(pts[0].d)}</text>
+      <text x={W - padR} y={H - 6} textAnchor="end" fontSize="9" fill="#9ca3af">{fmtDate(last.d)}</text>
     </svg>
   )
 }

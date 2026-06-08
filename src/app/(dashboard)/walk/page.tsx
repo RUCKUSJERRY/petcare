@@ -6,6 +6,7 @@ import { calcPetAge, lifeStageColor, pickBestPerActivityType } from '@/lib/utils
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { fetchWalkGuides } from '../_actions/guides'
 import type { Pet, WalkGuide } from '@/types'
 
 // activity_type 표시 메타
@@ -49,10 +50,7 @@ export default function WalkPage() {
 
   const { data: allGuides, isLoading: guidesLoading } = useQuery({
     queryKey: ['walk-guides'],
-    queryFn: async () => {
-      const { data } = await supabase.from('walk_guides').select('*')
-      return (data ?? []) as WalkGuide[]
-    },
+    queryFn: () => fetchWalkGuides(), // 서버 캐시(1시간) 공유
     staleTime: 60 * 60 * 1000,
   })
 
