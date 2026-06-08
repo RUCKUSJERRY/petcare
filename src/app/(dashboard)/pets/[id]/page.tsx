@@ -11,7 +11,7 @@ import { ImagePicker } from '@/components/ui/ImagePicker'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
-import { VaccinationSection } from '../_components/VaccinationSection'
+import { CareSection } from '../_components/CareSection'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -218,7 +218,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {!editing && (
         <>
           <WeightSection petId={params.id} />
-          <VaccinationSection petId={params.id} />
+          <CareSection petId={params.id} />
         </>
       )}
 

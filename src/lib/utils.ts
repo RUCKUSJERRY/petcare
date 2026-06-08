@@ -130,6 +130,51 @@ export function pickBestPerActivityType<
 }
 
 /**
+ * 오늘 기준 D-day 계산. (날짜 문자열 YYYY-MM-DD)
+ * 음수 = 지남, 0 = 오늘, 양수 = 남은 일수
+ */
+export function daysUntil(dateStr: string): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr + 'T00:00:00')
+  return Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+}
+
+/** D-day 배지 텍스트와 톤 */
+export function ddayBadge(dateStr: string): {
+  text: string
+  tone: 'overdue' | 'today' | 'soon' | 'upcoming'
+} {
+  const d = daysUntil(dateStr)
+  if (d < 0) return { text: `${Math.abs(d)}일 지남`, tone: 'overdue' }
+  if (d === 0) return { text: 'D-day', tone: 'today' }
+  if (d <= 7) return { text: `D-${d}`, tone: 'soon' }
+  return { text: `D-${d}`, tone: 'upcoming' }
+}
+
+/** D-day 톤별 색상 클래스 */
+export function ddayToneClass(tone: 'overdue' | 'today' | 'soon' | 'upcoming'): string {
+  return {
+    overdue:  'bg-red-100 text-red-700',
+    today:    'bg-red-100 text-red-700',
+    soon:     'bg-amber-100 text-amber-700',
+    upcoming: 'bg-gray-100 text-gray-500',
+  }[tone]
+}
+
+/** 건강 관리 카테고리별 아이콘 */
+export function careCategoryIcon(category: string): string {
+  return {
+    접종:       '💉',
+    심장사상충: '🪱',
+    구충:       '🐛',
+    외부기생충: '🦟',
+    건강검진:   '🩺',
+    기타:       '📋',
+  }[category] ?? '📋'
+}
+
+/**
  * 커뮤니티 카테고리 색상
  */
 export function categoryColor(category: string): string {

@@ -3,9 +3,22 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import type { VaccinationRecord } from '@/types'
+import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import type { CareCategory, CareRecord } from '@/types'
 
-export function VaccinationSection({ petId }: { petId: string }) {
+const CATEGORIES: CareCategory[] = ['접종', '심장사상충', '구충', '외부기생충', '건강검진', '기타']
+
+// 카테고리별 항목명 입력 힌트
+const NAME_PLACEHOLDER: Record<CareCategory, string> = {
+  '접종': '예: 종합백신 DHPPL',
+  '심장사상충': '예: 하트가드, 애드보킷',
+  '구충': '예: 드론탈, 파나쿠어',
+  '외부기생충': '예: 넥스가드, 프론트라인',
+  '건강검진': '예: 혈액검사, 엑스레이',
+  '기타': '항목명',
+}
+
+export function CareSection({ petId }: { petId: string }) {
   const supabase = createClient()
   const qc = useQueryClient()
   const [adding, setAdding] = useState(false)
@@ -13,6 +26,7 @@ export function VaccinationSection({ petId }: { petId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [form, setForm] = useState({
+    category: '접종' as CareCategory,
     vaccine_name: '',
     vaccinated_on: new Date().toISOString().slice(0, 10),
     next_due_on: '',
@@ -20,22 +34,23 @@ export function VaccinationSection({ petId }: { petId: string }) {
   })
 
   const { data: records = [] } = useQuery({
-    queryKey: ['vaccinations', petId],
+    queryKey: ['care', petId],
     queryFn: async () => {
       const { data } = await supabase
         .from('vaccination_records')
         .select('*')
         .eq('pet_id', petId)
         .order('vaccinated_on', { ascending: false })
-      return (data ?? []) as VaccinationRecord[]
+      return (data ?? []) as CareRecord[]
     },
   })
 
   const add = async () => {
-    if (!form.vaccine_name.trim()) { setError('백신 이름을 입력해주세요'); return }
+    if (!form.vaccine_name.trim()) { setError('항목명을 입력해주세요'); return }
     setSaving(true); setError(null)
     const { error: insErr } = await supabase.from('vaccination_records').insert({
       pet_id: petId,
+      category: form.category,
       vaccine_name: form.vaccine_name.trim(),
       vaccinated_on: form.vaccinated_on,
       next_due_on: form.next_due_on || null,
@@ -43,24 +58,21 @@ export function VaccinationSection({ petId }: { petId: string }) {
     })
     setSaving(false)
     if (insErr) { setError('저장에 실패했어요'); return }
-    setForm({ vaccine_name: '', vaccinated_on: new Date().toISOString().slice(0, 10), next_due_on: '', clinic: '' })
+    setForm({ category: '접종', vaccine_name: '', vaccinated_on: new Date().toISOString().slice(0, 10), next_due_on: '', clinic: '' })
     setAdding(false)
-    qc.invalidateQueries({ queryKey: ['vaccinations', petId] })
+    qc.invalidateQueries({ queryKey: ['care', petId] })
   }
 
   const remove = async (id: string) => {
     await supabase.from('vaccination_records').delete().eq('id', id)
     setConfirmDeleteId(null)
-    qc.invalidateQueries({ queryKey: ['vaccinations', petId] })
+    qc.invalidateQueries({ queryKey: ['care', petId] })
   }
-
-  const today = new Date().toISOString().slice(0, 10)
-  const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   return (
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">접종 기록</h2>
+        <h2 className="font-bold text-gray-900">건강 관리 기록</h2>
         <button
           onClick={() => setAdding(a => !a)}
           className="text-sm text-primary-600 font-semibold"
@@ -71,16 +83,33 @@ export function VaccinationSection({ petId }: { petId: string }) {
 
       {adding && (
         <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+          {/* 카테고리 선택 */}
+          <div className="flex gap-1.5 flex-wrap">
+            {CATEGORIES.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, category: c }))}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  form.category === c
+                    ? 'bg-primary-500 text-white border-primary-500'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                {careCategoryIcon(c)} {c}
+              </button>
+            ))}
+          </div>
           <input
             className="input"
-            placeholder="백신 이름 (예: 종합백신 DHPPL)"
+            placeholder={NAME_PLACEHOLDER[form.category]}
             value={form.vaccine_name}
             onChange={e => setForm(f => ({ ...f, vaccine_name: e.target.value }))}
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">접종일</label>
-              <input className="input" type="date" max={today}
+              <label className="text-xs text-gray-500 block mb-0.5">시행일</label>
+              <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
                 value={form.vaccinated_on}
                 onChange={e => setForm(f => ({ ...f, vaccinated_on: e.target.value }))} />
             </div>
@@ -105,52 +134,44 @@ export function VaccinationSection({ petId }: { petId: string }) {
       )}
 
       {records.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-3">아직 접종 기록이 없어요</p>
+        <p className="text-sm text-gray-400 text-center py-3">아직 기록이 없어요</p>
       ) : (
         <div className="space-y-2">
           {records.map(r => {
-            const overdue = r.next_due_on && r.next_due_on < today
-            // 30일 이내인 경우만 '곧 예정'으로 표시
-            const dueSoon = r.next_due_on && r.next_due_on >= today && r.next_due_on <= thirtyDaysLater
+            const badge = r.next_due_on ? ddayBadge(r.next_due_on) : null
             return (
               <div key={r.id} className="border border-gray-100 rounded-lg p-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm text-gray-900">{r.vaccine_name}</span>
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium shrink-0">
+                    {careCategoryIcon(r.category)} {r.category}
+                  </span>
+                  <span className="font-semibold text-sm text-gray-900 truncate">{r.vaccine_name}</span>
                   {confirmDeleteId === r.id ? (
-                    <div className="ml-auto flex items-center gap-2">
+                    <div className="ml-auto flex items-center gap-2 shrink-0">
                       <span className="text-xs text-gray-500">삭제할까요?</span>
-                      <button
-                        onClick={() => remove(r.id)}
-                        className="text-xs text-red-500 font-semibold"
-                      >
-                        삭제
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs text-gray-400"
-                      >
-                        취소
-                      </button>
+                      <button onClick={() => remove(r.id)} className="text-xs text-red-500 font-semibold">삭제</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">취소</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(r.id)}
-                      className="ml-auto text-xs text-gray-300 hover:text-red-500"
+                      className="ml-auto text-xs text-gray-300 hover:text-red-500 shrink-0"
+                      aria-label="기록 삭제"
                     >
                       삭제
                     </button>
                   )}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  접종 {r.vaccinated_on}
+                  시행 {r.vaccinated_on}
                   {r.clinic && ` · ${r.clinic}`}
                 </div>
-                {r.next_due_on && (
-                  <div className={`text-xs mt-1 font-medium ${
-                    overdue ? 'text-red-500' : dueSoon ? 'text-amber-600' : 'text-gray-400'
-                  }`}>
-                    다음 예정 {r.next_due_on}
-                    {overdue ? ' (지남)' : dueSoon ? ' (곧 예정)' : ''}
+                {r.next_due_on && badge && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ddayToneClass(badge.tone)}`}>
+                      {badge.text}
+                    </span>
+                    <span className="text-xs text-gray-400">다음 예정 {r.next_due_on}</span>
                   </div>
                 )}
               </div>

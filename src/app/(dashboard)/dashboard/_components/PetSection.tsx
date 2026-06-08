@@ -3,10 +3,8 @@
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
 import Link from 'next/link'
-import type { Pet } from '@/types'
+import type { CareAlert, Pet } from '@/types'
 import { SelectedPetSummary } from './SelectedPetSummary'
-
-type VaccAlert = { pet_id: string; vaccine_name: string; next_due_on: string }
 
 /**
  * 홈의 펫 영역.
@@ -18,7 +16,7 @@ export function PetSection({
   vaccAlerts,
 }: {
   pets: Pet[]
-  vaccAlerts: VaccAlert[]
+  vaccAlerts: CareAlert[]
 }) {
   const { selectedPetId } = useSelectedPet()
 

@@ -1,11 +1,9 @@
 'use client'
 
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor } from '@/lib/utils'
 import Link from 'next/link'
-import type { Pet } from '@/types'
-
-type VaccAlert = { pet_id: string; vaccine_name: string; next_due_on: string }
+import type { CareAlert, Pet } from '@/types'
 
 const QUICK_LINKS = [
   { href: '/foods', emoji: '🥩', label: '음식' },
@@ -22,7 +20,7 @@ export function SelectedPetSummary({
   vaccAlerts,
 }: {
   pets: Pet[]
-  vaccAlerts: VaccAlert[]
+  vaccAlerts: CareAlert[]
 }) {
   const { selectedPetId } = useSelectedPet()
   if (!selectedPetId) return null
@@ -31,7 +29,6 @@ export function SelectedPetSummary({
   if (!pet) return null
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
-  const today = new Date().toISOString().slice(0, 10)
   const nextVacc = vaccAlerts
     .filter(v => v.pet_id === pet.id)
     .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
@@ -64,13 +61,13 @@ export function SelectedPetSummary({
         </Link>
       </div>
 
-      {/* 다음 접종 알림 */}
+      {/* 다음 건강 일정 알림 */}
       {nextVacc && (
         <div className="mt-3 flex items-center gap-2 bg-white/15 rounded-lg px-3 py-2 text-sm">
-          <span>{nextVacc.next_due_on < today ? '⚠️' : '💉'}</span>
+          <span aria-hidden>{careCategoryIcon(nextVacc.category)}</span>
           <span className="flex-1 truncate">{nextVacc.vaccine_name}</span>
-          <span className="text-xs text-white/80 shrink-0">
-            {nextVacc.next_due_on}{nextVacc.next_due_on < today ? ' (지남)' : ''}
+          <span className="text-xs font-semibold text-white/90 shrink-0">
+            {ddayBadge(nextVacc.next_due_on).text}
           </span>
         </div>
       )}

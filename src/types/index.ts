@@ -162,13 +162,28 @@ export interface WeightLog {
   created_at: string
 }
 
-export interface VaccinationRecord {
+export type CareCategory = '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진' | '기타'
+
+/** 건강 관리 기록 (접종·심장사상충약·구충 등 주기적 관리 항목) */
+export interface CareRecord {
   id: string
   pet_id: string
-  vaccine_name: string
-  vaccinated_on: string   // YYYY-MM-DD
+  category: CareCategory
+  vaccine_name: string    // 항목명 (예: 종합백신 DHPPL, 하트가드)
+  vaccinated_on: string   // 시행일 YYYY-MM-DD
   next_due_on: string | null
   clinic: string | null
   note: string | null
   created_at: string
+}
+
+/** @deprecated CareRecord 사용 */
+export type VaccinationRecord = CareRecord
+
+/** 대시보드 D-day 알림용 경량 타입 */
+export interface CareAlert {
+  pet_id: string
+  category: CareCategory
+  vaccine_name: string
+  next_due_on: string
 }

@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { timeAgo, categoryColor } from '@/lib/utils'
 import Link from 'next/link'
-import type { Pet, PostListItem } from '@/types'
+import type { CareAlert, Pet, PostListItem } from '@/types'
 import { PetSection } from './_components/PetSection'
 import { VaccAlerts } from './_components/VaccAlerts'
 
@@ -15,21 +15,20 @@ export default async function DashboardPage() {
     .eq('user_id', user!.id)
     .order('created_at')
 
-  // 30일 이내 접종 예정 + 지난 접종 알림
+  // 30일 이내 예정 + 지난 건강 관리 알림 (접종·심장사상충·구충 등 모든 카테고리)
   const petIds = (pets ?? []).map((p: Pet) => p.id)
   const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-  type VaccAlert = { pet_id: string; vaccine_name: string; next_due_on: string }
-  let vaccAlerts: VaccAlert[] = []
+  let vaccAlerts: CareAlert[] = []
   if (petIds.length > 0) {
     const { data } = await supabase
       .from('vaccination_records')
-      .select('pet_id, vaccine_name, next_due_on')
+      .select('pet_id, category, vaccine_name, next_due_on')
       .in('pet_id', petIds)
       .not('next_due_on', 'is', null)
       .lte('next_due_on', soon)
       .order('next_due_on')
-    vaccAlerts = (data ?? []) as VaccAlert[]
+    vaccAlerts = (data ?? []) as CareAlert[]
   }
 
   // 최근 커뮤니티 글 (위젯용)
