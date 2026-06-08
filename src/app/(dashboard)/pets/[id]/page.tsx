@@ -94,7 +94,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   if (!pet) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
 
-  const age = calcPetAge(pet.birth_year, pet.birth_month)
+  const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
 
   return (
     <div className="px-4 py-6 space-y-5">

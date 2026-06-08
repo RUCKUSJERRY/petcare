@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { LogoutButton } from '@/components/ui/LogoutButton'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -69,6 +70,9 @@ export default function ProfilePage() {
           </svg>
         </button>
         <h1 className="text-xl font-bold text-gray-900">프로필 편집</h1>
+        <div className="ml-auto">
+          <LogoutButton />
+        </div>
       </div>
 
       <div className="space-y-5">

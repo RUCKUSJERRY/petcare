@@ -11,6 +11,8 @@ export function WeightSection({ petId }: { petId: string }) {
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
   const [form, setForm] = useState({
     weight_kg: '',
     measured_on: new Date().toISOString().slice(0, 10),
@@ -46,12 +48,16 @@ export function WeightSection({ petId }: { petId: string }) {
 
   const remove = async (id: string) => {
     await supabase.from('weight_logs').delete().eq('id', id)
+    setConfirmDeleteId(null)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
   }
 
   const latest = logs.length ? logs[logs.length - 1] : null
   const prev = logs.length > 1 ? logs[logs.length - 2] : null
   const diff = latest && prev ? +(latest.weight_kg - prev.weight_kg).toFixed(2) : null
+
+  const reversedLogs = [...logs].reverse()
+  const visibleLogs = showAll ? reversedLogs : reversedLogs.slice(0, 5)
 
   return (
     <div className="card space-y-3">
@@ -114,18 +120,44 @@ export function WeightSection({ petId }: { petId: string }) {
         <p className="text-sm text-gray-400 text-center py-3">아직 기록이 없어요</p>
       ) : (
         <div className="space-y-1">
-          {[...logs].reverse().slice(0, 5).map(log => (
+          {visibleLogs.map(log => (
             <div key={log.id} className="flex items-center text-sm py-1">
               <span className="text-gray-400 w-24">{log.measured_on}</span>
               <span className="font-medium text-gray-800">{log.weight_kg}kg</span>
-              <button
-                onClick={() => remove(log.id)}
-                className="ml-auto text-xs text-gray-300 hover:text-red-500"
-              >
-                삭제
-              </button>
+              {confirmDeleteId === log.id ? (
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-gray-500">삭제할까요?</span>
+                  <button
+                    onClick={() => remove(log.id)}
+                    className="text-xs text-red-500 font-semibold"
+                  >
+                    삭제
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="text-xs text-gray-400"
+                  >
+                    취소
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDeleteId(log.id)}
+                  className="ml-auto text-xs text-gray-300 hover:text-red-500"
+                >
+                  삭제
+                </button>
+              )}
             </div>
           ))}
+          {logs.length > 5 && (
+            <button
+              onClick={() => setShowAll(v => !v)}
+              className="w-full text-xs text-primary-600 font-medium pt-1 hover:underline"
+            >
+              {showAll ? '접기' : `이전 기록 ${logs.length - 5}건 더 보기`}
+            </button>
+          )}
         </div>
       )}
     </div>

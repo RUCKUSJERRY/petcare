@@ -13,6 +13,24 @@ export default async function DashboardPage() {
     .eq('user_id', user!.id)
     .order('created_at')
 
+  // 30일 이내 접종 예정 + 지난 접종 알림
+  const petIds = (pets ?? []).map((p: Pet) => p.id)
+  const today = new Date().toISOString().slice(0, 10)
+  const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  type VaccAlert = { pet_id: string; vaccine_name: string; next_due_on: string }
+  let vaccAlerts: VaccAlert[] = []
+  if (petIds.length > 0) {
+    const { data } = await supabase
+      .from('vaccination_records')
+      .select('pet_id, vaccine_name, next_due_on')
+      .in('pet_id', petIds)
+      .not('next_due_on', 'is', null)
+      .lte('next_due_on', soon)
+      .order('next_due_on')
+    vaccAlerts = (data ?? []) as VaccAlert[]
+  }
+
   // 최근 커뮤니티 글 (위젯용)
   const { data: recentPostsData } = await supabase
     .from('post_list')
@@ -54,7 +72,7 @@ export default async function DashboardPage() {
       ) : (
         <div className="space-y-3">
           {(pets as Pet[]).map(pet => {
-            const age = calcPetAge(pet.birth_year, pet.birth_month)
+            const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
             return (
               <Link key={pet.id} href={`/pets/${pet.id}`}>
                 <div className="card flex items-center gap-4 hover:shadow-md transition-shadow">
@@ -84,6 +102,37 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* 접종 예정 알림 */}
+      {vaccAlerts.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span>💉</span>
+            <span className="font-semibold text-amber-800 text-sm">접종 알림</span>
+          </div>
+          {vaccAlerts.slice(0, 3).map((v, i) => {
+            const pet = (pets as Pet[]).find(p => p.id === v.pet_id)
+            const isOverdue = v.next_due_on < today
+            return (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span>{isOverdue ? '⚠️' : '📅'}</span>
+                <span className="text-gray-700 truncate flex-1">
+                  {pet?.name} · {v.vaccine_name}
+                </span>
+                <span className={`text-xs font-medium shrink-0 ${isOverdue ? 'text-red-500' : 'text-amber-600'}`}>
+                  {v.next_due_on}{isOverdue ? ' (지남)' : ''}
+                </span>
+              </div>
+            )
+          })}
+          {vaccAlerts.length > 3 && (
+            <p className="text-xs text-amber-600 pt-0.5">외 {vaccAlerts.length - 3}건 더</p>
+          )}
+          <Link href="/pets" className="block text-xs text-amber-700 font-semibold pt-1">
+            접종 기록 확인하기 →
+          </Link>
+        </div>
+      )}
+
       {/* 빠른 메뉴 */}
       <div>
         <h2 className="text-sm font-semibold text-gray-500 mb-3">바로가기</h2>
@@ -92,7 +141,7 @@ export default async function DashboardPage() {
             { href: '/foods', emoji: '🥩', label: '음식 안전 정보', desc: '먹어도 되는 음식 확인' },
             { href: '/health', emoji: '🏥', label: '건강 가이드', desc: '나이별 주의 질환' },
             { href: '/walk', emoji: '🎾', label: '활동 가이드', desc: '권장 운동량 확인' },
-            { href: '/pets/new', emoji: '➕', label: '반려동물 추가', desc: '새 아이 등록하기' },
+            { href: '/community/new', emoji: '✏️', label: '커뮤니티 글쓰기', desc: '이야기 나누기' },
           ].map(item => (
             <Link key={item.href} href={item.href}>
               <div className="card hover:shadow-md transition-shadow h-full">

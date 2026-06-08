@@ -54,7 +54,7 @@ export default async function CommunityPage({
 
   if (activeCategory) query = query.eq('category', activeCategory)
   if (mine && user) query = query.eq('user_id', user.id)
-  if (q) query = query.ilike('title', `%${q}%`)
+  if (q) query = query.or(`title.ilike.%${q}%,content.ilike.%${q}%`)
 
   query = query.range(offset, offset + PAGE_SIZE - 1)
 

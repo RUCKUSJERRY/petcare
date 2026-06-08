@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, guideMatchScore } from '@/lib/utils'
 import { getHealthGuides } from '@/lib/staticData'
+import Link from 'next/link'
 import type { Pet } from '@/types'
 
 export default async function HealthPage() {
@@ -14,14 +15,24 @@ export default async function HealthPage() {
 
   // 각 반려동물의 현재 나이에 맞는 건강 가이드 (메모리 필터)
   const petGuides = (pets ?? []).map((pet: Pet) => {
-    const age = calcPetAge(pet.birth_year, pet.birth_month)
+    const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
     const size = pet.breed?.size_category ?? null
-    const guides = allGuides
-      .filter(g => g.species === pet.species &&
-        g.age_month_min <= age.months && g.age_month_max >= age.months)
-      .filter(g => guideMatchScore(g, pet.breed_id, size) > 0) // 내 아이에 해당하는 것만
-      // 견종별 > 크기별 > 공통 순으로 정렬
+
+    const ageMatched = allGuides.filter(g =>
+      g.species === pet.species &&
+      g.age_month_min <= age.months && g.age_month_max >= age.months
+    )
+
+    // 다른 견종 전용 가이드는 제외하고, 나머지를 관련도순으로 정렬
+    let guides = ageMatched
+      .filter(g => !g.breed_id || g.breed_id === pet.breed_id)
       .sort((a, b) => guideMatchScore(b, pet.breed_id, size) - guideMatchScore(a, pet.breed_id, size))
+
+    // 매칭 가이드가 없으면 공통 가이드(breed_id·size_category 모두 null)로 폴백
+    if (guides.length === 0) {
+      guides = ageMatched.filter(g => !g.breed_id && !g.size_category)
+    }
+
     return { pet, age, guides }
   })
 
@@ -34,8 +45,11 @@ export default async function HealthPage() {
       </div>
 
       {petGuides.length === 0 ? (
-        <div className="card text-center py-10 text-gray-400">
-          반려동물을 먼저 등록해주세요
+        <div className="card text-center py-10 space-y-3">
+          <p className="text-gray-400">반려동물을 먼저 등록해주세요</p>
+          <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">
+            반려동물 등록하기
+          </Link>
         </div>
       ) : (
         petGuides.map(({ pet, age, guides }) => (

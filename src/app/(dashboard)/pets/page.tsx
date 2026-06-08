@@ -2,7 +2,6 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
 import Link from 'next/link'
 import type { Pet } from '@/types'
-import { LogoutButton } from '@/components/ui/LogoutButton'
 
 export default async function PetsPage() {
   const supabase = await createServerSupabaseClient()
@@ -18,12 +17,9 @@ export default async function PetsPage() {
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">내 아이</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
-            + 등록
-          </Link>
-          <LogoutButton />
-        </div>
+        <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
+          + 등록
+        </Link>
       </div>
 
       {!pets || pets.length === 0 ? (
@@ -37,14 +33,14 @@ export default async function PetsPage() {
       ) : (
         <div className="space-y-3">
           {(pets as Pet[]).map(pet => {
-            const age = calcPetAge(pet.birth_year, pet.birth_month)
+            const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
             return (
               <Link key={pet.id} href={`/pets/${pet.id}`}>
                 <div className="card flex items-center gap-4 hover:shadow-md transition-shadow">
                   <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl flex-shrink-0">
                     {pet.photo_url
                       ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-                      : '🐾'}
+                      : (pet.species === 'cat' ? '🐱' : '🐶')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

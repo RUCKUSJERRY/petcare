@@ -11,6 +11,7 @@ export function VaccinationSection({ petId }: { petId: string }) {
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [form, setForm] = useState({
     vaccine_name: '',
     vaccinated_on: new Date().toISOString().slice(0, 10),
@@ -49,10 +50,12 @@ export function VaccinationSection({ petId }: { petId: string }) {
 
   const remove = async (id: string) => {
     await supabase.from('vaccination_records').delete().eq('id', id)
+    setConfirmDeleteId(null)
     qc.invalidateQueries({ queryKey: ['vaccinations', petId] })
   }
 
   const today = new Date().toISOString().slice(0, 10)
+  const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   return (
     <div className="card space-y-3">
@@ -106,26 +109,48 @@ export function VaccinationSection({ petId }: { petId: string }) {
       ) : (
         <div className="space-y-2">
           {records.map(r => {
-            const dueSoon = r.next_due_on && r.next_due_on >= today
             const overdue = r.next_due_on && r.next_due_on < today
+            // 30일 이내인 경우만 '곧 예정'으로 표시
+            const dueSoon = r.next_due_on && r.next_due_on >= today && r.next_due_on <= thirtyDaysLater
             return (
               <div key={r.id} className="border border-gray-100 rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm text-gray-900">{r.vaccine_name}</span>
-                  <button
-                    onClick={() => remove(r.id)}
-                    className="ml-auto text-xs text-gray-300 hover:text-red-500"
-                  >
-                    삭제
-                  </button>
+                  {confirmDeleteId === r.id ? (
+                    <div className="ml-auto flex items-center gap-2">
+                      <span className="text-xs text-gray-500">삭제할까요?</span>
+                      <button
+                        onClick={() => remove(r.id)}
+                        className="text-xs text-red-500 font-semibold"
+                      >
+                        삭제
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs text-gray-400"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(r.id)}
+                      className="ml-auto text-xs text-gray-300 hover:text-red-500"
+                    >
+                      삭제
+                    </button>
+                  )}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   접종 {r.vaccinated_on}
                   {r.clinic && ` · ${r.clinic}`}
                 </div>
                 {r.next_due_on && (
-                  <div className={`text-xs mt-1 font-medium ${overdue ? 'text-red-500' : dueSoon ? 'text-amber-600' : 'text-gray-400'}`}>
-                    다음 예정 {r.next_due_on}{overdue ? ' (지남)' : ''}
+                  <div className={`text-xs mt-1 font-medium ${
+                    overdue ? 'text-red-500' : dueSoon ? 'text-amber-600' : 'text-gray-400'
+                  }`}>
+                    다음 예정 {r.next_due_on}
+                    {overdue ? ' (지남)' : dueSoon ? ' (곧 예정)' : ''}
                   </div>
                 )}
               </div>

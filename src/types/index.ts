@@ -98,7 +98,7 @@ export interface PetAge {
   months: number
   years: number
   displayText: string  // "3살 2개월"
-  lifeStage: '퍼피' | '성견' | '시니어'
+  lifeStage: '퍼피' | '성견' | '시니어' | '키튼' | '성묘'
 }
 
 /** 음식 조회 시 견종 예외 적용 후 최종 결과 */

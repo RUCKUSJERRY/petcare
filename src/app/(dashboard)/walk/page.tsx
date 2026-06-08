@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, pickTopGuide } from '@/lib/utils'
 import { getWalkGuides } from '@/lib/staticData'
+import Link from 'next/link'
 import type { Pet } from '@/types'
 
 const intensityColor = (i: string) => ({
@@ -19,7 +20,7 @@ export default async function WalkPage() {
   ])
 
   const petGuides = (pets ?? []).map((pet: Pet) => {
-    const age = calcPetAge(pet.birth_year, pet.birth_month)
+    const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
     const size = pet.breed?.size_category ?? null
     // 나이대 매칭 후보를 메모리에서 필터
     const candidates = allGuides.filter(
@@ -36,8 +37,11 @@ export default async function WalkPage() {
       <h1 className="text-xl font-bold text-gray-900">활동 가이드</h1>
 
       {petGuides.length === 0 && (
-        <div className="card text-center py-10 text-gray-400">
-          반려동물을 먼저 등록해주세요
+        <div className="card text-center py-10 space-y-3">
+          <p className="text-gray-400">반려동물을 먼저 등록해주세요</p>
+          <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">
+            반려동물 등록하기
+          </Link>
         </div>
       )}
 

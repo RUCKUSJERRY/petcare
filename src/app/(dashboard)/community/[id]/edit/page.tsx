@@ -173,11 +173,11 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
           />
         </div>
 
-        {/* 견종 태그 (선택) */}
+        {/* 품종 태그 (선택) */}
         {pets && pets.length > 0 && (
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">
-              견종 태그 <span className="text-gray-400 font-normal">(선택)</span>
+              품종 태그 <span className="text-gray-400 font-normal">(선택)</span>
             </label>
             <select
               className="input"
