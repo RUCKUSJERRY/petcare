@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
@@ -39,12 +39,14 @@ function cn(...c: (string | false | null | undefined)[]) {
 }
 
 type FoodRow = FoodItem & { food_safety: FoodSafety[] }
+type BreedOption = { id: string; name: string }
 
 export default function FoodsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
   const [species, setSpecies] = useState<Species>('dog')
   const [breedFilter, setBreedFilter] = useState<string>('all')
+  const initialized = useRef(false)
   const supabase = createClient()
 
   const { data: foods, isLoading } = useQuery({
@@ -58,30 +60,48 @@ export default function FoodsPage() {
     },
   })
 
-  // 내 반려동물의 견종 ID 목록 (강아지 기준 예외용)
-  const { data: myBreeds } = useQuery({
-    queryKey: ['my-breeds'],
+  // 내 반려동물의 견종 목록 (강아지 + 고양이 모두)
+  const { data: myPets } = useQuery({
+    queryKey: ['my-pets-breeds'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!user) return { dog: [] as BreedOption[], cat: [] as BreedOption[] }
       const { data } = await supabase
         .from('pets')
-        .select('breed_id, breed:breeds(name_ko)')
+        .select('breed_id, species, breed:breeds(name_ko)')
         .eq('user_id', user.id)
-        .eq('species', 'dog')
-      type Row = { breed_id: string; breed?: { name_ko: string } }
+      type Row = { breed_id: string; species: string; breed?: { name_ko: string } }
       const rows = (data ?? []) as unknown as Row[]
-      const unique = Array.from(
-        new Map(rows.filter(r => r.breed_id).map(r => [r.breed_id, r.breed?.name_ko ?? ''])).entries()
-      ).map(([id, name]) => ({ id, name }))
-      return unique
+      const result: Record<Species, BreedOption[]> = { dog: [], cat: [] }
+      const seen: Record<Species, Set<string>> = { dog: new Set(), cat: new Set() }
+      for (const r of rows) {
+        if (!r.breed_id) continue
+        const sp = r.species as Species
+        if (!seen[sp].has(r.breed_id)) {
+          seen[sp].add(r.breed_id)
+          result[sp].push({ id: r.breed_id, name: r.breed?.name_ko ?? '' })
+        }
+      }
+      return result
     },
   })
 
-  // 선택된 견종의 음식 규칙 (강아지 전용)
+  // 첫 로드: 고양이만 있으면 cat 탭으로 자동 전환
+  useEffect(() => {
+    if (!myPets || initialized.current) return
+    initialized.current = true
+    if (myPets.cat.length > 0 && myPets.dog.length === 0) {
+      setSpecies('cat')
+      setBreedFilter(myPets.cat[0].id)
+    } else if (myPets.dog.length > 0) {
+      setBreedFilter(myPets.dog[0].id)
+    }
+  }, [myPets])
+
+  // 선택된 견종의 음식 규칙
   const { data: breedRules } = useQuery({
     queryKey: ['breed-food-rules', breedFilter],
-    enabled: breedFilter !== 'all' && species === 'dog',
+    enabled: breedFilter !== 'all',
     queryFn: async () => {
       const { data } = await supabase
         .from('breed_food_rules')
@@ -95,13 +115,15 @@ export default function FoodsPage() {
     (breedRules ?? []).map(r => [r.food_id, r])
   )
 
-  // 선택된 종의 안전도만 추출 (해당 종 데이터가 없는 음식은 제외)
+  const currentBreeds = myPets?.[species] ?? []
+
+  // 선택된 종의 안전도만 추출
   const rows = (foods ?? [])
     .map(f => ({ food: f, safety: f.food_safety.find(s => s.species === species) ?? null }))
     .filter(r => r.safety !== null) as { food: FoodRow; safety: FoodSafety }[]
 
   const filtered = rows.filter(({ food, safety }) => {
-    const effectiveSafety = (species === 'dog' && ruleMap.get(food.id)?.override_safety) || safety.safety_level
+    const effectiveSafety = ruleMap.get(food.id)?.override_safety || safety.safety_level
     const matchSearch = food.name_ko.includes(search)
     const matchFilter = filterMap[filter] === null || effectiveSafety === filterMap[filter]
     return matchSearch && matchFilter
@@ -110,6 +132,14 @@ export default function FoodsPage() {
   const filterBtnStyle = (f: Filter) => {
     if (filter !== f) return 'bg-white text-gray-500 border border-gray-200'
     return { '전체': 'bg-gray-700 text-white', '안전': 'bg-green-500 text-white', '주의': 'bg-amber-400 text-white', '위험': 'bg-red-500 text-white' }[f]
+  }
+
+  const handleSpeciesChange = (sp: Species) => {
+    setSpecies(sp)
+    setFilter('전체')
+    setSearch('')
+    const breeds = myPets?.[sp] ?? []
+    setBreedFilter(breeds.length > 0 ? breeds[0].id : 'all')
   }
 
   return (
@@ -121,7 +151,7 @@ export default function FoodsPage() {
         {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
           <button
             key={sp}
-            onClick={() => { setSpecies(sp); if (sp === 'cat') setBreedFilter('all') }}
+            onClick={() => handleSpeciesChange(sp)}
             className={cn(
               'flex-1 py-2 rounded-lg text-sm font-medium transition-colors border',
               species === sp ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
@@ -151,8 +181,8 @@ export default function FoodsPage() {
         ))}
       </div>
 
-      {/* 견종 필터 (강아지만) */}
-      {species === 'dog' && myBreeds && myBreeds.length > 0 && (
+      {/* 우리 아이 기준 (강아지/고양이 모두) */}
+      {currentBreeds.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-500 font-medium shrink-0">우리 아이 기준:</span>
           <button
@@ -164,7 +194,7 @@ export default function FoodsPage() {
           >
             전체 기준
           </button>
-          {myBreeds.map(b => (
+          {currentBreeds.map(b => (
             <button
               key={b.id}
               onClick={() => setBreedFilter(b.id)}
@@ -186,7 +216,7 @@ export default function FoodsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map(({ food, safety }) => {
-            const rule = species === 'dog' ? ruleMap.get(food.id) : undefined
+            const rule = ruleMap.get(food.id)
             const effectiveSafety = rule?.override_safety ?? safety.safety_level
             const hasOverride = rule && rule.override_safety !== safety.safety_level
             return (
@@ -207,7 +237,7 @@ export default function FoodsPage() {
                 {safety.reason && <p className="text-sm text-gray-600">{safety.reason}</p>}
                 {rule?.note && (
                   <p className={cn('text-xs px-2.5 py-1.5 rounded-lg font-medium', cautionBg[effectiveSafety])}>
-                    견종 주의: {rule.note}
+                    우리 아이 주의: {rule.note}
                   </p>
                 )}
                 {!rule?.note && safety.caution && (
