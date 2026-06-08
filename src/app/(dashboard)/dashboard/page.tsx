@@ -42,15 +42,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      {/* 헤더 (프로필 버튼은 전역 AppHeader로 이동) */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">우리 아이들</h1>
-        <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
-          + 등록
-        </Link>
-      </div>
-
-      {/* 펫 영역 (요약 카드 + 다른 아이들 목록) */}
+      {/* 펫 영역 (요약 카드 + 다른 아이들 목록). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} />
 
       {/* 접종 예정 알림 */}
