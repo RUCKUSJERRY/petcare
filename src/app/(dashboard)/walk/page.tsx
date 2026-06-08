@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { fetchWalkGuides } from '../_actions/guides'
+import { CardSkeletonList } from '@/components/ui/Skeleton'
 import type { Pet, WalkGuide } from '@/types'
 
 // activity_type 표시 메타
@@ -83,7 +84,7 @@ export default function WalkPage() {
       <PageHeader title="활동 가이드" />
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-400">불러오는 중...</div>
+        <CardSkeletonList count={3} />
       ) : petGuides.length === 0 ? (
         <div className="card text-center py-10 space-y-3">
           <p className="text-gray-400">반려동물을 먼저 등록해주세요</p>

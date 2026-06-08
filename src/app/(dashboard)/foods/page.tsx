@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { CardSkeletonList } from '@/components/ui/Skeleton'
 import type { BreedFoodRule, FoodItem, FoodSafety, Pet, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
@@ -195,7 +196,7 @@ export default function FoodsPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-400">불러오는 중...</div>
+        <CardSkeletonList count={5} />
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">검색 결과가 없어요</div>
       ) : (

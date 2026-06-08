@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { fetchHealthGuides } from '../_actions/guides'
+import { CardSkeletonList } from '@/components/ui/Skeleton'
 import type { HealthGuide, Pet } from '@/types'
 
 export default function HealthPage() {
@@ -68,7 +69,7 @@ export default function HealthPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-400">불러오는 중...</div>
+        <CardSkeletonList count={4} />
       ) : petGuides.length === 0 ? (
         <div className="card text-center py-10 space-y-3">
           <p className="text-gray-400">반려동물을 먼저 등록해주세요</p>

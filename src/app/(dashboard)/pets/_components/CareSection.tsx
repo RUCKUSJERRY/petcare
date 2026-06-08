@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { addMonths, careCategoryIcon, careDefaultIntervalMonths, ddayBadge, ddayToneClass } from '@/lib/utils'
 import type { CareCategory, CareRecord } from '@/types'
 
 const CATEGORIES: CareCategory[] = ['접종', '심장사상충', '구충', '외부기생충', '건강검진', '기타']
@@ -25,13 +25,27 @@ export function CareSection({ petId }: { petId: string }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<CareCategory | '전체'>('전체')
+  // 다음 예정일을 사용자가 직접 건드렸는지 (true면 자동 제안 중단)
+  const [dueTouched, setDueTouched] = useState(false)
+  const today = new Date().toISOString().slice(0, 10)
   const [form, setForm] = useState({
     category: '접종' as CareCategory,
     vaccine_name: '',
-    vaccinated_on: new Date().toISOString().slice(0, 10),
-    next_due_on: '',
+    vaccinated_on: today,
+    next_due_on: addMonths(today, careDefaultIntervalMonths('접종') ?? 0),
     clinic: '',
   })
+
+  // 카테고리·시행일 변경 시 다음 예정일을 권장 주기로 자동 제안(사용자가 안 건드린 경우)
+  const suggestDue = (category: CareCategory, vaccinatedOn: string) => {
+    const months = careDefaultIntervalMonths(category)
+    return months ? addMonths(vaccinatedOn, months) : ''
+  }
+  const setCategory = (category: CareCategory) =>
+    setForm(f => ({ ...f, category, next_due_on: dueTouched ? f.next_due_on : suggestDue(category, f.vaccinated_on) }))
+  const setVaccinatedOn = (vaccinated_on: string) =>
+    setForm(f => ({ ...f, vaccinated_on, next_due_on: dueTouched ? f.next_due_on : suggestDue(f.category, vaccinated_on) }))
 
   const { data: records = [] } = useQuery({
     queryKey: ['care', petId],
@@ -58,7 +72,9 @@ export function CareSection({ petId }: { petId: string }) {
     })
     setSaving(false)
     if (insErr) { setError('저장에 실패했어요'); return }
-    setForm({ category: '접종', vaccine_name: '', vaccinated_on: new Date().toISOString().slice(0, 10), next_due_on: '', clinic: '' })
+    const now = new Date().toISOString().slice(0, 10)
+    setForm({ category: '접종', vaccine_name: '', vaccinated_on: now, next_due_on: suggestDue('접종', now), clinic: '' })
+    setDueTouched(false)
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['care', petId] })
   }
@@ -89,7 +105,7 @@ export function CareSection({ petId }: { petId: string }) {
               <button
                 key={c}
                 type="button"
-                onClick={() => setForm(f => ({ ...f, category: c }))}
+                onClick={() => setCategory(c)}
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                   form.category === c
                     ? 'bg-primary-500 text-white border-primary-500'
@@ -109,15 +125,20 @@ export function CareSection({ petId }: { petId: string }) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">시행일</label>
-              <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
+              <input className="input" type="date" max={today}
                 value={form.vaccinated_on}
-                onChange={e => setForm(f => ({ ...f, vaccinated_on: e.target.value }))} />
+                onChange={e => setVaccinatedOn(e.target.value)} />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">다음 예정일</label>
+              <label className="text-xs text-gray-500 block mb-0.5">
+                다음 예정일
+                {!dueTouched && form.next_due_on && (
+                  <span className="text-primary-500 ml-1">· 권장 주기 자동</span>
+                )}
+              </label>
               <input className="input" type="date"
                 value={form.next_due_on}
-                onChange={e => setForm(f => ({ ...f, next_due_on: e.target.value }))} />
+                onChange={e => { setDueTouched(true); setForm(f => ({ ...f, next_due_on: e.target.value })) }} />
             </div>
           </div>
           <input
@@ -133,11 +154,30 @@ export function CareSection({ petId }: { petId: string }) {
         </div>
       )}
 
+      {/* 카테고리 필터 (기록이 있을 때만) */}
+      {records.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {(['전체', ...CATEGORIES.filter(c => records.some(r => r.category === c))] as const).map(c => (
+            <button
+              key={c}
+              onClick={() => setFilter(c)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                filter === c
+                  ? 'bg-gray-700 text-white border-gray-700'
+                  : 'bg-white text-gray-500 border-gray-200'
+              }`}
+            >
+              {c === '전체' ? '전체' : `${careCategoryIcon(c)} ${c}`}
+            </button>
+          ))}
+        </div>
+      )}
+
       {records.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-3">아직 기록이 없어요</p>
       ) : (
         <div className="space-y-2">
-          {records.map(r => {
+          {records.filter(r => filter === '전체' || r.category === filter).map(r => {
             const badge = r.next_due_on ? ddayBadge(r.next_due_on) : null
             return (
               <div key={r.id} className="border border-gray-100 rounded-lg p-3">

@@ -162,6 +162,25 @@ export function ddayToneClass(tone: 'overdue' | 'today' | 'soon' | 'upcoming'): 
   }[tone]
 }
 
+/** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 */
+export function addMonths(dateStr: string, months: number): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setMonth(d.getMonth() + months)
+  return d.toISOString().slice(0, 10)
+}
+
+/** 건강 관리 카테고리별 권장 재시행 주기(개월). null = 권장 주기 없음 */
+export function careDefaultIntervalMonths(category: string): number | null {
+  return ({
+    접종: 12,
+    심장사상충: 1,
+    구충: 3,
+    외부기생충: 1,
+    건강검진: 12,
+    기타: null,
+  } as Record<string, number | null>)[category] ?? null
+}
+
 /** 건강 관리 카테고리별 아이콘 */
 export function careCategoryIcon(category: string): string {
   return {
