@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { deleteImageByUrl } from '@/lib/upload'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -42,30 +43,15 @@ export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUr
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
-            <div className="text-center space-y-1">
-              <p className="font-bold text-gray-900 text-lg">글 삭제</p>
-              <p className="text-sm text-gray-500">삭제한 글은 복구할 수 없어요. 정말 삭제할까요?</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                disabled={deleting}
-                className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="py-3 rounded-xl bg-red-500 text-white text-sm font-semibold disabled:opacity-60"
-              >
-                {deleting ? '삭제 중...' : '삭제'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmModal
+          title="글 삭제"
+          description="삭제한 글은 복구할 수 없어요. 정말 삭제할까요?"
+          confirmLabel={deleting ? '삭제 중...' : '삭제'}
+          destructive
+          busy={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setShowModal(false)}
+        />
       )}
     </>
   )

@@ -9,6 +9,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import type { Breed, Pet } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { deleteImageByUrl } from '@/lib/upload'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
 import { VaccinationSection } from '../_components/VaccinationSection'
 
@@ -115,7 +116,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     <div className="px-4 py-6 space-y-5">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="text-gray-400">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -238,28 +239,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
       {/* 삭제 확인 모달 */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
-            <div className="text-center space-y-1">
-              <p className="font-bold text-gray-900 text-lg">{pet.name} 삭제</p>
-              <p className="text-sm text-gray-500">삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDelete}
-                className="py-3 rounded-xl bg-red-500 text-white text-sm font-semibold"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmModal
+          title={`${pet.name} 삭제`}
+          description="삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?"
+          confirmLabel="삭제"
+          destructive
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteModal(false)}
+        />
       )}
     </div>
   )

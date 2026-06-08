@@ -3,6 +3,7 @@ import { timeAgo, categoryColor } from '@/lib/utils'
 import Link from 'next/link'
 import type { Pet, PostListItem } from '@/types'
 import { PetSection } from './_components/PetSection'
+import { VaccAlerts } from './_components/VaccAlerts'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -16,7 +17,6 @@ export default async function DashboardPage() {
 
   // 30일 이내 접종 예정 + 지난 접종 알림
   const petIds = (pets ?? []).map((p: Pet) => p.id)
-  const today = new Date().toISOString().slice(0, 10)
   const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   type VaccAlert = { pet_id: string; vaccine_name: string; next_due_on: string }
@@ -45,36 +45,8 @@ export default async function DashboardPage() {
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} />
 
-      {/* 접종 예정 알림 */}
-      {vaccAlerts.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
-          <div className="flex items-center gap-2 mb-1">
-            <span>💉</span>
-            <span className="font-semibold text-amber-800 text-sm">접종 알림</span>
-          </div>
-          {vaccAlerts.slice(0, 3).map((v, i) => {
-            const pet = (pets as Pet[]).find(p => p.id === v.pet_id)
-            const isOverdue = v.next_due_on < today
-            return (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span>{isOverdue ? '⚠️' : '📅'}</span>
-                <span className="text-gray-700 truncate flex-1">
-                  {pet?.name} · {v.vaccine_name}
-                </span>
-                <span className={`text-xs font-medium shrink-0 ${isOverdue ? 'text-red-500' : 'text-amber-600'}`}>
-                  {v.next_due_on}{isOverdue ? ' (지남)' : ''}
-                </span>
-              </div>
-            )
-          })}
-          {vaccAlerts.length > 3 && (
-            <p className="text-xs text-amber-600 pt-0.5">외 {vaccAlerts.length - 3}건 더</p>
-          )}
-          <Link href="/pets" className="block text-xs text-amber-700 font-semibold pt-1">
-            접종 기록 확인하기 →
-          </Link>
-        </div>
-      )}
+      {/* 접종 예정 알림 (선택된 아이는 요약 카드와 중복되어 제외) */}
+      <VaccAlerts pets={(pets ?? []) as Pet[]} alerts={vaccAlerts} />
 
       {/* 최근 커뮤니티 글 */}
       {recentPosts.length > 0 && (
