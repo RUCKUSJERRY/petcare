@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
+import { useSearchParams } from 'next/navigation'
+import type { BreedFoodRule, FoodItem, FoodSafety, Pet, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
 type Filter = typeof FILTERS[number]
@@ -39,9 +40,11 @@ function cn(...c: (string | false | null | undefined)[]) {
 }
 
 type FoodRow = FoodItem & { food_safety: FoodSafety[] }
-type BreedOption = { id: string; name: string }
 
 export default function FoodsPage() {
+  const searchParams = useSearchParams()
+  const selectedPetId = searchParams.get('pet')
+
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
   const [species, setSpecies] = useState<Species>('dog')
@@ -60,45 +63,44 @@ export default function FoodsPage() {
     },
   })
 
-  // 내 반려동물의 견종 목록 (강아지 + 고양이 모두)
+  // 내 반려동물 목록 (species + breed 정보 포함)
   const { data: myPets } = useQuery({
-    queryKey: ['my-pets-breeds'],
+    queryKey: ['my-pets-food'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return { dog: [] as BreedOption[], cat: [] as BreedOption[] }
+      if (!user) return [] as Pet[]
       const { data } = await supabase
         .from('pets')
-        .select('breed_id, species, breed:breeds(name_ko)')
+        .select('id, name, species, breed_id, breed:breeds(name_ko)')
         .eq('user_id', user.id)
-      type Row = { breed_id: string; species: string; breed?: { name_ko: string } }
-      const rows = (data ?? []) as unknown as Row[]
-      const result: Record<Species, BreedOption[]> = { dog: [], cat: [] }
-      const seen: Record<Species, Set<string>> = { dog: new Set(), cat: new Set() }
-      for (const r of rows) {
-        if (!r.breed_id) continue
-        const sp = r.species as Species
-        if (!seen[sp].has(r.breed_id)) {
-          seen[sp].add(r.breed_id)
-          result[sp].push({ id: r.breed_id, name: r.breed?.name_ko ?? '' })
-        }
-      }
-      return result
+        .order('created_at')
+      return (data ?? []) as unknown as Pet[]
     },
   })
 
-  // 첫 로드: 고양이만 있으면 cat 탭으로 자동 전환
+  // 선택된 펫이 바뀌면 species/breed 자동 세팅
   useEffect(() => {
-    if (!myPets || initialized.current) return
-    initialized.current = true
-    if (myPets.cat.length > 0 && myPets.dog.length === 0) {
-      setSpecies('cat')
-      setBreedFilter(myPets.cat[0].id)
-    } else if (myPets.dog.length > 0) {
-      setBreedFilter(myPets.dog[0].id)
+    if (!myPets) return
+    if (selectedPetId) {
+      const pet = myPets.find(p => p.id === selectedPetId)
+      if (pet) {
+        setSpecies(pet.species)
+        setBreedFilter(pet.breed_id ?? 'all')
+        return
+      }
     }
-  }, [myPets])
+    // 선택된 펫 없음 → 최초 1회만 기본값 설정
+    if (!initialized.current) {
+      initialized.current = true
+      const first = myPets[0]
+      if (first) {
+        setSpecies(first.species)
+        setBreedFilter(first.breed_id ?? 'all')
+      }
+    }
+  }, [selectedPetId, myPets])
 
-  // 선택된 견종의 음식 규칙
+  // 견종별 음식 규칙
   const { data: breedRules } = useQuery({
     queryKey: ['breed-food-rules', breedFilter],
     enabled: breedFilter !== 'all',
@@ -114,8 +116,6 @@ export default function FoodsPage() {
   const ruleMap = new Map<string, BreedFoodRule>(
     (breedRules ?? []).map(r => [r.food_id, r])
   )
-
-  const currentBreeds = myPets?.[species] ?? []
 
   // 선택된 종의 안전도만 추출
   const rows = (foods ?? [])
@@ -134,33 +134,46 @@ export default function FoodsPage() {
     return { '전체': 'bg-gray-700 text-white', '안전': 'bg-green-500 text-white', '주의': 'bg-amber-400 text-white', '위험': 'bg-red-500 text-white' }[f]
   }
 
-  const handleSpeciesChange = (sp: Species) => {
-    setSpecies(sp)
-    setFilter('전체')
-    setSearch('')
-    const breeds = myPets?.[sp] ?? []
-    setBreedFilter(breeds.length > 0 ? breeds[0].id : 'all')
-  }
+  // 현재 선택된 펫 이름 (헤더에 표시)
+  const activePet = selectedPetId ? myPets?.find(p => p.id === selectedPetId) : null
+  const breedName = (activePet?.breed as unknown as { name_ko: string } | undefined)?.name_ko
+
+  // 펫 선택기가 없는 경우(펫 1마리 이하)에만 종 탭 노출
+  const showSpeciesTabs = !myPets || myPets.length <= 1
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">음식 안전 정보</h1>
-
-      {/* 종 선택 */}
-      <div className="flex gap-2">
-        {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
-          <button
-            key={sp}
-            onClick={() => handleSpeciesChange(sp)}
-            className={cn(
-              'flex-1 py-2 rounded-lg text-sm font-medium transition-colors border',
-              species === sp ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-900">음식 안전 정보</h1>
+        {activePet && (
+          <span className="text-sm text-primary-600 font-medium">
+            {activePet.species === 'cat' ? '🐱' : '🐶'} {activePet.name} 기준
+          </span>
+        )}
       </div>
+
+      {/* 펫이 없거나 1마리일 때만 종 탭 직접 노출 */}
+      {showSpeciesTabs && (
+        <div className="flex gap-2">
+          {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
+            <button
+              key={sp}
+              onClick={() => {
+                setSpecies(sp)
+                setFilter('전체')
+                setSearch('')
+                setBreedFilter('all')
+              }}
+              className={cn(
+                'flex-1 py-2 rounded-lg text-sm font-medium transition-colors border',
+                species === sp ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <input
         className="input"
@@ -180,34 +193,6 @@ export default function FoodsPage() {
           </button>
         ))}
       </div>
-
-      {/* 우리 아이 기준 (강아지/고양이 모두) */}
-      {currentBreeds.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-500 font-medium shrink-0">우리 아이 기준:</span>
-          <button
-            onClick={() => setBreedFilter('all')}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
-              breedFilter === 'all' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
-            )}
-          >
-            전체 기준
-          </button>
-          {currentBreeds.map(b => (
-            <button
-              key={b.id}
-              onClick={() => setBreedFilter(b.id)}
-              className={cn(
-                'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
-                breedFilter === b.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
-              )}
-            >
-              {b.name}
-            </button>
-          ))}
-        </div>
-      )}
 
       {isLoading ? (
         <div className="text-center py-12 text-gray-400">불러오는 중...</div>
@@ -237,7 +222,7 @@ export default function FoodsPage() {
                 {safety.reason && <p className="text-sm text-gray-600">{safety.reason}</p>}
                 {rule?.note && (
                   <p className={cn('text-xs px-2.5 py-1.5 rounded-lg font-medium', cautionBg[effectiveSafety])}>
-                    우리 아이 주의: {rule.note}
+                    {breedName ?? '우리 아이'} 주의: {rule.note}
                   </p>
                 )}
                 {!rule?.note && safety.caution && (
@@ -254,7 +239,6 @@ export default function FoodsPage() {
         </div>
       )}
 
-      {/* 면책 안내 */}
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
         ⓘ 본 정보는 ASPCA·AKC 등 공개 자료를 참고한 일반적인 안내이며, 개체별 건강 상태에 따라 다를 수 있어요.
         이상 증상이 있거나 급여 여부가 불확실하면 반드시 수의사와 상담하세요.

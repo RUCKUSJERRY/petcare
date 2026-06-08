@@ -10,16 +10,20 @@ const intensityColor = (i: string) => ({
   '활발': 'bg-orange-100 text-orange-700',
 }[i] ?? 'bg-gray-100 text-gray-700')
 
-export default async function WalkPage() {
+export default async function WalkPage({ searchParams }: { searchParams: { pet?: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: pets }, allGuides] = await Promise.all([
+  const [{ data: petsAll }, allGuides] = await Promise.all([
     supabase.from('pets').select('*, breed:breeds(*)').eq('user_id', user!.id),
     getWalkGuides(), // 캐시된 전체 가이드 (DB 왕복 없음)
   ])
 
-  const petGuides = (pets ?? []).map((pet: Pet) => {
+  const pets = searchParams.pet
+    ? (petsAll ?? []).filter((p: Pet) => p.id === searchParams.pet)
+    : (petsAll ?? [])
+
+  const petGuides = pets.map((pet: Pet) => {
     const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
     const size = pet.breed?.size_category ?? null
     // 나이대 매칭 후보를 메모리에서 필터

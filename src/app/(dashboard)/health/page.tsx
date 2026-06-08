@@ -4,17 +4,21 @@ import { getHealthGuides } from '@/lib/staticData'
 import Link from 'next/link'
 import type { Pet } from '@/types'
 
-export default async function HealthPage() {
+export default async function HealthPage({ searchParams }: { searchParams: { pet?: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: pets }, allGuides] = await Promise.all([
+  const [{ data: petsAll }, allGuides] = await Promise.all([
     supabase.from('pets').select('*, breed:breeds(*)').eq('user_id', user!.id),
     getHealthGuides(), // 캐시된 전체 가이드 (DB 왕복 없음)
   ])
 
+  const pets = searchParams.pet
+    ? (petsAll ?? []).filter((p: Pet) => p.id === searchParams.pet)
+    : (petsAll ?? [])
+
   // 각 반려동물의 현재 나이에 맞는 건강 가이드 (메모리 필터)
-  const petGuides = (pets ?? []).map((pet: Pet) => {
+  const petGuides = pets.map((pet: Pet) => {
     const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
     const size = pet.breed?.size_category ?? null
 
