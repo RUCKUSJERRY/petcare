@@ -1,0 +1,93 @@
+'use client'
+
+import { useSelectedPet } from '@/contexts/SelectedPetContext'
+import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import Link from 'next/link'
+import type { Pet } from '@/types'
+
+type VaccAlert = { pet_id: string; vaccine_name: string; next_due_on: string }
+
+const QUICK_LINKS = [
+  { href: '/foods', emoji: '🥩', label: '음식' },
+  { href: '/health', emoji: '🏥', label: '건강' },
+  { href: '/walk', emoji: '🎾', label: '활동' },
+]
+
+/**
+ * 헤더에서 선택한 아이의 요약 카드.
+ * 선택된 아이가 없으면 아무것도 렌더링하지 않는다.
+ */
+export function SelectedPetSummary({
+  pets,
+  vaccAlerts,
+}: {
+  pets: Pet[]
+  vaccAlerts: VaccAlert[]
+}) {
+  const { selectedPetId } = useSelectedPet()
+  if (!selectedPetId) return null
+
+  const pet = pets.find(p => p.id === selectedPetId)
+  if (!pet) return null
+
+  const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
+  const today = new Date().toISOString().slice(0, 10)
+  const nextVacc = vaccAlerts
+    .filter(v => v.pet_id === pet.id)
+    .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
+
+  return (
+    <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-5 text-white shadow-sm">
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
+          {pet.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
+          ) : (pet.species === 'cat' ? '🐱' : '🐶')}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold truncate">{pet.name}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
+              {age.lifeStage}
+            </span>
+          </div>
+          <p className="text-sm text-white/80 mt-0.5 truncate">
+            {pet.breed?.name_ko} · {age.displayText}
+          </p>
+        </div>
+        <Link
+          href={`/pets/${pet.id}`}
+          className="text-xs bg-white/20 hover:bg-white/30 rounded-full px-3 py-1.5 font-medium shrink-0 transition-colors"
+        >
+          상세
+        </Link>
+      </div>
+
+      {/* 다음 접종 알림 */}
+      {nextVacc && (
+        <div className="mt-3 flex items-center gap-2 bg-white/15 rounded-lg px-3 py-2 text-sm">
+          <span>{nextVacc.next_due_on < today ? '⚠️' : '💉'}</span>
+          <span className="flex-1 truncate">{nextVacc.vaccine_name}</span>
+          <span className="text-xs text-white/80 shrink-0">
+            {nextVacc.next_due_on}{nextVacc.next_due_on < today ? ' (지남)' : ''}
+          </span>
+        </div>
+      )}
+
+      {/* 맞춤 정보 바로가기 (선택된 아이 기준으로 필터됨) */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {QUICK_LINKS.map(l => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className="flex flex-col items-center gap-0.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 transition-colors"
+          >
+            <span className="text-lg leading-none">{l.emoji}</span>
+            <span className="text-xs font-medium">{l.label}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}

@@ -2,8 +2,9 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type { BreedFoodRule, FoodItem, FoodSafety, Pet, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
@@ -42,10 +43,6 @@ function cn(...c: (string | false | null | undefined)[]) {
 type FoodRow = FoodItem & { food_safety: FoodSafety[] }
 
 export default function FoodsPage() {
-  return <FoodsContent />
-}
-
-function FoodsContent() {
   const { selectedPetId } = useSelectedPet()
 
   const [search, setSearch] = useState('')
@@ -146,10 +143,10 @@ function FoodsContent() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">음식 안전 정보</h1>
+      <div className="flex items-center justify-between gap-2">
+        <PageHeader title="음식 안전 정보" />
         {activePet && (
-          <span className="text-sm text-primary-600 font-medium">
+          <span className="text-sm text-primary-600 font-medium shrink-0">
             {activePet.species === 'cat' ? '🐱' : '🐶'} {activePet.name} 기준
           </span>
         )}

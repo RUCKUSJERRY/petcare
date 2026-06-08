@@ -11,6 +11,9 @@ const navItems = [
   { href: '/pets', label: '내 아이', icon: '🐾' },
 ]
 
+// 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화)
+const INFO_SUBPATHS = ['/foods', '/health', '/walk']
+
 export function BottomNav() {
   const pathname = usePathname()
 
@@ -18,7 +21,10 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
       <div className="max-w-lg mx-auto flex">
         {navItems.map(item => {
-          const isActive = pathname.startsWith(item.href)
+          const isActive =
+            item.href === '/info'
+              ? pathname.startsWith('/info') || INFO_SUBPATHS.some(p => pathname.startsWith(p))
+              : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}

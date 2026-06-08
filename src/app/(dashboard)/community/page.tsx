@@ -86,19 +86,20 @@ export default async function CommunityPage({
 
         {/* 카테고리 필터 */}
         <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
-          <FilterChip label="전체" href={buildUrl({ mine, sort, q })} active={!activeCategory && !mine} />
+          {/* 칩은 상호배타(라디오)로 동작: 전체/카테고리/내 글 중 하나만 선택 */}
+          <FilterChip label="전체" href={buildUrl({ sort, q })} active={!activeCategory && !mine} />
           {CATEGORIES.map(c => (
             <FilterChip
               key={c}
               label={c}
-              href={buildUrl({ category: c, mine, sort, q })}
-              active={activeCategory === c}
+              href={buildUrl({ category: c, sort, q })}
+              active={activeCategory === c && !mine}
             />
           ))}
           {user && (
             <FilterChip
               label="내 글"
-              href={buildUrl({ category: activeCategory, mine: !mine, sort, q })}
+              href={buildUrl({ mine: true, sort, q })}
               active={mine}
             />
           )}

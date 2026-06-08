@@ -5,6 +5,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, guideMatchScore, lifeStageColor } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type { HealthGuide, Pet } from '@/types'
 
 export default function HealthPage() {
@@ -62,7 +63,7 @@ export default function HealthPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">건강 가이드</h1>
+      <PageHeader title="건강 가이드" />
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3">
         ⓘ 일반적인 참고 정보예요. 우리 아이의 정확한 건강 상태와 진단은 수의사와 상담하세요.

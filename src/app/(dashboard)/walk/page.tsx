@@ -5,6 +5,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor, pickBestPerActivityType } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type { Pet, WalkGuide } from '@/types'
 
 // activity_type 표시 메타
@@ -81,7 +82,7 @@ export default function WalkPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">활동 가이드</h1>
+      <PageHeader title="활동 가이드" />
 
       {isLoading ? (
         <div className="text-center py-12 text-gray-400">불러오는 중...</div>

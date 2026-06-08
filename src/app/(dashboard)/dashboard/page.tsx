@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, lifeStageColor, timeAgo, categoryColor } from '@/lib/utils'
 import Link from 'next/link'
 import type { Pet, PostListItem } from '@/types'
+import { SelectedPetSummary } from './_components/SelectedPetSummary'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -41,24 +42,19 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      {/* 헤더 */}
+      {/* 헤더 (프로필 버튼은 전역 AppHeader로 이동) */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">우리 아이들</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/profile"
-            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50"
-            aria-label="프로필 편집"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </Link>
-          <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
-            + 등록
-          </Link>
-        </div>
+        <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
+          + 등록
+        </Link>
       </div>
+
+      {/* 선택된 아이 요약 (헤더에서 선택 시 표시) */}
+      <SelectedPetSummary
+        pets={(pets ?? []) as Pet[]}
+        vaccAlerts={vaccAlerts}
+      />
 
       {/* 반려동물 카드 목록 */}
       {!pets || pets.length === 0 ? (
