@@ -151,6 +151,26 @@ export interface Comment {
   author?: Pick<Profile, 'display_name' | 'avatar_url'>
 }
 
+// ─── 알림 ────────────────────────────────────────────────────
+
+export type NotificationType = 'comment' | 'like'
+
+/** notification_list 뷰: 알림 + actor 프로필 + 게시글 제목 */
+export interface NotificationItem {
+  id: string
+  recipient_id: string
+  actor_id: string
+  type: NotificationType
+  post_id: string | null
+  comment_id: string | null
+  read: boolean
+  created_at: string
+  // join
+  actor_name: string | null
+  actor_avatar: string | null
+  post_title: string | null
+}
+
 // ─── 내 아이 기록 ────────────────────────────────────────────
 
 export interface WeightLog {
