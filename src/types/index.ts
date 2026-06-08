@@ -86,6 +86,7 @@ export interface WalkGuide {
   // breed_id, size_category 모두 null = 전체 공통
   age_month_min: number
   age_month_max: number
+  activity_type: string         // '산책' | '실내놀이' | '인지훈련' | '사냥놀이' | '실내탐험'
   daily_minutes: number
   intensity: '가벼움' | '보통' | '활발'
   tips: string | null

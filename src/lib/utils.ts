@@ -113,6 +113,23 @@ export function pickTopGuide<T extends { breed_id: string | null; size_category:
 }
 
 /**
+ * activity_type 별로 가장 우선순위 높은 가이드 1건씩 반환
+ */
+export function pickBestPerActivityType<
+  T extends { breed_id: string | null; size_category: string | null; activity_type: string }
+>(guides: T[], breedId: string, sizeCategory: string | null): Map<string, T> {
+  const result = new Map<string, T>()
+  for (const g of guides) {
+    const score = guideMatchScore(g, breedId, sizeCategory)
+    const current = result.get(g.activity_type)
+    if (!current || score > guideMatchScore(current, breedId, sizeCategory)) {
+      result.set(g.activity_type, g)
+    }
+  }
+  return result
+}
+
+/**
  * 커뮤니티 카테고리 색상
  */
 export function categoryColor(category: string): string {

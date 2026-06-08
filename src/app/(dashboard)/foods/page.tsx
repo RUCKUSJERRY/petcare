@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { Suspense, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import type { BreedFoodRule, FoodItem, FoodSafety, Pet, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
@@ -42,16 +42,11 @@ function cn(...c: (string | false | null | undefined)[]) {
 type FoodRow = FoodItem & { food_safety: FoodSafety[] }
 
 export default function FoodsPage() {
-  return (
-    <Suspense fallback={<div className="px-4 py-12 text-center text-gray-400">불러오는 중...</div>}>
-      <FoodsContent />
-    </Suspense>
-  )
+  return <FoodsContent />
 }
 
 function FoodsContent() {
-  const searchParams = useSearchParams()
-  const selectedPetId = searchParams.get('pet')
+  const { selectedPetId } = useSelectedPet()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
