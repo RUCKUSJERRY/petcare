@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
+import { PushToggle } from '@/components/ui/PushToggle'
 import { deleteImageByUrl } from '@/lib/upload'
 
 export default function ProfilePage() {
@@ -120,6 +121,11 @@ export default function ProfilePage() {
         <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
           {saving ? '저장 중...' : done ? '저장됐어요 ✓' : '저장하기'}
         </button>
+
+        {/* 알림 설정 */}
+        <div className="border-t border-gray-100 pt-4">
+          <PushToggle />
+        </div>
       </div>
     </div>
   )

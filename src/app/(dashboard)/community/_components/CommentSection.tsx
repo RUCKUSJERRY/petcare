@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { timeAgo } from '@/lib/utils'
 import { useRef, useState } from 'react'
+import { notifyNewComment } from '../_actions'
 import type { Comment } from '@/types'
 
 type Author = { display_name: string; avatar_url: string | null }
@@ -57,6 +58,8 @@ export function CommentSection({
 
     const author = await getMyAuthor(user.id)
     setComments(prev => [...prev, { ...(data as Comment), author }])
+    // 수신자에게 푸시 (베스트 에포트, 실패 무시)
+    notifyNewComment((data as Comment).id).catch(() => {})
     return true
   }
 
