@@ -162,11 +162,10 @@ export function ddayToneClass(tone: 'overdue' | 'today' | 'soon' | 'upcoming'): 
   }[tone]
 }
 
-/** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 */
+/** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 (시간대 영향 없이 UTC 기준 계산) */
 export function addMonths(dateStr: string, months: number): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setMonth(d.getMonth() + months)
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1 + months, d)).toISOString().slice(0, 10)
 }
 
 /** 건강 관리 카테고리별 권장 재시행 주기(개월). null = 권장 주기 없음 */

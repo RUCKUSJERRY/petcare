@@ -1,9 +1,9 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor, pickBestPerActivityType } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
+import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { fetchWalkGuides } from '../_actions/guides'
@@ -33,21 +33,8 @@ const intensityColor = (i: string) => ({
 
 export default function WalkPage() {
   const { selectedPetId } = useSelectedPet()
-  const supabase = createClient()
 
-  const { data: petsAll, isLoading: petsLoading } = useQuery({
-    queryKey: ['my-pets-full'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return [] as Pet[]
-      const { data } = await supabase
-        .from('pets')
-        .select('*, breed:breeds(*)')
-        .eq('user_id', user.id)
-        .order('created_at')
-      return (data ?? []) as Pet[]
-    },
-  })
+  const { data: petsAll, isLoading: petsLoading } = useMyPets()
 
   const { data: allGuides, isLoading: guidesLoading } = useQuery({
     queryKey: ['walk-guides'],

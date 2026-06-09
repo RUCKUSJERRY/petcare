@@ -3,13 +3,14 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Breed, Species } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 
 export default function NewPetPage() {
   const router = useRouter()
   const supabase = createClient()
+  const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -50,6 +51,7 @@ export default function NewPetPage() {
       setError('등록에 실패했어요. 잠시 후 다시 시도해주세요.')
       return
     }
+    queryClient.invalidateQueries({ queryKey: ['my-pets'] })
     router.push('/dashboard')
   }
 

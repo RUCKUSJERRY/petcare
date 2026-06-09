@@ -85,6 +85,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       deleteImageByUrl(pet.photo_url)
     }
     await refetch()
+    // 공용 펫 목록 캐시도 갱신 (헤더/다른 화면 반영)
+    queryClient.invalidateQueries({ queryKey: ['my-pets'] })
     setEditing(false)
   }
 

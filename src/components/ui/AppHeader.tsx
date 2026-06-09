@@ -3,30 +3,18 @@
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn } from '@/lib/utils'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
+import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { NotificationBell } from './NotificationBell'
-import type { Pet } from '@/types'
 
 export function AppHeader() {
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const supabase = createClient()
   const queryClient = useQueryClient()
 
-  const { data: pets } = useQuery({
-    queryKey: ['my-pets-header'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return [] as Pet[]
-      const { data } = await supabase
-        .from('pets')
-        .select('id, name, species, photo_url')
-        .eq('user_id', user.id)
-        .order('created_at')
-      return (data ?? []) as Pet[]
-    },
-  })
+  const { data: pets } = useMyPets()
 
   // 자가 복구: 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
   useEffect(() => {

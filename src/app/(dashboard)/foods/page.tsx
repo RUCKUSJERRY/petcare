@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
+import { useMyPets } from '@/hooks/useMyPets'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
-import type { BreedFoodRule, FoodItem, FoodSafety, Pet, Species } from '@/types'
+import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
 type Filter = typeof FILTERS[number]
@@ -65,19 +66,7 @@ export default function FoodsPage() {
   })
 
   // 내 반려동물 목록 (species + breed 정보 포함)
-  const { data: myPets } = useQuery({
-    queryKey: ['my-pets-food'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return [] as Pet[]
-      const { data } = await supabase
-        .from('pets')
-        .select('id, name, species, breed_id, breed:breeds(name_ko)')
-        .eq('user_id', user.id)
-        .order('created_at')
-      return (data ?? []) as unknown as Pet[]
-    },
-  })
+  const { data: myPets } = useMyPets()
 
   // 선택된 펫이 바뀌면 species/breed 자동 세팅
   useEffect(() => {
