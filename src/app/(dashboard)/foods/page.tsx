@@ -12,6 +12,12 @@ import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
 type Filter = typeof FILTERS[number]
 
+const CATEGORIES = ['전체', '육류', '채소', '과일', '유제품', '기타'] as const
+type CategoryFilter = typeof CATEGORIES[number]
+const categoryIcon: Record<string, string> = {
+  육류: '🥩', 채소: '🥦', 과일: '🍎', 유제품: '🥛', 기타: '🍽️',
+}
+
 const filterMap: Record<Filter, string | null> = {
   '전체': null, '안전': 'safe', '주의': 'caution', '위험': 'dangerous',
 }
@@ -49,6 +55,7 @@ export default function FoodsPage() {
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
+  const [category, setCategory] = useState<CategoryFilter>('전체')
   const [species, setSpecies] = useState<Species>('dog')
   const [breedFilter, setBreedFilter] = useState<string>('all')
   const initialized = useRef(false)
@@ -116,7 +123,8 @@ export default function FoodsPage() {
     const effectiveSafety = ruleMap.get(food.id)?.override_safety || safety.safety_level
     const matchSearch = food.name_ko.includes(search)
     const matchFilter = filterMap[filter] === null || effectiveSafety === filterMap[filter]
-    return matchSearch && matchFilter
+    const matchCategory = category === '전체' || food.category === category
+    return matchSearch && matchFilter && matchCategory
   })
 
   const filterBtnStyle = (f: Filter) => {
@@ -151,6 +159,7 @@ export default function FoodsPage() {
               onClick={() => {
                 setSpecies(sp)
                 setFilter('전체')
+                setCategory('전체')
                 setSearch('')
                 setBreedFilter('all')
               }}
@@ -180,6 +189,22 @@ export default function FoodsPage() {
             className={cn('px-3 py-1.5 rounded-full text-sm font-medium transition-colors', filterBtnStyle(f))}
           >
             {f}
+          </button>
+        ))}
+      </div>
+
+      {/* 분류 필터 */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4">
+        {CATEGORIES.map(c => (
+          <button
+            key={c}
+            onClick={() => setCategory(c)}
+            className={cn(
+              'px-3 py-1 rounded-full text-xs font-medium border shrink-0 transition-colors',
+              category === c ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+            )}
+          >
+            {c === '전체' ? '전체' : `${categoryIcon[c]} ${c}`}
           </button>
         ))}
       </div>
