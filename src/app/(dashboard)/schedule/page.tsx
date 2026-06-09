@@ -3,8 +3,10 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
 import type { CareCategory } from '@/types'
 
@@ -20,6 +22,9 @@ type ScheduleItem = {
 
 export default function SchedulePage() {
   const supabase = createClient()
+  const { selectedPetId } = useSelectedPet()
+  const [filter, setFilter] = useState<string>('all') // 'all' | petId
+  const initialized = useRef(false)
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['care-schedule'],
@@ -51,9 +56,25 @@ export default function SchedulePage() {
     },
   })
 
+  // 일정이 있는 펫 목록 (필터 칩용)
+  const petsInItems = Array.from(
+    new Map(items.map(i => [i.pet_id, { id: i.pet_id, name: i.pet_name, species: i.pet_species }])).values()
+  )
+
+  // 최초 로드 시: 선택된 아이에게 일정이 있으면 그 아이 기준으로 시작
+  useEffect(() => {
+    if (initialized.current || items.length === 0) return
+    initialized.current = true
+    if (selectedPetId && items.some(i => i.pet_id === selectedPetId)) {
+      setFilter(selectedPetId)
+    }
+  }, [items, selectedPetId])
+
+  const visible = filter === 'all' ? items : items.filter(i => i.pet_id === filter)
+
   // 지남 / 다가오는 일정으로 그룹
-  const overdue = items.filter(i => daysUntil(i.next_due_on) < 0)
-  const upcoming = items.filter(i => daysUntil(i.next_due_on) >= 0)
+  const overdue = visible.filter(i => daysUntil(i.next_due_on) < 0)
+  const upcoming = visible.filter(i => daysUntil(i.next_due_on) >= 0)
 
   const Row = ({ i }: { i: ScheduleItem }) => {
     const badge = ddayBadge(i.next_due_on)
@@ -82,6 +103,31 @@ export default function SchedulePage() {
     <div className="px-4 py-6 space-y-5">
       <PageHeader title="건강 일정" fallbackHref="/dashboard" />
 
+      {/* 펫 필터 (2마리 이상 일정이 있을 때만) */}
+      {!isLoading && petsInItems.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              filter === 'all' ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-500 border-gray-200'
+            }`}
+          >
+            전체
+          </button>
+          {petsInItems.map(p => (
+            <button
+              key={p.id}
+              onClick={() => setFilter(p.id)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                filter === p.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+              }`}
+            >
+              {p.species === 'cat' ? '🐱' : '🐶'} {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <CardSkeletonList count={4} />
       ) : items.length === 0 ? (
@@ -89,6 +135,10 @@ export default function SchedulePage() {
           <div className="text-4xl mb-3">🗓️</div>
           다음 예정일이 등록된 건강 기록이 없어요.
           <p className="text-xs mt-2">아이 상세 → 건강 관리 기록에서 다음 예정일을 등록해보세요.</p>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="card text-center py-12 text-gray-400">
+          이 아이는 예정된 건강 일정이 없어요.
         </div>
       ) : (
         <div className="space-y-5">
