@@ -18,6 +18,7 @@ export function PushToggle() {
   const [enabled, setEnabled] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [diag, setDiag] = useState<string | null>(null)
 
   useEffect(() => {
     const ok =
@@ -82,6 +83,24 @@ export function PushToggle() {
     }
   }
 
+  const sendTest = async () => {
+    setBusy(true); setError(null); setDiag(null)
+    try {
+      const res = await fetch('/api/push/test', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) { setError('테스트 요청 실패'); return }
+      // 진단 결과 안내
+      if (!d.vapidConfigured) setDiag('⚠️ 서버에 VAPID 키가 설정되지 않았어요 (환경변수 확인 필요)')
+      else if (!d.serviceRoleConfigured) setDiag('⚠️ 서버에 SERVICE_ROLE 키가 없어요 (환경변수 확인 필요)')
+      else if (d.subscriptions === 0) setDiag('⚠️ 저장된 구독이 없어요. 토글을 껐다 다시 켜보세요')
+      else setDiag('✅ 발송했어요. 잠시 후 OS 알림(우측 하단)을 확인하세요')
+    } catch {
+      setError('테스트 중 오류가 발생했어요')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
@@ -103,7 +122,13 @@ export function PushToggle() {
           <span className="text-xs text-gray-400 shrink-0">미지원 기기</span>
         )}
       </div>
+      {enabled && (
+        <button onClick={sendTest} disabled={busy} className="text-xs text-primary-600 font-medium disabled:opacity-60">
+          테스트 알림 보내기
+        </button>
+      )}
       {error && <p className="text-xs text-red-500">{error}</p>}
+      {diag && <p className="text-xs text-gray-500">{diag}</p>}
     </div>
   )
 }
