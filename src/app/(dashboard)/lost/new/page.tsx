@@ -15,12 +15,17 @@ export default function NewLostPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const geocoderRef = useRef<any>(null)
+  const mapsRef = useRef<any>(null)
+  const mapObjRef = useRef<any>(null)
+  const placeRef = useRef<(ll: any) => void>(() => {})
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null)
   const [areaText, setAreaText] = useState('')
+  const [query, setQuery] = useState('')
+  const [searchError, setSearchError] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', species: 'dog' as Species, gender: '', lost_at: new Date().toISOString().slice(0, 10),
     description: '', contact: '', contact_public: true,
@@ -31,8 +36,10 @@ export default function NewLostPage() {
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
     const seoul = new maps.LatLng(37.5665, 126.978)
     const map = new maps.Map(el, { center: seoul, level: 5 })
-    const marker = new maps.Marker({ position: seoul, map })
+    const marker = new maps.Marker({ position: seoul, map, draggable: true })
     geocoderRef.current = new maps.services.Geocoder()
+    mapsRef.current = maps
+    mapObjRef.current = map
 
     const place = (latlng: any) => {
       marker.setPosition(latlng)
@@ -44,7 +51,10 @@ export default function NewLostPage() {
         }
       })
     }
+    placeRef.current = place
     maps.event.addListener(map, 'click', (e: any) => place(e.latLng))
+    // 마커 드래그로도 위치 지정
+    maps.event.addListener(marker, 'dragend', () => place(marker.getPosition()))
 
     navigator.geolocation?.getCurrentPosition(
       p => { const ll = new maps.LatLng(p.coords.latitude, p.coords.longitude); map.setCenter(ll); place(ll) },
@@ -52,6 +62,26 @@ export default function NewLostPage() {
       { timeout: 4000 }
     )
   }, [])
+
+  // 주소/장소 검색 → 지도 이동 + 핀 지정
+  const searchAddress = () => {
+    const maps = mapsRef.current
+    const map = mapObjRef.current
+    const q = query.trim()
+    if (!maps || !map || !q) return
+    setSearchError(null)
+    const places = new maps.services.Places()
+    places.keywordSearch(q, (data: any[], status: string) => {
+      if (status === maps.services.Status.OK && data.length > 0) {
+        const ll = new maps.LatLng(Number(data[0].y), Number(data[0].x))
+        map.setCenter(ll)
+        map.setLevel(4)
+        placeRef.current(ll)
+      } else {
+        setSearchError('검색 결과가 없어요. 다른 키워드로 시도해보세요.')
+      }
+    })
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,8 +166,22 @@ export default function NewLostPage() {
             </div>
           ) : (
             <>
+              {/* 주소/장소 검색 */}
+              <div className="flex gap-2 mb-2">
+                <input
+                  className="input flex-1"
+                  placeholder="주소·장소 검색 (예: 강남역, 역삼동)"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchAddress() } }}
+                />
+                <button type="button" onClick={searchAddress} className="btn-secondary px-4 text-sm shrink-0">
+                  검색
+                </button>
+              </div>
+              {searchError && <p className="text-xs text-red-500 mb-1">{searchError}</p>}
               <div ref={mapRef} className="w-full h-56 rounded-xl border border-gray-200 overflow-hidden bg-gray-100" />
-              <p className="text-xs text-gray-400 mt-1">지도를 탭해 실종 위치를 표시하세요.</p>
+              <p className="text-xs text-gray-400 mt-1">검색하거나 지도를 탭/핀을 드래그해 실종 위치를 표시하세요.</p>
             </>
           )}
         </div>
