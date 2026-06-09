@@ -18,29 +18,49 @@ export function CommentSection({
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const content = text.trim()
     if (!content || sending) return
     setSending(true)
+    setError(null)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
+      setError('로그인이 필요해요')
       setSending(false)
       return
     }
 
-    const { data, error } = await supabase
+    // 1) 댓글 저장 (임베드 없이 단순 insert → 트리거/관계 이슈와 분리)
+    const { data, error: insErr } = await supabase
       .from('comments')
       .insert({ post_id: postId, user_id: user.id, content })
-      .select('*, author:profiles(display_name, avatar_url)')
+      .select('*')
       .single()
 
-    if (!error && data) {
-      setComments(prev => [...prev, data as unknown as Comment])
-      setText('')
+    if (insErr || !data) {
+      setError('댓글 저장에 실패했어요. 다시 시도해주세요.')
+      setSending(false)
+      return
     }
+
+    // 2) 작성자 표시 정보는 내 프로필에서 채움
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const newComment = {
+      ...(data as Comment),
+      author: profile ?? { display_name: '익명의 보호자', avatar_url: null },
+    } as unknown as Comment
+
+    setComments(prev => [...prev, newComment])
+    setText('')
     setSending(false)
   }
 
@@ -74,6 +94,7 @@ export function CommentSection({
           등록
         </button>
       </form>
+      {error && <p className="text-sm text-red-500 -mt-2">{error}</p>}
 
       {/* 목록 */}
       <div className="space-y-3">
