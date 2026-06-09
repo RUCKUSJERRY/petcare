@@ -22,12 +22,29 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   if (!postData) notFound()
   const post = postData as PostListItem
 
+  // 댓글 조회 (comments→profiles 직접 FK가 없어 임베드 대신 앱에서 작성자 조인)
   const { data: commentData } = await supabase
     .from('comments')
-    .select('*, author:profiles(display_name, avatar_url)')
+    .select('*')
     .eq('post_id', params.id)
     .order('created_at', { ascending: true })
-  const comments = (commentData ?? []) as unknown as Comment[]
+  const rawComments = (commentData ?? []) as Comment[]
+
+  const authorIds = Array.from(new Set(rawComments.map(c => c.user_id)))
+  const authorMap = new Map<string, { display_name: string; avatar_url: string | null }>()
+  if (authorIds.length > 0) {
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds)
+    for (const p of (profs ?? []) as { id: string; display_name: string; avatar_url: string | null }[]) {
+      authorMap.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url })
+    }
+  }
+  const comments = rawComments.map(c => ({
+    ...c,
+    author: authorMap.get(c.user_id) ?? { display_name: '익명의 보호자', avatar_url: null },
+  })) as Comment[]
 
   let likedByMe = false
   if (user) {
