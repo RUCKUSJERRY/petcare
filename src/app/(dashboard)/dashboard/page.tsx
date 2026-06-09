@@ -51,6 +51,7 @@ export default async function DashboardPage() {
       {pets && pets.length > 0 && (
         <Link
           href="/schedule"
+          data-tour="schedule"
           className="card flex items-center gap-3 hover:shadow-md transition-shadow"
         >
           <span className="text-xl" aria-hidden>🗓️</span>

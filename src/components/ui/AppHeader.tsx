@@ -72,7 +72,7 @@ export function AppHeader() {
     <div className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-2.5">
         {/* 펫 칩 목록 (없으면 빈 공간으로 우측 버튼 정렬 유지) */}
-        <div className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-none min-w-0">
+        <div data-tour="pets" className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-none min-w-0">
           {hasPets ? (
             pets!.map(pet => (
               <button

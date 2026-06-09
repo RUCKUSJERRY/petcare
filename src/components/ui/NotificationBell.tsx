@@ -86,7 +86,7 @@ export function NotificationBell() {
   const recent = items.slice(0, 8)
 
   return (
-    <div className="relative shrink-0" ref={wrapRef}>
+    <div data-tour="bell" className="relative shrink-0" ref={wrapRef}>
       <button
         onClick={() => setOpen(o => !o)}
         className="relative w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors"
