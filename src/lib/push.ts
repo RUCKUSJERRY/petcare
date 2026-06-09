@@ -4,19 +4,26 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 let configured: boolean | null = null
 
-/** VAPID 설정. 키가 없으면 false(푸시 비활성) — 앱은 정상 동작. */
+/** VAPID 설정. 키가 없거나 형식이 잘못되면 false(푸시 비활성) — 앱은 정상 동작. */
 function ensureConfigured(): boolean {
   if (configured !== null) return configured
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   const privateKey = process.env.VAPID_PRIVATE_KEY
-  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@petcare.app'
+  let subject = process.env.VAPID_SUBJECT || 'mailto:admin@petcare.app'
+  // mailto:/https: 형식이 아니면 보정 (web-push가 거부하므로)
+  if (!/^(mailto:|https?:)/.test(subject)) subject = `mailto:${subject}`
   if (!publicKey || !privateKey) {
     configured = false
     return false
   }
-  webpush.setVapidDetails(subject, publicKey, privateKey)
-  configured = true
-  return true
+  try {
+    webpush.setVapidDetails(subject, publicKey, privateKey)
+    configured = true
+  } catch (err) {
+    console.error('[push] VAPID 설정 실패:', err)
+    configured = false
+  }
+  return configured
 }
 
 export type PushPayload = {

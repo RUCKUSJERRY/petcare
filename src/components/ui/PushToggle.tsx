@@ -88,7 +88,7 @@ export function PushToggle() {
     try {
       const res = await fetch('/api/push/test', { method: 'POST' })
       const d = await res.json()
-      if (!res.ok) { setError('테스트 요청 실패'); return }
+      if (!res.ok) { setError(`테스트 실패: ${d.error ?? res.status}`); return }
       // 진단 결과 안내
       if (!d.vapidConfigured) setDiag('⚠️ 서버에 VAPID 키가 설정되지 않았어요 (환경변수 확인 필요)')
       else if (!d.serviceRoleConfigured) setDiag('⚠️ 서버에 SERVICE_ROLE 키가 없어요 (환경변수 확인 필요)')
