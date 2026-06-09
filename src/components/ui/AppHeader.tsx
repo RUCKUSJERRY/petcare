@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useEffect } from 'react'
 import type { Pet } from '@/types'
@@ -11,6 +11,7 @@ import type { Pet } from '@/types'
 export function AppHeader() {
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const supabase = createClient()
+  const queryClient = useQueryClient()
 
   const { data: pets } = useQuery({
     queryKey: ['my-pets-header'],
@@ -45,6 +46,33 @@ export function AppHeader() {
       setSelectedPetId(null)
     }
   }, [pets, selectedPetId, setSelectedPetId])
+
+  // 실시간 알림: 내 알림이 생성/변경되면 배지·목록 즉시 갱신
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let active = true
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !active) return
+      channel = supabase
+        .channel('notifications-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
+            queryClient.invalidateQueries({ queryKey: ['notifications'] })
+          }
+        )
+        .subscribe()
+    })()
+    return () => {
+      active = false
+      if (channel) supabase.removeChannel(channel)
+    }
+    // supabase/queryClient는 안정적 참조라 마운트 시 1회만 구독
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const toggle = (id: string) => {
     setSelectedPetId(selectedPetId === id ? null : id)

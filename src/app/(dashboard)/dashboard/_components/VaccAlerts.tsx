@@ -44,8 +44,8 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
       {shown.length > 4 && (
         <p className="text-xs text-amber-600 pt-0.5">외 {shown.length - 4}건 더</p>
       )}
-      <Link href="/pets" className="block text-xs text-amber-700 font-semibold pt-1">
-        건강 기록 확인하기 →
+      <Link href="/schedule" className="block text-xs text-amber-700 font-semibold pt-1">
+        건강 일정 전체 보기 →
       </Link>
     </div>
   )
