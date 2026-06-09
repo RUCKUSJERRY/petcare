@@ -22,12 +22,35 @@ export function PetSection({
 
   if (pets.length === 0) {
     return (
-      <div className="card text-center py-12">
-        <div className="text-4xl mb-3">🐶</div>
-        <p className="text-gray-500 text-sm">아직 등록된 반려동물이 없어요</p>
-        <Link href="/pets/new" className="btn-primary inline-block mt-4 text-sm">
-          첫 아이 등록하기
-        </Link>
+      <div className="space-y-4">
+        {/* 환영 히어로 */}
+        <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-6 text-white text-center">
+          <div className="text-5xl mb-3">🐶🐱</div>
+          <h2 className="text-lg font-bold">우리 아이를 등록해볼까요?</h2>
+          <p className="text-sm text-white/85 mt-1.5 leading-relaxed">
+            아이를 등록하면 견종·나이에 꼭 맞는<br />음식·건강·활동 정보를 받아볼 수 있어요.
+          </p>
+          <Link
+            href="/pets/new"
+            className="inline-block mt-4 bg-white text-primary-700 font-bold text-sm rounded-xl px-5 py-2.5 hover:bg-white/90 transition-colors"
+          >
+            + 첫 아이 등록하기
+          </Link>
+        </div>
+
+        {/* 기능 미리보기 */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { emoji: '🥩', label: '음식 안전' },
+            { emoji: '🗓️', label: '건강 일정' },
+            { emoji: '💬', label: '커뮤니티' },
+          ].map(f => (
+            <div key={f.label} className="card text-center py-4">
+              <div className="text-2xl mb-1">{f.emoji}</div>
+              <div className="text-xs text-gray-500 font-medium">{f.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
