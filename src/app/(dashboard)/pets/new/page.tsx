@@ -32,12 +32,16 @@ export default function NewPetPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
     setError(null)
+    // 성별은 버튼 그룹이라 네이티브 required 검증이 걸리지 않는다 → 직접 확인
+    const name = form.name.trim()
+    if (!name) { setError('이름을 입력해주세요'); return }
+    if (!form.gender) { setError('성별을 선택해주세요'); return }
+    setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { error: insErr } = await supabase.from('pets').insert({
       user_id: user!.id,
-      name: form.name,
+      name,
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
       birth_month: parseInt(form.birth_month),
