@@ -173,6 +173,43 @@ export interface NotificationItem {
   post_title: string | null
 }
 
+// ─── 실종 반려동물 ───────────────────────────────────────────
+
+export type LostPetStatus = 'active' | 'found'
+
+export interface LostPet {
+  id: string
+  user_id: string
+  name: string | null
+  species: Species
+  breed_id: string | null
+  gender: Gender | null
+  photo_url: string | null
+  lost_at: string        // YYYY-MM-DD
+  lat: number
+  lng: number
+  area_text: string | null
+  description: string | null
+  contact: string | null
+  contact_public: boolean
+  status: LostPetStatus
+  created_at: string
+  updated_at: string
+  // join
+  breed?: Pick<Breed, 'name_ko'>
+}
+
+export interface LostPetSighting {
+  id: string
+  lost_pet_id: string
+  user_id: string
+  content: string
+  lat: number | null
+  lng: number | null
+  created_at: string
+  author?: Pick<Profile, 'display_name' | 'avatar_url'>
+}
+
 // ─── 내 아이 기록 ────────────────────────────────────────────
 
 export interface WeightLog {

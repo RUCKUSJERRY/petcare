@@ -47,6 +47,18 @@ export default async function DashboardPage() {
       {/* 접종 예정 알림 (선택된 아이는 요약 카드와 중복되어 제외) */}
       <VaccAlerts pets={(pets ?? []) as Pet[]} alerts={vaccAlerts} />
 
+      {/* 실종 신고 지도 (항상 노출) */}
+      <Link href="/lost" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+        <span className="text-xl" aria-hidden>🐾</span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-gray-900">실종 신고 지도</p>
+          <p className="text-xs text-gray-400">잃어버린 아이를 찾고, 목격 정보를 나눠요</p>
+        </div>
+        <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </Link>
+
       {/* 건강 일정 전체 보기 (펫이 있을 때 항상 노출) */}
       {pets && pets.length > 0 && (
         <Link
