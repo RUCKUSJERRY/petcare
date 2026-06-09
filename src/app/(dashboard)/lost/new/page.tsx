@@ -4,17 +4,16 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ImagePicker } from '@/components/ui/ImagePicker'
-import { hasKakaoKey, loadKakaoMaps } from '@/lib/kakao'
+import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import type { Species } from '@/types'
 
 export default function NewLostPage() {
   const supabase = createClient()
   const router = useRouter()
   const qc = useQueryClient()
-  const mapRef = useRef<HTMLDivElement>(null)
   const geocoderRef = useRef<any>(null)
 
   const [saving, setSaving] = useState(false)
@@ -29,39 +28,29 @@ export default function NewLostPage() {
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }))
 
   // 지도: 탭해서 위치 핀 지정 + 역지오코딩으로 지역명
-  useEffect(() => {
-    if (!hasKakaoKey() || !mapRef.current) return
-    let cancelled = false
-    loadKakaoMaps().then(maps => {
-      if (cancelled || !mapRef.current) return
-      const seoul = new maps.LatLng(37.5665, 126.978)
-      const map = new maps.Map(mapRef.current, { center: seoul, level: 5 })
-      const marker = new maps.Marker({ position: seoul, map })
-      geocoderRef.current = new maps.services.Geocoder()
+  const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
+    const seoul = new maps.LatLng(37.5665, 126.978)
+    const map = new maps.Map(el, { center: seoul, level: 5 })
+    const marker = new maps.Marker({ position: seoul, map })
+    geocoderRef.current = new maps.services.Geocoder()
 
-      const place = (latlng: any) => {
-        marker.setPosition(latlng)
-        setPos({ lat: latlng.getLat(), lng: latlng.getLng() })
-        geocoderRef.current.coord2RegionCode(latlng.getLng(), latlng.getLat(), (res: any[], status: string) => {
-          if (status === maps.services.Status.OK) {
-            const r = res.find(x => x.region_type === 'H') ?? res[0]
-            if (r) setAreaText(`${r.region_2depth_name} ${r.region_3depth_name}`.trim())
-          }
-        })
-      }
-      maps.event.addListener(map, 'click', (e: any) => place(e.latLng))
+    const place = (latlng: any) => {
+      marker.setPosition(latlng)
+      setPos({ lat: latlng.getLat(), lng: latlng.getLng() })
+      geocoderRef.current.coord2RegionCode(latlng.getLng(), latlng.getLat(), (res: any[], status: string) => {
+        if (status === maps.services.Status.OK) {
+          const r = res.find(x => x.region_type === 'H') ?? res[0]
+          if (r) setAreaText(`${r.region_2depth_name} ${r.region_3depth_name}`.trim())
+        }
+      })
+    }
+    maps.event.addListener(map, 'click', (e: any) => place(e.latLng))
 
-      // 현재 위치로 초기화 시도
-      navigator.geolocation?.getCurrentPosition(
-        p => {
-          const ll = new maps.LatLng(p.coords.latitude, p.coords.longitude)
-          map.setCenter(ll); place(ll)
-        },
-        () => {},
-        { timeout: 4000 }
-      )
-    }).catch(() => {})
-    return () => { cancelled = true }
+    navigator.geolocation?.getCurrentPosition(
+      p => { const ll = new maps.LatLng(p.coords.latitude, p.coords.longitude); map.setCenter(ll); place(ll) },
+      () => {},
+      { timeout: 4000 }
+    )
   }, [])
 
   const submit = async (e: React.FormEvent) => {
@@ -141,15 +130,15 @@ export default function NewLostPage() {
           <label className="text-sm font-medium text-gray-700 block mb-1.5">
             실종 위치 {areaText && <span className="text-primary-600">· {areaText}</span>}
           </label>
-          {hasKakaoKey() ? (
+          {kakaoNotice(mapStatus) ? (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-400">
+              {kakaoNotice(mapStatus)}
+            </div>
+          ) : (
             <>
               <div ref={mapRef} className="w-full h-56 rounded-xl border border-gray-200 overflow-hidden bg-gray-100" />
               <p className="text-xs text-gray-400 mt-1">지도를 탭해 실종 위치를 표시하세요.</p>
             </>
-          ) : (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-400">
-              카카오맵 키 설정 후 지도에서 위치를 지정할 수 있어요.
-            </div>
           )}
         </div>
 

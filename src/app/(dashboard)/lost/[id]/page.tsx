@@ -3,16 +3,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { hasKakaoKey, loadKakaoMaps } from '@/lib/kakao'
+import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { timeAgo } from '@/lib/utils'
 import type { LostPet, LostPetSighting } from '@/types'
 
 export default function LostDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const qc = useQueryClient()
-  const mapRef = useRef<HTMLDivElement>(null)
   const [me, setMe] = useState<string | null>(null)
   const [showContact, setShowContact] = useState(false)
   const [text, setText] = useState('')
@@ -54,17 +53,12 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
   })
 
   // 미니 지도
-  useEffect(() => {
-    if (!hasKakaoKey() || !mapRef.current || !pet) return
-    let cancelled = false
-    loadKakaoMaps().then(maps => {
-      if (cancelled || !mapRef.current) return
-      const ll = new maps.LatLng(pet.lat, pet.lng)
-      const map = new maps.Map(mapRef.current, { center: ll, level: 4 })
-      new maps.Marker({ position: ll, map })
-      map.setDraggable(false); map.setZoomable(false)
-    }).catch(() => {})
-    return () => { cancelled = true }
+  const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
+    if (!pet) return
+    const ll = new maps.LatLng(pet.lat, pet.lng)
+    const map = new maps.Map(el, { center: ll, level: 4 })
+    new maps.Marker({ position: ll, map })
+    map.setDraggable(false); map.setZoomable(false)
   }, [pet])
 
   const isAuthor = !!me && pet?.user_id === me
@@ -116,7 +110,11 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
         {pet.area_text && <p className="text-sm text-gray-500">📍 {pet.area_text}</p>}
       </div>
 
-      {hasKakaoKey() && (
+      {kakaoNotice(mapStatus) ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-400">
+          {kakaoNotice(mapStatus)}
+        </div>
+      ) : (
         <div ref={mapRef} className="w-full h-52 rounded-2xl border border-gray-200 overflow-hidden bg-gray-100" />
       )}
 

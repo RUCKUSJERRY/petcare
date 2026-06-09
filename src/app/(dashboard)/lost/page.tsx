@@ -4,10 +4,9 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
-import { hasKakaoKey, loadKakaoMaps } from '@/lib/kakao'
+import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { daysUntil } from '@/lib/utils'
 import type { LostPet } from '@/types'
 
@@ -18,7 +17,6 @@ function dPlus(lostAt: string) {
 
 export default function LostListPage() {
   const supabase = createClient()
-  const mapRef = useRef<HTMLDivElement>(null)
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['lost-pets'],
@@ -33,26 +31,21 @@ export default function LostListPage() {
   })
 
   // 지도 초기화 + 마커
-  useEffect(() => {
-    if (!hasKakaoKey() || !mapRef.current || items.length === 0) return
-    let cancelled = false
-    loadKakaoMaps().then(maps => {
-      if (cancelled || !mapRef.current) return
-      const center = new maps.LatLng(items[0].lat, items[0].lng)
-      const map = new maps.Map(mapRef.current, { center, level: 7 })
-      const bounds = new maps.LatLngBounds()
-      items.forEach(it => {
-        const pos = new maps.LatLng(it.lat, it.lng)
-        const marker = new maps.Marker({ position: pos, map })
-        const iw = new maps.InfoWindow({
-          content: `<div style="padding:6px 10px;font-size:12px;">${it.species === 'cat' ? '🐱' : '🐶'} ${it.name ?? '실종'} · ${it.area_text ?? ''}</div>`,
-        })
-        maps.event.addListener(marker, 'click', () => iw.open(map, marker))
-        bounds.extend(pos)
+  const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
+    if (items.length === 0) return
+    const center = new maps.LatLng(items[0].lat, items[0].lng)
+    const map = new maps.Map(el, { center, level: 7 })
+    const bounds = new maps.LatLngBounds()
+    items.forEach(it => {
+      const pos = new maps.LatLng(it.lat, it.lng)
+      const marker = new maps.Marker({ position: pos, map })
+      const iw = new maps.InfoWindow({
+        content: `<div style="padding:6px 10px;font-size:12px;">${it.species === 'cat' ? '🐱' : '🐶'} ${it.name ?? '실종'} · ${it.area_text ?? ''}</div>`,
       })
-      map.setBounds(bounds)
-    }).catch(() => {})
-    return () => { cancelled = true }
+      maps.event.addListener(marker, 'click', () => iw.open(map, marker))
+      bounds.extend(pos)
+    })
+    map.setBounds(bounds)
   }, [items])
 
   return (
@@ -63,14 +56,14 @@ export default function LostListPage() {
       </div>
 
       {/* 지도 */}
-      {hasKakaoKey() ? (
+      {kakaoNotice(mapStatus) ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-400">
+          {kakaoNotice(mapStatus)}
+        </div>
+      ) : (
         items.length > 0 && (
           <div ref={mapRef} className="w-full h-64 rounded-2xl border border-gray-200 overflow-hidden bg-gray-100" />
         )
-      ) : (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-400">
-          🗺️ 지도를 보려면 카카오맵 키 설정이 필요해요. (목록은 정상 표시)
-        </div>
       )}
 
       {/* 목록 */}
