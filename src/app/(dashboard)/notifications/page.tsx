@@ -10,9 +10,10 @@ import type { NotificationItem } from '@/types'
 
 const typeText: Record<string, string> = {
   comment: '님이 댓글을 남겼어요',
+  reply: '님이 답글을 남겼어요',
   like: '님이 회원님의 글을 좋아해요',
 }
-const typeIcon: Record<string, string> = { comment: '💬', like: '❤️' }
+const typeIcon: Record<string, string> = { comment: '💬', reply: '↩️', like: '❤️' }
 
 export default function NotificationsPage() {
   const supabase = createClient()

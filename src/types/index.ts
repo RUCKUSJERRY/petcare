@@ -145,15 +145,17 @@ export interface Comment {
   id: string
   post_id: string
   user_id: string
+  parent_id: string | null
   content: string
   created_at: string
+  updated_at: string
   // join
   author?: Pick<Profile, 'display_name' | 'avatar_url'>
 }
 
 // ─── 알림 ────────────────────────────────────────────────────
 
-export type NotificationType = 'comment' | 'like'
+export type NotificationType = 'comment' | 'like' | 'reply'
 
 /** notification_list 뷰: 알림 + actor 프로필 + 게시글 제목 */
 export interface NotificationItem {
