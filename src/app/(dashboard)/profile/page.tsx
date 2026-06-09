@@ -8,6 +8,7 @@ import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 import { PushToggle } from '@/components/ui/PushToggle'
+import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
 
 export default function ProfilePage() {
@@ -126,6 +127,14 @@ export default function ProfilePage() {
         <div className="border-t border-gray-100 pt-4">
           <PushToggle />
         </div>
+
+        {/* 사용 안내 다시 보기 */}
+        <button
+          onClick={() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))}
+          className="text-sm text-gray-500 hover:text-primary-600"
+        >
+          사용 안내 다시 보기
+        </button>
       </div>
     </div>
   )

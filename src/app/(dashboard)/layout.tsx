@@ -1,5 +1,6 @@
 import { BottomNav } from '@/components/ui/BottomNav'
 import { AppHeader } from '@/components/ui/AppHeader'
+import { OnboardingModal } from '@/components/ui/OnboardingModal'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <BottomNav />
+      <OnboardingModal />
     </div>
   )
 }
