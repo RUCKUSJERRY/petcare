@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 로그인 필요 경로 → 미로그인 시 /login으로
-  const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/walk', '/info', '/community', '/profile']
+  const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/walk', '/info', '/community', '/profile', '/schedule', '/notifications']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
@@ -93,5 +93,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|offline|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
