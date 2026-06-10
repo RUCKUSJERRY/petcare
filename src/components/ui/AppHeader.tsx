@@ -59,6 +59,15 @@ export function AppHeader() {
   return (
     <div className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-2.5">
+        {/* 내 아이 관리 진입 (칩 선택 좌측) */}
+        <Link
+          href="/pets"
+          aria-label="내 아이 관리"
+          className="shrink-0 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-base hover:bg-gray-50 transition-colors"
+        >
+          🐾
+        </Link>
+
         {/* 펫 칩 목록 (없으면 빈 공간으로 우측 버튼 정렬 유지) */}
         <div data-tour="pets" className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-none min-w-0">
           {hasPets ? (
@@ -82,7 +91,7 @@ export function AppHeader() {
               </button>
             ))
           ) : (
-            <Link href="/dashboard" className="text-sm font-bold text-primary-600">🐾 펫케어</Link>
+            <Link href="/pets/new" className="text-sm font-medium text-primary-600">내 아이 등록하기 →</Link>
           )}
         </div>
 

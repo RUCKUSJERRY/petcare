@@ -51,7 +51,7 @@ export default function LostListPage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader title="실종 신고" fallbackHref="/dashboard" />
+        <PageHeader title="실종 신고" fallbackHref="/map" />
         <Link href="/lost/new" className="btn-primary text-sm py-1.5 px-3 shrink-0">+ 제보</Link>
       </div>
 

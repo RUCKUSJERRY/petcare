@@ -7,12 +7,14 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/dashboard', label: '홈', icon: '🏠' },
   { href: '/info', label: '정보', icon: '📚' },
+  { href: '/map', label: '지도', icon: '🗺️' },
   { href: '/community', label: '커뮤니티', icon: '💬' },
-  { href: '/pets', label: '내 아이', icon: '🐾' },
 ]
 
 // 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화)
 const INFO_SUBPATHS = ['/foods', '/health', '/walk']
+// 지도 탭에 묶이는 하위 페이지 (실종 신고/제보는 지도 탭에서 진입)
+const MAP_SUBPATHS = ['/lost']
 
 export function BottomNav() {
   const pathname = usePathname()
@@ -24,7 +26,9 @@ export function BottomNav() {
           const isActive =
             item.href === '/info'
               ? pathname.startsWith('/info') || INFO_SUBPATHS.some(p => pathname.startsWith(p))
-              : pathname.startsWith(item.href)
+              : item.href === '/map'
+                ? pathname.startsWith('/map') || MAP_SUBPATHS.some(p => pathname.startsWith(p))
+                : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
