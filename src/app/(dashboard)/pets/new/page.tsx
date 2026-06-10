@@ -32,12 +32,16 @@ export default function NewPetPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
     setError(null)
+    // 성별은 버튼 그룹이라 네이티브 required 검증이 걸리지 않는다 → 직접 확인
+    const name = form.name.trim()
+    if (!name) { setError('이름을 입력해주세요'); return }
+    if (!form.gender) { setError('성별을 선택해주세요'); return }
+    setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { error: insErr } = await supabase.from('pets').insert({
       user_id: user!.id,
-      name: form.name,
+      name,
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
       birth_month: parseInt(form.birth_month),
@@ -71,9 +75,9 @@ export default function NewPetPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">종류 *</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="종류">
             {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
-              <button key={sp} type="button"
+              <button key={sp} type="button" role="radio" aria-checked={species === sp}
                 onClick={() => { setSpecies(sp); set('breed_id', '') }}
                 className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                   species === sp
@@ -101,13 +105,13 @@ export default function NewPetPage() {
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">이름 *</label>
           <input className="input" placeholder="예: 콩이" value={form.name}
-            onChange={e => set('name', e.target.value)} required />
+            onChange={e => set('name', e.target.value)} required aria-required maxLength={20} />
         </div>
 
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">{breedLabel} *</label>
           <select className="input" value={form.breed_id}
-            onChange={e => set('breed_id', e.target.value)} required>
+            onChange={e => set('breed_id', e.target.value)} required aria-required>
             <option value="">{breedLabel} 선택</option>
             {breeds.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
           </select>
@@ -117,12 +121,12 @@ export default function NewPetPage() {
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">태어난 년도 *</label>
             <input className="input" type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
-              value={form.birth_year} onChange={e => set('birth_year', e.target.value)} required />
+              value={form.birth_year} onChange={e => set('birth_year', e.target.value)} required aria-required />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">태어난 월 *</label>
             <select className="input" value={form.birth_month}
-              onChange={e => set('birth_month', e.target.value)} required>
+              onChange={e => set('birth_month', e.target.value)} required aria-required>
               <option value="">월 선택</option>
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={i+1} value={i+1}>{i+1}월</option>
@@ -133,9 +137,9 @@ export default function NewPetPage() {
 
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">성별 *</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="성별" aria-required>
             {['수컷', '암컷'].map(g => (
-              <button key={g} type="button"
+              <button key={g} type="button" role="radio" aria-checked={form.gender === g}
                 onClick={() => set('gender', g)}
                 className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                   form.gender === g

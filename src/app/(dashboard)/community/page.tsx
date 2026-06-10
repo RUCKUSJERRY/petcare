@@ -54,7 +54,12 @@ export default async function CommunityPage({
 
   if (activeCategory) query = query.eq('category', activeCategory)
   if (mine && user) query = query.eq('user_id', user.id)
-  if (q) query = query.or(`title.ilike.%${q}%,content.ilike.%${q}%`)
+  if (q) {
+    // PostgREST .or() 필터에서 구조 문자(쉼표/괄호/역슬래시)와 LIKE 와일드카드(%,_)는
+    // 검색을 깨뜨리거나 의도치 않은 조건 주입을 일으킬 수 있어 제거/무력화한다.
+    const safeQ = q.replace(/[,()\\]/g, ' ').replace(/[%_]/g, '').trim()
+    if (safeQ) query = query.or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
+  }
 
   query = query.range(offset, offset + PAGE_SIZE - 1)
 

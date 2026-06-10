@@ -61,6 +61,9 @@ export function CareSection({ petId }: { petId: string }) {
 
   const add = async () => {
     if (!form.vaccine_name.trim()) { setError('항목명을 입력해주세요'); return }
+    if (form.next_due_on && form.next_due_on < form.vaccinated_on) {
+      setError('다음 예정일은 시행일 이후여야 해요'); return
+    }
     setSaving(true); setError(null)
     const { error: insErr } = await supabase.from('vaccination_records').insert({
       pet_id: petId,

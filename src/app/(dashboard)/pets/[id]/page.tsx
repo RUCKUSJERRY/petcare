@@ -78,6 +78,12 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     setSaving(false)
     if (error) {
       setSaveError('저장에 실패했어요. 다시 시도해주세요.')
+      // 저장이 실패하면 이번에 새로 올린 사진은 어디서도 참조되지 않는 고아가 된다.
+      // 정리하고 폼을 원본 사진으로 되돌린다.
+      if (photoUrl && photoUrl !== pet?.photo_url) {
+        deleteImageByUrl(photoUrl)
+        setPhotoUrl(pet?.photo_url ?? null)
+      }
       return
     }
     // 사진을 바꾼/지운 경우 기존 커밋 파일 정리(고아 방지)

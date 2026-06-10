@@ -116,11 +116,13 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         {/* 카테고리 */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">카테고리 *</label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="카테고리" aria-required>
             {CATEGORIES.map(c => (
               <button
                 key={c}
                 type="button"
+                role="radio"
+                aria-checked={form.category === c}
                 onClick={() => set('category', c)}
                 className={`py-2 rounded-lg border text-sm font-medium transition-colors ${
                   form.category === c
@@ -144,6 +146,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
             value={form.title}
             onChange={e => set('title', e.target.value)}
             required
+            aria-required
           />
         </div>
 
@@ -157,6 +160,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
             value={form.content}
             onChange={e => set('content', e.target.value)}
             required
+            aria-required
           />
         </div>
 

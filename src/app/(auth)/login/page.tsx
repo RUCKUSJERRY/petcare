@@ -1,18 +1,35 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginContent() {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
+  const searchParams = useSearchParams()
+
+  // 콜백/공급자 단계에서 실패해 돌아온 경우 안내 (?error=...)
+  useEffect(() => {
+    if (searchParams.get('error')) {
+      setError('로그인에 실패했어요. 다시 시도해주세요.')
+    }
+  }, [searchParams])
 
   const handleGoogleLogin = async () => {
     setLoading(true)
-    await supabase.auth.signInWithOAuth({
+    setError(null)
+    const { error: oauthErr } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${location.origin}/auth/callback` },
     })
+    // 성공 시엔 구글로 리다이렉트되어 이 줄에 도달하지 않는다.
+    // 실패 시 버튼이 '로그인 중...'에 영구 고착되지 않도록 복구한다.
+    if (oauthErr) {
+      setError('로그인에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -41,6 +58,7 @@ export default function LoginPage() {
             </svg>
             {loading ? '로그인 중...' : 'Google로 시작하기'}
           </button>
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
@@ -48,5 +66,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   )
 }
