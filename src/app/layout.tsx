@@ -13,8 +13,12 @@ export const metadata: Metadata = {
     title: '펫케어',
   },
   icons: {
-    icon: '/icon.svg',
-    apple: '/icon.svg',
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    // iOS 홈 화면 추가 시엔 PNG apple-touch-icon만 인식한다 (SVG 미지원)
+    apple: '/apple-touch-icon.png',
   },
 }
 

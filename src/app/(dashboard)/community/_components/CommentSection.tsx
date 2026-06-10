@@ -31,6 +31,7 @@ export function CommentSection({
   const [replyText, setReplyText] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const myAuthorRef = useRef<Author | null>(null)
   const getMyAuthor = async (userId: string): Promise<Author> => {
@@ -96,11 +97,12 @@ export function CommentSection({
   }
 
   const remove = async (id: string) => {
+    setConfirmDeleteId(null)
     const prev = comments
     // 부모를 지우면 답글도 함께 제거(DB는 cascade, UI도 동일하게)
     setComments(c => c.filter(x => x.id !== id && x.parent_id !== id))
     const { error: delErr } = await supabase.from('comments').delete().eq('id', id)
-    if (delErr) setComments(prev)
+    if (delErr) { setComments(prev); setError('삭제에 실패했어요. 다시 시도해주세요.') }
   }
 
   const topLevel = comments
@@ -166,12 +168,30 @@ export function CommentSection({
                   >
                     수정
                   </button>
-                  <button
-                    onClick={() => remove(c.id)}
-                    className="text-xs text-gray-400 hover:text-red-500"
-                  >
-                    삭제
-                  </button>
+                  {confirmDeleteId === c.id ? (
+                    <>
+                      <span className="text-xs text-gray-500">삭제할까요?</span>
+                      <button
+                        onClick={() => remove(c.id)}
+                        className="text-xs text-red-500 font-semibold"
+                      >
+                        삭제
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs text-gray-400"
+                      >
+                        취소
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(c.id)}
+                      className="text-xs text-gray-400 hover:text-red-500"
+                    >
+                      삭제
+                    </button>
+                  )}
                 </>
               )}
             </div>

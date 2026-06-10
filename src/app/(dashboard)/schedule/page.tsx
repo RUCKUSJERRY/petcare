@@ -57,9 +57,13 @@ export default function SchedulePage() {
   const visible = selectedPetId ? items.filter(i => i.pet_id === selectedPetId) : items
   const selectedName = selectedPetId ? items.find(i => i.pet_id === selectedPetId)?.pet_name : null
 
-  // 지남 / 다가오는 일정으로 그룹
+  // 지남 / 임박(7일 이내) / 예정으로 그룹
   const overdue = visible.filter(i => daysUntil(i.next_due_on) < 0)
-  const upcoming = visible.filter(i => daysUntil(i.next_due_on) >= 0)
+  const soon = visible.filter(i => {
+    const d = daysUntil(i.next_due_on)
+    return d >= 0 && d <= 7
+  })
+  const later = visible.filter(i => daysUntil(i.next_due_on) > 7)
 
   const Row = ({ i }: { i: ScheduleItem }) => {
     const badge = ddayBadge(i.next_due_on)
@@ -111,10 +115,16 @@ export default function SchedulePage() {
               <div className="space-y-2">{overdue.map(i => <Row key={i.id} i={i} />)}</div>
             </section>
           )}
-          {upcoming.length > 0 && (
+          {soon.length > 0 && (
             <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-gray-500">다가오는 일정</h2>
-              <div className="space-y-2">{upcoming.map(i => <Row key={i.id} i={i} />)}</div>
+              <h2 className="text-sm font-semibold text-amber-600">임박한 일정 (7일 이내) {soon.length}</h2>
+              <div className="space-y-2">{soon.map(i => <Row key={i.id} i={i} />)}</div>
+            </section>
+          )}
+          {later.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-gray-500">예정된 일정 {later.length}</h2>
+              <div className="space-y-2">{later.map(i => <Row key={i.id} i={i} />)}</div>
             </section>
           )}
         </div>

@@ -4,6 +4,19 @@ import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteImageByUrl, uploadImage, validateImage } from '@/lib/upload'
 
+/** 업로드 실패 원인을 사용자 친화적 메시지로 변환 */
+function uploadErrorMessage(err: unknown): string {
+  const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase()
+  if (msg.includes('로그인')) return '로그인이 필요해요. 다시 로그인해주세요.'
+  if (msg.includes('exceeded') || msg.includes('too large') || msg.includes('413')) {
+    return '파일이 너무 커요. 더 작은 사진을 선택해주세요.'
+  }
+  if (msg.includes('fetch') || msg.includes('network') || msg.includes('timeout')) {
+    return '연결이 불안정해요. 네트워크를 확인하고 다시 시도해주세요.'
+  }
+  return '업로드에 실패했어요. 다시 시도해주세요.'
+}
+
 /**
  * 이미지 선택 + 업로드 + 미리보기 컴포넌트.
  * 업로드 완료 시 onUploaded(url) 호출.
@@ -49,8 +62,8 @@ export function ImagePicker({
       }
       sessionUrls.current.add(url)
       onUploaded(url)
-    } catch {
-      onError?.('업로드에 실패했어요. 다시 시도해주세요.')
+    } catch (err) {
+      onError?.(uploadErrorMessage(err))
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
