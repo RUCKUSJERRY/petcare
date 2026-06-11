@@ -210,6 +210,22 @@ export interface LostPetSighting {
   author?: Pick<Profile, 'display_name' | 'avatar_url'>
 }
 
+// ─── 지도 즐겨찾기 ───────────────────────────────────────────
+
+export interface MapFavorite {
+  id: string
+  user_id: string
+  place_id: string
+  place_name: string
+  category: string | null
+  address: string | null
+  phone: string | null
+  lat: number
+  lng: number
+  place_url: string | null
+  created_at: string
+}
+
 // ─── 내 아이 기록 ────────────────────────────────────────────
 
 export interface WeightLog {
