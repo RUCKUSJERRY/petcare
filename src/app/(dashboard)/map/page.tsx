@@ -84,16 +84,21 @@ export default function MapPage() {
     markersRef.current.set(key, { marker, pos, content })
   }
 
-  // 정보창이 마커 위쪽으로 열리므로, 마커를 화면 중앙보다 약간 아래로 옮겨
-  // 팝업이 지도 영역을 벗어나(잘리지) 않도록 보정한 좌표로 부드럽게 이동.
+  // 정보창은 마커 위쪽으로 열리므로, 마커를 지도 하단에서 일정 여유(아래 BOTTOM_GAP)만
+  // 남기고 배치 → 위쪽 공간을 최대한 확보해 팝업이 잘리지 않게 한다.
+  // 지도 높이에 비례해 보정량을 계산하므로 화면 크기와 무관하게 동작한다.
   const panToWithRoom = (latLng: any) => {
     const map = mapObjRef.current
     const maps = mapsRef.current
     try {
       const proj = map.getProjection()
       const pt = proj.containerPointFromCoords(latLng)
-      // 위로 약 90px 올린 지점을 중심으로 → 마커는 중심보다 아래에 위치(팝업 공간 확보)
-      const target = proj.coordsFromContainerPoint(new maps.Point(pt.x, pt.y - 90))
+      const h = mapRef.current?.clientHeight ?? 320
+      const BOTTOM_GAP = 56 // 마커를 하단 끝에서 띄울 여유(px) — 팝업 아랫줄이 잘리지 않도록
+      // 마커를 (높이 - BOTTOM_GAP) 위치로 이동 → 중심에서 (h/2 - BOTTOM_GAP)px 아래.
+      // 하한을 두지 않는다(과거 하한 때문에 짧은 지도에서 마커가 바닥으로 밀려 잘렸음).
+      const offset = Math.max(0, h / 2 - BOTTOM_GAP)
+      const target = proj.coordsFromContainerPoint(new maps.Point(pt.x, pt.y - offset))
       map.panTo(target)
     } catch {
       map.panTo(latLng)
@@ -392,7 +397,7 @@ export default function MapPage() {
         <>
           <div
             ref={mapRef}
-            className="w-full h-[50vh] min-h-72 rounded-2xl border border-gray-200 overflow-hidden bg-gray-100"
+            className="w-full h-[55vh] min-h-80 rounded-2xl border border-gray-200 overflow-hidden bg-gray-100"
           />
           <p className="text-xs text-gray-400">
             {loading
