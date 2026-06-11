@@ -84,22 +84,23 @@ export default function MapPage() {
     markersRef.current.set(key, { marker, pos, content })
   }
 
-  // 정보창은 마커 위쪽으로 열리므로, 마커를 지도 하단에서 일정 여유(아래 BOTTOM_GAP)만
-  // 남기고 배치 → 위쪽 공간을 최대한 확보해 팝업이 잘리지 않게 한다.
-  // 지도 높이에 비례해 보정량을 계산하므로 화면 크기와 무관하게 동작한다.
+  // 정보창은 마커 위쪽으로 열리므로, 마커를 지도 하단에서 일정 여유(BOTTOM_GAP)만 남기고
+  // 배치해 위쪽 공간을 확보한다. projection API는 환경에 따라 불안정해서,
+  // getBounds()로 '픽셀당 위도'를 구해 중심을 마커보다 북쪽으로 옮기는 안정적 방식 사용.
   const panToWithRoom = (latLng: any) => {
     const map = mapObjRef.current
     const maps = mapsRef.current
     try {
-      const proj = map.getProjection()
-      const pt = proj.containerPointFromCoords(latLng)
-      const h = mapRef.current?.clientHeight ?? 320
-      const BOTTOM_GAP = 56 // 마커를 하단 끝에서 띄울 여유(px) — 팝업 아랫줄이 잘리지 않도록
-      // 마커를 (높이 - BOTTOM_GAP) 위치로 이동 → 중심에서 (h/2 - BOTTOM_GAP)px 아래.
-      // 하한을 두지 않는다(과거 하한 때문에 짧은 지도에서 마커가 바닥으로 밀려 잘렸음).
-      const offset = Math.max(0, h / 2 - BOTTOM_GAP)
-      const target = proj.coordsFromContainerPoint(new maps.Point(pt.x, pt.y - offset))
-      map.panTo(target)
+      const h = mapRef.current?.clientHeight ?? 360
+      const bounds = map.getBounds()
+      const sw = bounds.getSouthWest()
+      const ne = bounds.getNorthEast()
+      const latPerPx = (ne.getLat() - sw.getLat()) / h
+      const BOTTOM_GAP = 64 // 마커를 하단 끝에서 띄울 여유(px)
+      // 마커를 화면 하단(h - BOTTOM_GAP)에 두려면 중심을 마커보다 (h/2 - GAP)px 북쪽으로.
+      const d = Math.max(0, h / 2 - BOTTOM_GAP)
+      const targetLat = latLng.getLat() + d * latPerPx
+      map.panTo(new maps.LatLng(targetLat, latLng.getLng()))
     } catch {
       map.panTo(latLng)
     }
@@ -207,7 +208,10 @@ export default function MapPage() {
     // 병원/카페/식당: 카카오 장소검색 (지도 중심 반경 5km)
     const places = placesRef.current
     if (!places) return
-    const searchTerm = appliedKeyword.trim() || cat.keyword!
+    // 검색어가 있으면 카테고리 키워드와 결합해 범위를 한정한다.
+    // (예: 동물병원 탭에서 '응급실' → '동물병원 응급실' — 떡볶이집 같은 무관 결과 방지)
+    const kw = appliedKeyword.trim()
+    const searchTerm = kw ? `${cat.keyword} ${kw}` : cat.keyword!
     setLoading(true)
     places.keywordSearch(
       searchTerm,
@@ -376,7 +380,7 @@ export default function MapPage() {
         <form onSubmit={submitSearch} className="flex gap-2">
           <input
             className="input flex-1"
-            placeholder={`${activeCat.label} 검색 (예: ${activeCat.keyword})`}
+            placeholder={`${activeCat.label} 내 검색 (예: 응급실, 24시, 동네 이름)`}
             value={keyword}
             onChange={e => setKeyword(e.target.value)}
           />
