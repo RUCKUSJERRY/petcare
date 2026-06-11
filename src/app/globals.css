@@ -39,3 +39,15 @@
            bg-white text-gray-900 placeholder-gray-400 text-sm;
   }
 }
+
+@layer utilities {
+  /* 가로 스크롤 영역(펫 칩·필터 등)에서 스크롤바를 숨겨 깔끔하게 보이도록.
+     기존에 어디에도 정의되지 않아 회색 스크롤바가 노출되던 문제를 보완. */
+  .scrollbar-none {
+    -ms-overflow-style: none;     /* IE/Edge */
+    scrollbar-width: none;        /* Firefox */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;                /* Chrome/Safari/모바일 웹킷 */
+  }
+}
