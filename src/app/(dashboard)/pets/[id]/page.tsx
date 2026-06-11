@@ -2,8 +2,8 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import type { Breed, Pet } from '@/types'
@@ -15,6 +15,11 @@ import { CareSection } from '../_components/CareSection'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // 홈 빠른 기록 버튼에서 ?add=weight|care 로 진입하면 해당 폼을 펼친 채로 시작
+  const addTarget = searchParams.get('add')
+  const weightRef = useRef<HTMLDivElement>(null)
+  const careRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
@@ -62,6 +67,16 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       setPhotoUrl(pet.photo_url)
     }
   }, [pet])
+
+  // ?add=weight|care 진입 시 해당 기록 섹션으로 부드럽게 스크롤
+  useEffect(() => {
+    if (!pet || !addTarget) return
+    const el = addTarget === 'weight' ? weightRef.current : addTarget === 'care' ? careRef.current : null
+    if (el) {
+      const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+      return () => clearTimeout(t)
+    }
+  }, [pet, addTarget])
 
   const handleSave = async () => {
     setSaving(true)
@@ -225,8 +240,12 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 내 아이 기록 (조회 모드에서만) */}
       {!editing && (
         <>
-          <WeightSection petId={params.id} />
-          <CareSection petId={params.id} />
+          <div ref={weightRef}>
+            <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
+          </div>
+          <div ref={careRef}>
+            <CareSection petId={params.id} defaultOpen={addTarget === 'care'} />
+          </div>
         </>
       )}
 

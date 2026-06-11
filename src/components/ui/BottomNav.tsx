@@ -8,6 +8,7 @@ const navItems = [
   { href: '/dashboard', label: '홈', icon: '🏠' },
   { href: '/info', label: '정보', icon: '📚' },
   { href: '/map', label: '지도', icon: '🗺️' },
+  { href: '/schedule', label: '일정', icon: '🗓️' },
   { href: '/community', label: '커뮤니티', icon: '💬' },
 ]
 
@@ -34,12 +35,25 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               data-tour={`nav-${item.href.slice(1)}`}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex-1 flex flex-col items-center gap-0.5 py-3 text-xs transition-colors',
+                'relative flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-xs transition-colors',
                 isActive ? 'text-primary-600 font-semibold' : 'text-gray-400'
               )}
             >
-              <span className="text-xl leading-none">{item.icon}</span>
+              {/* 활성 표시: 상단 인디케이터 바 */}
+              {isActive && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary-500" />
+              )}
+              {/* 활성 시 아이콘 뒤 둥근 배경으로 직관적으로 강조 */}
+              <span
+                className={cn(
+                  'flex items-center justify-center w-9 h-7 rounded-full text-xl leading-none transition-colors',
+                  isActive && 'bg-primary-50'
+                )}
+              >
+                {item.icon}
+              </span>
               <span>{item.label}</span>
             </Link>
           )

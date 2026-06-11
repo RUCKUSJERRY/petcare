@@ -18,10 +18,10 @@ const NAME_PLACEHOLDER: Record<CareCategory, string> = {
   '기타': '항목명',
 }
 
-export function CareSection({ petId }: { petId: string }) {
+export function CareSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
   const supabase = createClient()
   const qc = useQueryClient()
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(defaultOpen)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)

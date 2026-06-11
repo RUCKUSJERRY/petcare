@@ -2,12 +2,17 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
 import type { CareCategory } from '@/types'
+import { ScheduleAddForm } from './_components/ScheduleAddForm'
+import { ScheduleCalendar } from './_components/ScheduleCalendar'
+
+type View = 'list' | 'calendar'
 
 type ScheduleItem = {
   id: string
@@ -22,6 +27,8 @@ type ScheduleItem = {
 export default function SchedulePage() {
   const supabase = createClient()
   const { selectedPetId } = useSelectedPet()
+  const [view, setView] = useState<View>('list')
+  const [adding, setAdding] = useState(false)
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['care-schedule'],
@@ -89,13 +96,41 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="px-4 py-6 space-y-5">
+    <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <PageHeader title="건강 일정" fallbackHref="/dashboard" />
         {selectedName && (
           <span className="text-sm text-primary-600 font-medium shrink-0">{selectedName} 기준</span>
         )}
       </div>
+
+      {/* 보기 전환 + 추가 */}
+      <div className="flex items-center gap-2">
+        <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
+          {([['list', '목록'], ['calendar', '캘린더']] as const).map(([v, label]) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={cn(
+                'flex-1 py-1.5 rounded-md text-sm font-medium transition-colors',
+                view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setAdding(a => !a)}
+          className={cn('text-sm py-1.5 px-3 shrink-0', adding ? 'btn-secondary' : 'btn-primary')}
+        >
+          {adding ? '닫기' : '+ 일정'}
+        </button>
+      </div>
+
+      {adding && (
+        <ScheduleAddForm defaultPetId={selectedPetId} onClose={() => setAdding(false)} />
+      )}
 
       {isLoading ? (
         <CardSkeletonList count={4} />
@@ -105,8 +140,10 @@ export default function SchedulePage() {
           {selectedName
             ? `${selectedName}는 예정된 건강 일정이 없어요.`
             : '다음 예정일이 등록된 건강 기록이 없어요.'}
-          <p className="text-xs mt-2">아이 상세 → 건강 관리 기록에서 다음 예정일을 등록해보세요.</p>
+          <p className="text-xs mt-2">위 “+ 일정”을 눌러 다음 예정일을 등록해보세요.</p>
         </div>
+      ) : view === 'calendar' ? (
+        <ScheduleCalendar items={visible} />
       ) : (
         <div className="space-y-5">
           {overdue.length > 0 && (

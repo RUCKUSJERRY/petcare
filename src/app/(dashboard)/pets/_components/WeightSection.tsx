@@ -5,10 +5,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { WeightLog } from '@/types'
 
-export function WeightSection({ petId }: { petId: string }) {
+export function WeightSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
   const supabase = createClient()
   const qc = useQueryClient()
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(defaultOpen)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)

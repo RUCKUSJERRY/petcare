@@ -1,10 +1,10 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { timeAgo } from '@/lib/utils'
+import { cn, timeAgo } from '@/lib/utils'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { NotificationItem } from '@/types'
 
@@ -19,8 +19,10 @@ export function NotificationBell() {
   const supabase = createClient()
   const qc = useQueryClient()
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const active = open || pathname.startsWith('/notifications')
 
   const { data: unread = 0 } = useQuery({
     queryKey: ['notifications-unread'],
@@ -89,7 +91,12 @@ export function NotificationBell() {
     <div data-tour="bell" className="relative shrink-0" ref={wrapRef}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="relative w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors"
+        className={cn(
+          'relative w-8 h-8 rounded-full border flex items-center justify-center transition-colors',
+          active
+            ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
+            : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+        )}
         aria-label={unread > 0 ? `알림 ${unread}건` : '알림'}
         aria-haspopup="true"
         aria-expanded={open}
