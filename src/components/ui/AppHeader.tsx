@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { NotificationBell } from './NotificationBell'
 
@@ -13,6 +14,9 @@ export function AppHeader() {
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const pathname = usePathname()
+  const petsActive = pathname.startsWith('/pets')
+  const profileActive = pathname.startsWith('/profile')
 
   const { data: pets } = useMyPets()
 
@@ -63,7 +67,13 @@ export function AppHeader() {
         <Link
           href="/pets"
           aria-label="내 아이 관리"
-          className="shrink-0 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-base hover:bg-gray-50 transition-colors"
+          aria-current={petsActive ? 'page' : undefined}
+          className={cn(
+            'shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-base transition-colors',
+            petsActive
+              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
+              : 'border-gray-200 hover:bg-gray-50'
+          )}
         >
           🐾
         </Link>
@@ -101,7 +111,13 @@ export function AppHeader() {
         {/* 프로필 버튼 */}
         <Link
           href="/profile"
-          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 shrink-0 transition-colors"
+          aria-current={profileActive ? 'page' : undefined}
+          className={cn(
+            'w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-colors',
+            profileActive
+              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
+              : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+          )}
           aria-label="프로필"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
