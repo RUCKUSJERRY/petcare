@@ -13,10 +13,11 @@ npm install
 ```bash
 cp .env.local.example .env.local
 ```
-`.env.local`을 열어 Supabase와 Anthropic API 키를 입력하세요.
+`.env.local`을 열어 Supabase와 카카오맵 키를 입력하세요.
 
 - Supabase: https://supabase.com/dashboard → 프로젝트 생성 → Settings > API
-- Anthropic: https://console.anthropic.com → API Keys
+- 카카오맵: https://developers.kakao.com → 내 애플리케이션 → 앱 키 > JavaScript 키
+  - `플랫폼 > Web`에 서비스 도메인(예: http://localhost:3000)을 등록하고, `Kakao Map`·`Local`(장소 검색) API를 활성화해야 지도 기능이 동작합니다.
 
 ### 3. Supabase DB 초기화
 Supabase 대시보드 → SQL Editor에서 `supabase/init.sql` 전체를 복사해 실행하세요.
