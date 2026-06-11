@@ -45,6 +45,10 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 }
 
+// 클라이언트 세션 동안 마지막 지도 위치를 기억(모듈 스코프).
+// 화면을 떠났다 돌아와도 같은 위치로 복원되고, 전체 새로고침 시에는 초기화된다.
+let lastMapState: { lat: number; lng: number; level: number } | null = null
+
 export default function MapPage() {
   const supabase = createClient()
   const [category, setCategory] = useState<CategoryKey>('lost')
@@ -273,20 +277,32 @@ export default function MapPage() {
 
   // 지도 초기화 (1회)
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
-    const seoul = new maps.LatLng(37.5665, 126.978)
-    const map = new maps.Map(el, { center: seoul, level: 5 })
+    // 직전에 보던 위치가 있으면 거기서 시작 (실종 상세 등 다녀와도 서울로 튀지 않게)
+    const start = lastMapState
+      ? new maps.LatLng(lastMapState.lat, lastMapState.lng)
+      : new maps.LatLng(37.5665, 126.978)
+    const map = new maps.Map(el, { center: start, level: lastMapState?.level ?? 5 })
     mapsRef.current = maps
     mapObjRef.current = map
     placesRef.current = new maps.services.Places()
     infoRef.current = new maps.InfoWindow({ removable: true })
 
-    maps.event.addListener(map, 'idle', () => loadRef.current())
+    // 지도가 멈출 때마다 마지막 위치를 기억 → 화면 재진입 시 복원에 사용
+    maps.event.addListener(map, 'idle', () => {
+      const c = map.getCenter()
+      lastMapState = { lat: c.getLat(), lng: c.getLng(), level: map.getLevel() }
+      loadRef.current()
+    })
 
-    navigator.geolocation?.getCurrentPosition(
-      p => map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude)),
-      () => loadRef.current(),
-      { timeout: 4000 }
-    )
+    // 기억된 위치가 없을 때만(첫 진입) 현재 위치로 이동.
+    // maximumAge로 최근 위치 캐시를 즉시 사용해 2초 지연을 줄인다.
+    if (!lastMapState) {
+      navigator.geolocation?.getCurrentPosition(
+        p => map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude)),
+        () => loadRef.current(),
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+      )
+    }
     loadRef.current()
   }, [])
 

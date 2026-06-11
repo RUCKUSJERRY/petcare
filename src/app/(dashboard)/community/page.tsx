@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { categoryColor, timeAgo } from '@/lib/utils'
 import type { PostCategory, PostListItem } from '@/types'
 import { SearchBar } from './_components/SearchBar'
+import { FilterScroller } from '@/components/ui/FilterScroller'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 const PAGE_SIZE = 20
@@ -90,7 +91,7 @@ export default async function CommunityPage({
         </div>
 
         {/* 카테고리 필터 */}
-        <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
+        <FilterScroller className="pb-1">
           {/* 칩은 상호배타(라디오)로 동작: 전체/카테고리/내 글 중 하나만 선택 */}
           <FilterChip label="전체" href={buildUrl({ sort, q })} active={!activeCategory && !mine} />
           {CATEGORIES.map(c => (
@@ -108,7 +109,7 @@ export default async function CommunityPage({
               active={mine}
             />
           )}
-        </div>
+        </FilterScroller>
 
         {/* 정렬 토글 */}
         <div className="flex gap-3 mt-2 text-sm">
