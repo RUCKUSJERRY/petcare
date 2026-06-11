@@ -45,6 +45,10 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 }
 
+// 클라이언트 세션 동안 마지막 지도 위치를 기억(모듈 스코프).
+// 화면을 떠났다 돌아와도 같은 위치로 복원되고, 전체 새로고침 시에는 초기화된다.
+let lastMapState: { lat: number; lng: number; level: number } | null = null
+
 export default function MapPage() {
   const supabase = createClient()
   const [category, setCategory] = useState<CategoryKey>('lost')
@@ -75,11 +79,25 @@ export default function MapPage() {
     const map = mapObjRef.current
     const pos = new maps.LatLng(lat, lng)
     const marker = new maps.Marker({ position: pos, map })
-    maps.event.addListener(marker, 'click', () => {
-      infoRef.current.setContent(content)
-      infoRef.current.open(map, marker)
-    })
+    // 마커를 직접 눌러도 리스트 클릭과 동일하게 '여유 공간 확보 후 열기'로 통일
+    maps.event.addListener(marker, 'click', () => focusByKey(key, pos))
     markersRef.current.set(key, { marker, pos, content })
+  }
+
+  // 정보창이 마커 위쪽으로 열리므로, 마커를 화면 중앙보다 약간 아래로 옮겨
+  // 팝업이 지도 영역을 벗어나(잘리지) 않도록 보정한 좌표로 부드럽게 이동.
+  const panToWithRoom = (latLng: any) => {
+    const map = mapObjRef.current
+    const maps = mapsRef.current
+    try {
+      const proj = map.getProjection()
+      const pt = proj.containerPointFromCoords(latLng)
+      // 위로 약 90px 올린 지점을 중심으로 → 마커는 중심보다 아래에 위치(팝업 공간 확보)
+      const target = proj.coordsFromContainerPoint(new maps.Point(pt.x, pt.y - 90))
+      map.panTo(target)
+    } catch {
+      map.panTo(latLng)
+    }
   }
 
   // 마커 렌더가 끝난 뒤, 리스트에서 누른 항목이 있으면 해당 팝업 자동 오픈
@@ -92,6 +110,16 @@ export default function MapPage() {
       infoRef.current.open(mapObjRef.current, entry.marker)
       pendingFocusRef.current = null
     }
+  }
+
+  // 항목 포커스: 이동(panTo)하면 idle → 재로드 → openPending 순으로 팝업이 열린다.
+  // 이동이 거의 없어 idle이 안 뜨는 경우를 위해 폴백으로 직접 오픈을 시도.
+  const focusByKey = (key: string, latLng: any) => {
+    const map = mapObjRef.current
+    if (!map) return
+    pendingFocusRef.current = key
+    panToWithRoom(latLng)
+    setTimeout(() => openPending(), 350)
   }
 
   // 즐겨찾기 로드
@@ -129,7 +157,7 @@ export default function MapPage() {
             const name = it.name ?? '이름 미상'
             const area = it.area_text ?? ''
             const content =
-              `<div style="padding:8px 10px;font-size:12px;line-height:1.5;min-width:140px;">` +
+              `<div style="padding:8px 10px;font-size:12px;line-height:1.5;min-width:140px;max-width:230px;word-break:keep-all;">` +
               `<b>${it.species === 'cat' ? '🐱' : '🐶'} ${escapeHtml(name)}</b>` +
               (area ? `<br/><span style="color:#888;">${escapeHtml(area)}</span>` : '') +
               `<br/><a href="/lost/${it.id}" style="color:#2d8a42;font-weight:600;">상세보기 →</a></div>`
@@ -152,7 +180,7 @@ export default function MapPage() {
       const list: ListItem[] = favorites.map(f => {
         const dir = `https://map.kakao.com/link/to/${encodeURIComponent(f.place_name)},${f.lat},${f.lng}`
         const content =
-          `<div style="padding:8px 10px;font-size:12px;line-height:1.5;min-width:150px;">` +
+          `<div style="padding:8px 10px;font-size:12px;line-height:1.5;min-width:150px;max-width:230px;word-break:keep-all;">` +
           `<b>${escapeHtml(f.place_name)}</b>` +
           (f.address ? `<br/><span style="color:#888;">${escapeHtml(f.address)}</span>` : '') +
           (f.phone ? `<br/><a href="tel:${escapeHtml(f.phone)}" style="color:#2d8a42;">📞 ${escapeHtml(f.phone)}</a>` : '') +
@@ -189,7 +217,7 @@ export default function MapPage() {
           const dist = p.distance ? `${(Number(p.distance) / 1000).toFixed(1)}km` : ''
           const dir = `https://map.kakao.com/link/to/${encodeURIComponent(p.place_name)},${p.y},${p.x}`
           const content =
-            `<div style="padding:8px 10px;font-size:12px;line-height:1.5;min-width:150px;">` +
+            `<div style="padding:8px 10px;font-size:12px;line-height:1.5;min-width:150px;max-width:230px;word-break:keep-all;">` +
             `<b>${escapeHtml(p.place_name)}</b>${dist ? ` <span style="color:#2d8a42;">${dist}</span>` : ''}` +
             (addr ? `<br/><span style="color:#888;">${escapeHtml(addr)}</span>` : '') +
             (p.phone ? `<br/><a href="tel:${escapeHtml(p.phone)}" style="color:#2d8a42;">📞 ${escapeHtml(p.phone)}</a>` : '') +
@@ -212,15 +240,10 @@ export default function MapPage() {
   }
 
   // 리스트 항목 클릭 → 지도 이동 + 팝업
-  // 이동(panTo)하면 idle → 재로드 → openPending 순으로 팝업이 열린다.
-  // 이동이 거의 없어 idle이 안 뜨는 경우를 위해 폴백으로 직접 오픈을 시도.
   const focusItem = (it: ListItem) => {
-    const map = mapObjRef.current
     const maps = mapsRef.current
-    if (!map || !maps) return
-    pendingFocusRef.current = it.key
-    map.panTo(new maps.LatLng(it.lat, it.lng))
-    setTimeout(() => openPending(), 350)
+    if (!maps) return
+    focusByKey(it.key, new maps.LatLng(it.lat, it.lng))
   }
 
   // 즐겨찾기 토글
@@ -254,20 +277,32 @@ export default function MapPage() {
 
   // 지도 초기화 (1회)
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
-    const seoul = new maps.LatLng(37.5665, 126.978)
-    const map = new maps.Map(el, { center: seoul, level: 5 })
+    // 직전에 보던 위치가 있으면 거기서 시작 (실종 상세 등 다녀와도 서울로 튀지 않게)
+    const start = lastMapState
+      ? new maps.LatLng(lastMapState.lat, lastMapState.lng)
+      : new maps.LatLng(37.5665, 126.978)
+    const map = new maps.Map(el, { center: start, level: lastMapState?.level ?? 5 })
     mapsRef.current = maps
     mapObjRef.current = map
     placesRef.current = new maps.services.Places()
     infoRef.current = new maps.InfoWindow({ removable: true })
 
-    maps.event.addListener(map, 'idle', () => loadRef.current())
+    // 지도가 멈출 때마다 마지막 위치를 기억 → 화면 재진입 시 복원에 사용
+    maps.event.addListener(map, 'idle', () => {
+      const c = map.getCenter()
+      lastMapState = { lat: c.getLat(), lng: c.getLng(), level: map.getLevel() }
+      loadRef.current()
+    })
 
-    navigator.geolocation?.getCurrentPosition(
-      p => map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude)),
-      () => loadRef.current(),
-      { timeout: 4000 }
-    )
+    // 기억된 위치가 없을 때만(첫 진입) 현재 위치로 이동.
+    // maximumAge로 최근 위치 캐시를 즉시 사용해 2초 지연을 줄인다.
+    if (!lastMapState) {
+      navigator.geolocation?.getCurrentPosition(
+        p => map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude)),
+        () => loadRef.current(),
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+      )
+    }
     loadRef.current()
   }, [])
 

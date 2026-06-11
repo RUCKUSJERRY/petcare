@@ -36,6 +36,9 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
     return new Date(n.getFullYear(), n.getMonth(), 1)
   })
   const [selected, setSelected] = useState<string | null>(todayYMD)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  // 연/월 선택 패널에서 현재 보고 있는 연도(월 선택 전 단계)
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
 
   // 날짜별 일정 그룹
   const byDate = useMemo(() => {
@@ -64,18 +67,69 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
   const move = (delta: number) =>
     setCursor(c => new Date(c.getFullYear(), c.getMonth() + delta, 1))
 
+  const openPicker = () => {
+    setPickerYear(cursor.getFullYear())
+    setPickerOpen(o => !o)
+  }
+  const pickMonth = (monthIdx: number) => {
+    setCursor(new Date(pickerYear, monthIdx, 1))
+    setPickerOpen(false)
+  }
+  const goToday = () => {
+    const n = new Date()
+    setCursor(new Date(n.getFullYear(), n.getMonth(), 1))
+    setSelected(todayYMD)
+    setPickerOpen(false)
+  }
+
   const selectedItems = selected ? byDate.get(selected) ?? [] : []
 
   return (
     <div className="space-y-4">
       <div className="card space-y-3">
-        {/* 월 네비게이션 */}
+        {/* 월 네비게이션 (가운데 라벨을 누르면 연/월 선택 패널) */}
         <div className="flex items-center justify-between">
           <button onClick={() => move(-1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="이전 달">‹</button>
-          <span className="font-bold text-gray-900">{monthLabel}</span>
+          <button
+            onClick={openPicker}
+            className="flex items-center gap-1 font-bold text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100"
+            aria-expanded={pickerOpen}
+          >
+            {monthLabel}
+            <span className="text-xs text-gray-400">{pickerOpen ? '▲' : '▼'}</span>
+          </button>
           <button onClick={() => move(1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="다음 달">›</button>
         </div>
 
+        {/* 연/월 선택 패널: 연도 먼저 고른 뒤 월 선택 */}
+        {pickerOpen ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <button onClick={() => setPickerYear(y => y - 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="이전 연도">‹</button>
+              <span className="font-bold text-gray-900">{pickerYear}년</span>
+              <button onClick={() => setPickerYear(y => y + 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="다음 연도">›</button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 12 }, (_, i) => {
+                const isCurrent = cursor.getFullYear() === pickerYear && cursor.getMonth() === i
+                return (
+                  <button
+                    key={i}
+                    onClick={() => pickMonth(i)}
+                    className={[
+                      'py-2 rounded-lg text-sm font-medium transition-colors',
+                      isCurrent ? 'bg-primary-500 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100',
+                    ].join(' ')}
+                  >
+                    {i + 1}월
+                  </button>
+                )
+              })}
+            </div>
+            <button onClick={goToday} className="w-full text-sm text-primary-600 font-semibold py-1">오늘로</button>
+          </div>
+        ) : (
+        <>
         {/* 요일 헤더 */}
         <div className="grid grid-cols-7 text-center text-xs text-gray-400">
           {WEEKDAYS.map((w, i) => (
@@ -119,6 +173,8 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
             )
           })}
         </div>
+        </>
+        )}
       </div>
 
       {/* 선택한 날짜의 일정 */}
