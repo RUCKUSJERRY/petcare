@@ -255,6 +255,23 @@ export interface CareRecord {
 /** @deprecated CareRecord 사용 */
 export type VaccinationRecord = CareRecord
 
+/** 진료 기록 (병원 방문 이력 — 증상·진단·처치·처방·비용) */
+export interface MedicalRecord {
+  id: string
+  pet_id: string
+  visited_on: string      // 진료일 YYYY-MM-DD
+  clinic: string | null
+  reason: string | null       // 내원 사유 / 증상
+  diagnosis: string | null    // 진단명
+  treatment: string | null    // 처치 / 치료
+  medication: string | null   // 처방약
+  cost: number | null         // 비용(원)
+  next_visit_on: string | null
+  note: string | null
+  photo_url: string | null    // 처방전 / 영수증 사진
+  created_at: string
+}
+
 /** 대시보드 D-day 알림용 경량 타입 */
 export interface CareAlert {
   pet_id: string

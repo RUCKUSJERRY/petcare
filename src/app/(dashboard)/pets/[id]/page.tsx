@@ -12,6 +12,7 @@ import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
 import { CareSection } from '../_components/CareSection'
+import { MedicalSection } from '../_components/MedicalSection'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -20,6 +21,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const addTarget = searchParams.get('add')
   const weightRef = useRef<HTMLDivElement>(null)
   const careRef = useRef<HTMLDivElement>(null)
+  const medicalRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
@@ -71,7 +73,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   // ?add=weight|care 진입 시 해당 기록 섹션으로 부드럽게 스크롤
   useEffect(() => {
     if (!pet || !addTarget) return
-    const el = addTarget === 'weight' ? weightRef.current : addTarget === 'care' ? careRef.current : null
+    const el = addTarget === 'weight' ? weightRef.current
+      : addTarget === 'care' ? careRef.current
+        : addTarget === 'medical' ? medicalRef.current : null
     if (el) {
       const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
       return () => clearTimeout(t)
@@ -245,6 +249,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           </div>
           <div ref={careRef}>
             <CareSection petId={params.id} defaultOpen={addTarget === 'care'} />
+          </div>
+          <div ref={medicalRef}>
+            <MedicalSection petId={params.id} defaultOpen={addTarget === 'medical'} />
           </div>
         </>
       )}
