@@ -84,8 +84,8 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
 
   const notice = kakaoNotice(mapStatus)
 
-  if (!walk) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
-
+  // 주의: walk 로딩 중에도 지도 컨테이너는 항상 렌더링해야 한다.
+  // (로딩 중 early-return 하면 useKakaoMap이 컨테이너를 찾지 못해 지도가 회색으로 남는 버그)
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -94,11 +94,11 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk.title || '산책'}</h1>
+        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || '산책'}</h1>
         <div className="w-6" />
       </div>
 
-      {/* 경로 지도 */}
+      {/* 경로 지도 — 항상 마운트 (조건부 렌더 시 카카오맵 초기화 실패로 회색 표시) */}
       <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
         <div ref={mapRef} className="absolute inset-0" />
         {notice && (
@@ -108,6 +108,10 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
         )}
       </div>
 
+      {!walk ? (
+        <div className="text-gray-400 text-center py-6">불러오는 중...</div>
+      ) : (
+      <>
       {/* 통계 */}
       <div className="card grid grid-cols-3 gap-2 text-center">
         <div>
@@ -171,6 +175,8 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}
         />
+      )}
+      </>
       )}
     </div>
   )

@@ -100,8 +100,9 @@ export default function MapPage() {
   }
 
   const select = (item: ListItem) => {
+    // 목록 펼침 상태(listOpen)는 유지한다. 상세 시트는 목록 위에 겹쳐 뜨고,
+    // 상세를 닫으면 이전에 펼쳐둔 목록이 그대로 보이도록 함.
     setSelected(item)
-    setListOpen(false)
     panMarkerAboveSheet(item.lat, item.lng)
   }
 

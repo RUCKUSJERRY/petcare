@@ -3,6 +3,7 @@
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
 import Link from 'next/link'
+import { useState } from 'react'
 import type { CareAlert, Pet } from '@/types'
 import { SelectedPetSummary } from './SelectedPetSummary'
 
@@ -19,6 +20,8 @@ export function PetSection({
   vaccAlerts: CareAlert[]
 }) {
   const { selectedPetId } = useSelectedPet()
+  // 선택된 아이가 있을 때 "다른 아이들" 목록은 기본 접힘 (영역 차지 최소화)
+  const [othersOpen, setOthersOpen] = useState(false)
 
   if (pets.length === 0) {
     return (
@@ -63,13 +66,21 @@ export function PetSection({
       {/* 선택된 아이 요약 카드 */}
       <SelectedPetSummary pets={pets} vaccAlerts={vaccAlerts} />
 
-      {/* 나머지 아이 목록 */}
+      {/* 나머지 아이 목록 — 선택된 아이가 있으면 접어두기 (공간 절약) */}
       {listPets.length > 0 && (
         <div className="space-y-2">
           {hasSelection && (
-            <h2 className="text-sm font-semibold text-gray-500 pt-1">다른 아이들</h2>
+            <button
+              type="button"
+              onClick={() => setOthersOpen(o => !o)}
+              className="w-full flex items-center justify-between pt-1 text-sm font-semibold text-gray-500"
+              aria-expanded={othersOpen}
+            >
+              <span>다른 아이들 {listPets.length}마리</span>
+              <span className="text-gray-400">{othersOpen ? '접기 ▲' : '펼치기 ▼'}</span>
+            </button>
           )}
-          {listPets.map(pet => {
+          {(!hasSelection || othersOpen) && listPets.map(pet => {
             const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
             return (
               <Link key={pet.id} href={`/pets/${pet.id}`}>

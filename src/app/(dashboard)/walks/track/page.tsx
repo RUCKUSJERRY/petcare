@@ -170,7 +170,7 @@ export default function WalkTrackPage() {
   const notice = kakaoNotice(mapStatus)
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-30 bg-gray-100 overflow-hidden flex flex-col">
+    <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-[60] bg-gray-100 overflow-hidden flex flex-col">
       {/* 지도 */}
       <div className="relative flex-1">
         <div ref={mapRef} className="absolute inset-0" />

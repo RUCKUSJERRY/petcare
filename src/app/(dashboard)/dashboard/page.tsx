@@ -21,14 +21,26 @@ export default async function DashboardPage() {
 
   let vaccAlerts: CareAlert[] = []
   if (petIds.length > 0) {
+    // 같은 관리 항목(아이·카테고리·항목명)은 "가장 최근 시행 기록"만 유효한 일정으로 본다.
+    // 더 최근에 다시 시행한 기록이 있으면, 이전 기록의 다음 예정일은 이미 갱신된 과거 일정이므로
+    // 대시보드 알림에서 제외한다. (예: 6/13에 건강검진을 다시 했는데 6/10이 예정일이던
+    // 이전 기록이 "지남"으로 표시되던 문제 해결)
     const { data } = await supabase
       .from('vaccination_records')
-      .select('pet_id, category, vaccine_name, next_due_on')
+      .select('pet_id, category, vaccine_name, vaccinated_on, next_due_on')
       .in('pet_id', petIds)
-      .not('next_due_on', 'is', null)
-      .lte('next_due_on', soon)
-      .order('next_due_on')
-    vaccAlerts = (data ?? []) as CareAlert[]
+      .order('vaccinated_on', { ascending: false })
+
+    type CareRow = CareAlert & { vaccinated_on: string; next_due_on: string | null }
+    const latestByLine = new Map<string, CareRow>()
+    for (const r of (data ?? []) as CareRow[]) {
+      const key = `${r.pet_id}|${r.category}|${r.vaccine_name}`
+      // 시행일 내림차순 정렬이므로 각 항목의 첫 등장이 최신 기록
+      if (!latestByLine.has(key)) latestByLine.set(key, r)
+    }
+    vaccAlerts = Array.from(latestByLine.values())
+      .filter((a): a is CareAlert & { vaccinated_on: string } => a.next_due_on != null && a.next_due_on <= soon)
+      .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))
   }
 
   // 최근 커뮤니티 글 (위젯용)
