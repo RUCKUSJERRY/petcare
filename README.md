@@ -22,7 +22,7 @@ cp .env.local.example .env.local
 ### 3. Supabase DB 초기화
 Supabase 대시보드 → SQL Editor에서 `supabase/init.sql` 전체를 복사해 실행하세요.
 이후 `supabase/migrations/` 안의 SQL을 번호 순서대로 실행해 최신 스키마를 맞춥니다.
-(예: 지도 즐겨찾기는 `018_map_favorites.sql`, 진료 기록은 `019_medical_records.sql` 실행이 필요합니다. 각 파일은 idempotent라 재실행해도 안전합니다.)
+(예: 지도 즐겨찾기는 `018_map_favorites.sql`, 진료 기록은 `019_medical_records.sql`, 산책 기록은 `020_walks.sql` 실행이 필요합니다. 각 파일은 idempotent라 재실행해도 안전합니다.)
 
 ### 4. Supabase Google 로그인 설정
 Supabase 대시보드 → Authentication → Providers → Google 활성화

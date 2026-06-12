@@ -279,3 +279,28 @@ export interface CareAlert {
   vaccine_name: string
   next_due_on: string
 }
+
+// ─── 산책 기록 ───────────────────────────────────────────────
+
+/** 경로 좌표 한 점 [위도, 경도] */
+export type WalkPoint = [number, number]
+
+/** 산책 기록 */
+export interface Walk {
+  id: string
+  user_id: string
+  pet_id: string | null
+  title: string | null
+  started_at: string
+  ended_at: string
+  duration_s: number
+  distance_m: number
+  path: WalkPoint[]
+  is_public: boolean
+  area_text: string | null
+  note: string | null
+  created_at: string
+  // join (공유 피드용)
+  pet_name?: string | null
+  author_name?: string | null
+}

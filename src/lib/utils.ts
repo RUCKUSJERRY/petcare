@@ -192,6 +192,62 @@ export function careCategoryIcon(category: string): string {
   }[category] ?? '📋'
 }
 
+// ─── 산책 기록 ──────────────────────────────────────────────
+
+/** 두 좌표 사이 거리(미터) — 하버사인 공식 */
+export function haversineMeters(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  const R = 6371000 // 지구 반지름(m)
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(b.lat - a.lat)
+  const dLng = toRad(b.lng - a.lng)
+  const lat1 = toRad(a.lat)
+  const lat2 = toRad(b.lat)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
+/** 경로 좌표 배열의 총 거리(미터) */
+export function pathDistanceMeters(path: [number, number][]): number {
+  let total = 0
+  for (let i = 1; i < path.length; i++) {
+    total += haversineMeters(
+      { lat: path[i - 1][0], lng: path[i - 1][1] },
+      { lat: path[i][0], lng: path[i][1] }
+    )
+  }
+  return total
+}
+
+/** 거리(m) → "1.234km" / "850m" */
+export function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m`
+  return `${(meters / 1000).toFixed(2)}km`
+}
+
+/** 소요 시간(초) → "1:23:45" 또는 "23:45" */
+export function formatDuration(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`
+}
+
+/** 평균 페이스 "분'초"/km" (거리 0이면 '-') */
+export function formatPace(meters: number, totalSec: number): string {
+  if (meters < 10) return '-'
+  const secPerKm = totalSec / (meters / 1000)
+  const m = Math.floor(secPerKm / 60)
+  const s = Math.round(secPerKm % 60)
+  return `${m}'${String(s).padStart(2, '0')}"/km`
+}
+
 /**
  * 커뮤니티 카테고리 색상
  */

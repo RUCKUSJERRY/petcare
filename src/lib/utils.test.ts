@@ -10,6 +10,11 @@ import {
   pickBestPerActivityType,
   timeAgo,
   cn,
+  haversineMeters,
+  pathDistanceMeters,
+  formatDistance,
+  formatDuration,
+  formatPace,
 } from './utils'
 
 describe('calcPetAge', () => {
@@ -136,5 +141,42 @@ describe('cn', () => {
   it('falsy 제거 후 공백 결합', () => {
     expect(cn('a', false, null, undefined, 'b')).toBe('a b')
     expect(cn()).toBe('')
+  })
+})
+
+describe('산책 거리/포맷 헬퍼', () => {
+  it('haversineMeters: 위도 1도 ≈ 111km', () => {
+    const d = haversineMeters({ lat: 37, lng: 127 }, { lat: 38, lng: 127 })
+    expect(d).toBeGreaterThan(110000)
+    expect(d).toBeLessThan(112000)
+  })
+
+  it('haversineMeters: 같은 좌표는 0', () => {
+    expect(haversineMeters({ lat: 37.5, lng: 127 }, { lat: 37.5, lng: 127 })).toBe(0)
+  })
+
+  it('pathDistanceMeters: 누적 거리, 1점 이하는 0', () => {
+    expect(pathDistanceMeters([])).toBe(0)
+    expect(pathDistanceMeters([[37, 127]])).toBe(0)
+    const total = pathDistanceMeters([[37, 127], [37.001, 127], [37.002, 127]])
+    expect(total).toBeGreaterThan(200)
+    expect(total).toBeLessThan(240)
+  })
+
+  it('formatDistance: m / km 표기', () => {
+    expect(formatDistance(0)).toBe('0m')
+    expect(formatDistance(850)).toBe('850m')
+    expect(formatDistance(1234)).toBe('1.23km')
+  })
+
+  it('formatDuration: 시:분:초 / 분:초', () => {
+    expect(formatDuration(0)).toBe('0:00')
+    expect(formatDuration(65)).toBe('1:05')
+    expect(formatDuration(3725)).toBe('1:02:05')
+  })
+
+  it('formatPace: 거리 짧으면 "-", 아니면 분초/km', () => {
+    expect(formatPace(5, 100)).toBe('-')
+    expect(formatPace(1000, 360)).toBe("6'00\"/km")
   })
 })
