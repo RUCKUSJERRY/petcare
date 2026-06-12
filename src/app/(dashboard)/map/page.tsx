@@ -10,6 +10,12 @@ import type { MapFavorite } from '@/types'
 
 type CategoryKey = 'lost' | 'hospital' | 'cafe' | 'restaurant' | 'favorite'
 
+// 동물병원 특화 진료/시설 빠른 필터 (카카오 키워드 검색에 덧붙임)
+const HOSPITAL_TAGS = ['24시', '응급', '안과', '치과', '피부', '정형외과', '내과', '한방']
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+
 const CATEGORIES: {
   key: CategoryKey
   label: string
@@ -55,17 +61,21 @@ export default function MapPage() {
   const [favorites, setFavorites] = useState<MapFavorite[]>([])
   const [selected, setSelected] = useState<ListItem | null>(null) // 하단 상세 시트
   const [listOpen, setListOpen] = useState(false)                 // 목록 시트 펼침
+  const [needsResearch, setNeedsResearch] = useState(false)       // 지도 이동 후 '이 지역 재검색' 노출
   const userIdRef = useRef<string | null>(null)
 
   const mapsRef = useRef<any>(null)
   const mapObjRef = useRef<any>(null)
   const placesRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
+  const labelsRef = useRef<Map<string, any>>(new Map())  // 마커 상호명 라벨(CustomOverlay)
   const mapElRef = useRef<HTMLElement | null>(null) // 지도 컨테이너 DOM (높이 계산용)
 
   const clearMarkers = () => {
     markersRef.current.forEach(m => m.setMap(null))
     markersRef.current.clear()
+    labelsRef.current.forEach(l => l.setMap(null))
+    labelsRef.current.clear()
   }
 
   // 핀이 하단 시트에 가리지 않도록 마커를 화면 상단 1/3 지점으로 이동
@@ -98,9 +108,20 @@ export default function MapPage() {
   const addMarker = (item: ListItem) => {
     const maps = mapsRef.current
     const map = mapObjRef.current
-    const marker = new maps.Marker({ position: new maps.LatLng(item.lat, item.lng), map })
+    const pos = new maps.LatLng(item.lat, item.lng)
+    const marker = new maps.Marker({ position: pos, map })
     maps.event.addListener(marker, 'click', () => select(item))
     markersRef.current.set(item.key, marker)
+
+    // 핀 아래 상호명 라벨 (네이버지도처럼) — 클릭 시 상세 선택
+    const label = new maps.CustomOverlay({
+      position: pos,
+      yAnchor: 0,           // 라벨 상단을 핀 위치에 맞춰 마커 아래로 배치
+      zIndex: 1,
+      content: `<div style="margin-top:2px;max-width:120px;padding:2px 6px;border-radius:9999px;background:rgba(255,255,255,0.95);box-shadow:0 1px 3px rgba(0,0,0,0.2);font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(item.title)}</div>`,
+    })
+    label.setMap(map)
+    labelsRef.current.set(item.key, label)
   }
 
   const loadFavorites = useCallback(async () => {
@@ -121,6 +142,7 @@ export default function MapPage() {
     const maps = mapsRef.current
     const map = mapObjRef.current
     if (!maps || !map) return
+    setNeedsResearch(false)
     clearMarkers()
     const cat = CATEGORIES.find(c => c.key === category)!
 
@@ -220,6 +242,15 @@ export default function MapPage() {
     }
   }
 
+  // 사용자가 지도를 움직였을 때(드래그/줌) — 장소 카테고리면 '이 지역 재검색' 노출.
+  // (프로그램 panTo는 dragend/zoom_changed를 발생시키지 않아 핀 선택 시엔 뜨지 않음)
+  const onUserMoveRef = useRef<() => void>(() => {})
+  onUserMoveRef.current = () => {
+    if (category === 'hospital' || category === 'cafe' || category === 'restaurant') {
+      setNeedsResearch(true)
+    }
+  }
+
   // 지도 초기화 (1회)
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
     mapElRef.current = el
@@ -231,15 +262,20 @@ export default function MapPage() {
     mapObjRef.current = map
     placesRef.current = new maps.services.Places()
 
+    // idle: 세션 위치만 저장 (자동 재검색은 하지 않음 → 카카오 쿼터 절약)
     maps.event.addListener(map, 'idle', () => {
       const c = map.getCenter()
       lastMapState = { lat: c.getLat(), lng: c.getLng(), level: map.getLevel() }
-      loadRef.current()
     })
+    maps.event.addListener(map, 'dragend', () => onUserMoveRef.current())
+    maps.event.addListener(map, 'zoom_changed', () => onUserMoveRef.current())
 
     if (!lastMapState) {
       navigator.geolocation?.getCurrentPosition(
-        p => map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude)),
+        p => {
+          map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude))
+          loadRef.current() // 현재 위치 확정 후 그 지역으로 재검색
+        },
         () => loadRef.current(),
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
       )
@@ -343,6 +379,48 @@ export default function MapPage() {
             </button>
           ))}
         </div>
+
+        {/* 동물병원 특화 빠른 필터 (응급/24시·안과·치과 등) */}
+        {category === 'hospital' && (
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pointer-events-auto">
+            {HOSPITAL_TAGS.map(tag => {
+              const active = appliedKeyword === tag
+              return (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    const next = active ? '' : tag
+                    setKeyword(next)
+                    setAppliedKeyword(next)
+                  }}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full text-xs font-medium shrink-0 shadow-sm border transition-colors',
+                    active
+                      ? 'bg-rose-500 text-white border-rose-500'
+                      : 'bg-white/95 text-gray-600 border-gray-100'
+                  )}
+                >
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* 지도 이동 후 이 지역 재검색 */}
+        {needsResearch && !selected && (
+          <div className="flex justify-center pointer-events-auto pt-0.5">
+            <button
+              onClick={() => loadRef.current()}
+              className="flex items-center gap-1.5 bg-white text-primary-600 text-sm font-semibold rounded-full px-4 py-2 shadow-md border border-gray-100"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              이 지역에서 재검색
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── 현재 위치 버튼 ── */}
@@ -350,7 +428,10 @@ export default function MapPage() {
         <button
           onClick={() => {
             navigator.geolocation?.getCurrentPosition(
-              p => mapObjRef.current?.panTo(new mapsRef.current.LatLng(p.coords.latitude, p.coords.longitude)),
+              p => {
+                mapObjRef.current?.panTo(new mapsRef.current.LatLng(p.coords.latitude, p.coords.longitude))
+                onUserMoveRef.current() // 이동한 위치에서 재검색 버튼 노출
+              },
               undefined,
               { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
             )
