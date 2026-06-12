@@ -59,6 +59,18 @@ export default async function DashboardPage() {
         </svg>
       </Link>
 
+      {/* 산책 기록 (러닝앱처럼 경로·거리·시간 기록 + 좋은 경로 공유) */}
+      <Link href="/walks" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+        <span className="text-xl" aria-hidden>🦮</span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-gray-900">산책 기록</p>
+          <p className="text-xs text-gray-400">경로·거리·시간을 기록하고 좋은 산책로를 공유해요</p>
+        </div>
+        <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </Link>
+
       {/* 건강 일정 전체 보기 (펫이 있을 때 항상 노출) */}
       {pets && pets.length > 0 && (
         <Link

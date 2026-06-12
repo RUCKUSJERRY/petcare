@@ -73,18 +73,24 @@ export function SelectedPetSummary({
       )}
 
       {/* 빠른 기록 입력 (아이 상세의 해당 폼을 바로 열어줌) */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <Link
           href={`/pets/${pet.id}?add=weight`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>⚖️</span> 체중 기록
+          <span aria-hidden>⚖️</span> 체중
         </Link>
         <Link
           href={`/pets/${pet.id}?add=care`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>🩺</span> 건강 기록
+          <span aria-hidden>🩺</span> 건강
+        </Link>
+        <Link
+          href={`/pets/${pet.id}?add=medical`}
+          className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
+        >
+          <span aria-hidden>🏥</span> 진료
         </Link>
       </div>
 

@@ -255,10 +255,52 @@ export interface CareRecord {
 /** @deprecated CareRecord 사용 */
 export type VaccinationRecord = CareRecord
 
+/** 진료 기록 (병원 방문 이력 — 증상·진단·처치·처방·비용) */
+export interface MedicalRecord {
+  id: string
+  pet_id: string
+  visited_on: string      // 진료일 YYYY-MM-DD
+  clinic: string | null
+  reason: string | null       // 내원 사유 / 증상
+  diagnosis: string | null    // 진단명
+  treatment: string | null    // 처치 / 치료
+  medication: string | null   // 처방약
+  cost: number | null         // 비용(원)
+  next_visit_on: string | null
+  note: string | null
+  photo_url: string | null    // 처방전 / 영수증 사진
+  created_at: string
+}
+
 /** 대시보드 D-day 알림용 경량 타입 */
 export interface CareAlert {
   pet_id: string
   category: CareCategory
   vaccine_name: string
   next_due_on: string
+}
+
+// ─── 산책 기록 ───────────────────────────────────────────────
+
+/** 경로 좌표 한 점 [위도, 경도] */
+export type WalkPoint = [number, number]
+
+/** 산책 기록 */
+export interface Walk {
+  id: string
+  user_id: string
+  pet_id: string | null
+  title: string | null
+  started_at: string
+  ended_at: string
+  duration_s: number
+  distance_m: number
+  path: WalkPoint[]
+  is_public: boolean
+  area_text: string | null
+  note: string | null
+  created_at: string
+  // join (공유 피드용)
+  pet_name?: string | null
+  author_name?: string | null
 }
