@@ -10,6 +10,7 @@ const QUICK_LINKS = [
   { href: '/foods', emoji: '🥩', label: '음식' },
   { href: '/health', emoji: '🩺', label: '건강' },
   { href: '/walk', emoji: '🎾', label: '활동' },
+  { href: '/care', emoji: '🧼', label: '관리' },
 ]
 
 /**
@@ -98,7 +99,7 @@ export function SelectedPetSummary({
 
       {/* 맞춤 '가이드' 바로가기 (선택된 아이 기준으로 필터됨) — 기록과 구분 */}
       <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">📚 맞춤 가이드</p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {QUICK_LINKS.map(l => (
           <Link
             key={l.href}
