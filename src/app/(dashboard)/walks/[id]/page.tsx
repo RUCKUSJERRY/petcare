@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { WalkSocial } from '../_components/WalkSocial'
 import type { Walk } from '@/types'
 
 type WalkRow = Walk & {
@@ -142,7 +143,13 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
       {/* 메타 */}
       <div className="card space-y-1.5 text-sm">
         <div className="flex justify-between"><span className="text-gray-400">날짜</span>
-          <span className="text-gray-700">{new Date(walk.started_at).toLocaleString('ko-KR')}</span></div>
+          <span className="text-gray-700">{new Date(walk.started_at).toLocaleDateString('ko-KR')}</span></div>
+        <div className="flex justify-between"><span className="text-gray-400">시작 · 종료</span>
+          <span className="text-gray-700 tabular-nums">
+            {new Date(walk.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            {' ~ '}
+            {new Date(walk.ended_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+          </span></div>
         {walk.pet?.name && (
           <div className="flex justify-between"><span className="text-gray-400">함께한 아이</span>
             <span className="text-gray-700">{walk.pet.name}</span></div>
@@ -175,6 +182,14 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
             산책 기록 삭제
           </button>
         </div>
+      )}
+
+      {/* 공유된 산책: 좋아요 + 댓글 (커뮤니티 게시판처럼) */}
+      {walk.is_public && (
+        <>
+          <hr className="border-gray-100" />
+          <WalkSocial walkId={walk.id} initialLikeCount={walk.like_count ?? 0} />
+        </>
       )}
 
       {showDelete && (

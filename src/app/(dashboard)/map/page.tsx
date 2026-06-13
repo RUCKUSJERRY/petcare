@@ -449,6 +449,16 @@ export default function MapPage() {
         </button>
       )}
 
+      {/* ── 산책 기록 바로가기 (지도에서 산책 진입) ── */}
+      {!notice && !selected && (
+        <Link
+          href="/walks"
+          className="absolute left-3 bottom-24 z-20 flex items-center gap-1.5 rounded-full bg-primary-500 text-white text-sm font-semibold pl-3 pr-4 py-2.5 shadow-md"
+        >
+          <span aria-hidden>🦮</span> 산책 기록
+        </Link>
+      )}
+
       {/* ── 하단: 상세 시트(선택 시) 또는 목록 시트 ── */}
       {!notice && (
         selected ? (
