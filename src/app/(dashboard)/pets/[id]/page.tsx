@@ -13,6 +13,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
 import { CareSection } from '../_components/CareSection'
 import { MedicalSection } from '../_components/MedicalSection'
+import { PetMembers } from '../_components/PetMembers'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -32,9 +33,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [uid, setUid] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
   })
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
+  }, [supabase])
 
   const { data: pet, refetch } = useQuery({
     queryKey: ['pet', params.id],
@@ -253,6 +259,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           <div ref={medicalRef}>
             <MedicalSection petId={params.id} defaultOpen={addTarget === 'medical'} />
           </div>
+          <PetMembers petId={params.id} petName={pet.name} />
         </>
       )}
 
@@ -261,8 +268,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         <p className="text-sm text-red-500 text-center">{deleteError}</p>
       )}
 
-      {/* 삭제 버튼 */}
-      {!editing && (
+      {/* 삭제 버튼 — 소유자(등록자)만. 구성원은 '공동 관리에서 나가기' 사용 */}
+      {!editing && pet.user_id === uid && (
         <button
           onClick={() => setShowDeleteModal(true)}
           className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"

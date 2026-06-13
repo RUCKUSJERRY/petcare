@@ -5,12 +5,12 @@ import type { Pet } from '@/types'
 
 export default async function PetsPage() {
   const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  await supabase.auth.getUser()
 
+  // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 (공동 관리 아이 포함)
   const { data: pets } = await supabase
     .from('pets')
     .select('*, breed:breeds(*)')
-    .eq('user_id', user!.id)
     .order('created_at')
 
   return (
