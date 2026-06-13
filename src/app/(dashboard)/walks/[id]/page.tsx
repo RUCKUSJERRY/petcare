@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { ShareButton } from '@/components/ui/ShareButton'
 import type { Walk } from '@/types'
 
 type WalkRow = Walk & {
@@ -95,7 +96,17 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           </svg>
         </button>
         <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || '산책'}</h1>
-        <div className="w-6" />
+        {walk?.is_public ? (
+          <ShareButton
+            path={`/walks/${walk.id}`}
+            title={walk.title || '산책 경로'}
+            text="이 산책 경로를 확인해보세요"
+            iconOnly
+            className="text-gray-400 hover:text-primary-600 w-6 h-6 flex items-center justify-center"
+          />
+        ) : (
+          <div className="w-6" />
+        )}
       </div>
 
       {/* 경로 지도 — 항상 마운트 (조건부 렌더 시 카카오맵 초기화 실패로 회색 표시) */}

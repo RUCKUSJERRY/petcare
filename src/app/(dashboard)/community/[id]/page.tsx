@@ -8,6 +8,7 @@ import { CommentSection } from '../_components/CommentSection'
 import { DeletePostButton } from '../_components/DeletePostButton'
 import { BackButton } from '@/components/ui/BackButton'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
+import { ShareButton } from '@/components/ui/ShareButton'
 
 export default async function PostDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient()
@@ -64,17 +65,26 @@ export default async function PostDetailPage({ params }: { params: { id: string 
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <BackButton />
-        {isAuthor && (
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/community/${post.id}/edit`}
-              className="text-sm text-primary-600 font-semibold"
-            >
-              수정
-            </Link>
-            <DeletePostButton postId={post.id} imageUrl={post.image_url} />
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <ShareButton
+            path={`/community/${post.id}`}
+            title={post.title}
+            text="펫케어 커뮤니티 글을 확인해보세요"
+            label="공유"
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600"
+          />
+          {isAuthor && (
+            <>
+              <Link
+                href={`/community/${post.id}/edit`}
+                className="text-sm text-primary-600 font-semibold"
+              >
+                수정
+              </Link>
+              <DeletePostButton postId={post.id} imageUrl={post.image_url} />
+            </>
+          )}
+        </div>
       </div>
 
       {/* 본문 */}
