@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages } from 'next-intl/server'
 import { Providers } from './providers'
 import { ServiceWorkerRegister } from '@/components/ui/ServiceWorkerRegister'
 
@@ -29,11 +31,16 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale()
+  const messages = await getMessages()
   return (
-    <html lang="ko">
+    <html lang={locale}>
       <body className="bg-gray-50 text-gray-900 antialiased">
-        <Providers>{children}</Providers>
+        {/* NextIntlClientProvider: 클라이언트 컴포넌트에서 useTranslations 사용 가능 */}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

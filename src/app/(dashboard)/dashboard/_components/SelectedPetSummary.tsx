@@ -2,15 +2,16 @@
 
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import type { CareAlert, Pet } from '@/types'
 
 // 맞춤 '가이드' 바로가기 (기록과 구분되도록 라벨 명확화)
 const QUICK_LINKS = [
-  { href: '/foods', emoji: '🥩', label: '음식' },
-  { href: '/health', emoji: '🩺', label: '건강' },
-  { href: '/walk', emoji: '🎾', label: '활동' },
-  { href: '/care', emoji: '🧼', label: '생활' },
+  { href: '/foods', emoji: '🥩', key: 'guideFood' as const },
+  { href: '/health', emoji: '🩺', key: 'guideHealth' as const },
+  { href: '/walk', emoji: '🎾', key: 'guideActivity' as const },
+  { href: '/care', emoji: '🧼', key: 'guideLife' as const },
 ]
 
 /**
@@ -25,6 +26,7 @@ export function SelectedPetSummary({
   vaccAlerts: CareAlert[]
 }) {
   const { selectedPetId } = useSelectedPet()
+  const t = useTranslations('summary')
   if (!selectedPetId) return null
 
   const pet = pets.find(p => p.id === selectedPetId)
@@ -59,7 +61,7 @@ export function SelectedPetSummary({
           href={`/pets/${pet.id}`}
           className="text-xs bg-white/20 hover:bg-white/30 rounded-full px-3 py-1.5 font-medium shrink-0 transition-colors"
         >
-          상세
+          {t('detail')}
         </Link>
       </div>
 
@@ -75,30 +77,30 @@ export function SelectedPetSummary({
       )}
 
       {/* 빠른 '기록' 입력 (아이 상세의 해당 폼을 바로 열어줌) */}
-      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">📝 기록하기</p>
+      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">{t('recordSection')}</p>
       <div className="grid grid-cols-3 gap-2">
         <Link
           href={`/pets/${pet.id}?add=weight`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>⚖️</span> 체중
+          <span aria-hidden>⚖️</span> {t('weight')}
         </Link>
         <Link
           href={`/pets/${pet.id}?add=care`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>💉</span> 관리
+          <span aria-hidden>💉</span> {t('care')}
         </Link>
         <Link
           href={`/pets/${pet.id}?add=medical`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>🏥</span> 진료
+          <span aria-hidden>🏥</span> {t('medical')}
         </Link>
       </div>
 
       {/* 맞춤 '가이드' 바로가기 (선택된 아이 기준으로 필터됨) — 기록과 구분 */}
-      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">📚 맞춤 가이드</p>
+      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">{t('guideSection')}</p>
       <div className="grid grid-cols-4 gap-2">
         {QUICK_LINKS.map(l => (
           <Link
@@ -107,7 +109,7 @@ export function SelectedPetSummary({
             className="flex flex-col items-center gap-0.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 transition-colors"
           >
             <span className="text-lg leading-none">{l.emoji}</span>
-            <span className="text-xs font-medium">{l.label}</span>
+            <span className="text-xs font-medium">{t(l.key)}</span>
           </Link>
         ))}
       </div>

@@ -8,9 +8,11 @@ import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { NotificationBell } from './NotificationBell'
 
 export function AppHeader() {
+  const t = useTranslations('header')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -66,7 +68,7 @@ export function AppHeader() {
         {/* 내 아이 관리 진입 (칩 선택 좌측) */}
         <Link
           href="/pets"
-          aria-label="내 아이 관리"
+          aria-label={t('myPetsAria')}
           aria-current={petsActive ? 'page' : undefined}
           className={cn(
             'shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-base transition-colors',
@@ -101,7 +103,7 @@ export function AppHeader() {
               </button>
             ))
           ) : (
-            <Link href="/pets/new" className="text-sm font-medium text-primary-600">내 아이 등록하기 →</Link>
+            <Link href="/pets/new" className="text-sm font-medium text-primary-600">{t('registerPet')}</Link>
           )}
         </div>
 
@@ -118,7 +120,7 @@ export function AppHeader() {
               ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
               : 'border-gray-200 text-gray-400 hover:bg-gray-50'
           )}
-          aria-label="프로필"
+          aria-label={t('profile')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

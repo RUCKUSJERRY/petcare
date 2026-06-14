@@ -2,15 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/dashboard', label: '홈', icon: '🏠' },
-  { href: '/info', label: '정보', icon: '📚' },
-  { href: '/map', label: '지도', icon: '🗺️' },
-  { href: '/schedule', label: '일정', icon: '🗓️' },
-  { href: '/community', label: '커뮤니티', icon: '💬' },
-]
+  { href: '/dashboard', key: 'home', icon: '🏠' },
+  { href: '/info', key: 'info', icon: '📚' },
+  { href: '/map', key: 'map', icon: '🗺️' },
+  { href: '/schedule', key: 'schedule', icon: '🗓️' },
+  { href: '/community', key: 'community', icon: '💬' },
+] as const
 
 // 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화)
 const INFO_SUBPATHS = ['/foods', '/health', '/walk']
@@ -19,6 +20,7 @@ const MAP_SUBPATHS = ['/lost']
 
 export function BottomNav() {
   const pathname = usePathname()
+  const t = useTranslations('nav')
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
@@ -54,7 +56,7 @@ export function BottomNav() {
               >
                 {item.icon}
               </span>
-              <span>{item.label}</span>
+              <span>{t(item.key)}</span>
             </Link>
           )
         })}

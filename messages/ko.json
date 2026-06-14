@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "home": "홈",
+    "info": "정보",
+    "map": "지도",
+    "schedule": "일정",
+    "community": "커뮤니티"
+  },
+  "common": {
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "saving": "저장 중...",
+    "delete": "삭제",
+    "close": "닫기",
+    "more": "더보기"
+  },
+  "header": {
+    "myPetsAria": "내 아이 관리",
+    "registerPet": "내 아이 등록하기 →",
+    "profile": "프로필"
+  },
+  "login": {
+    "appName": "펫케어",
+    "tagline": "우리 아이 맞춤 건강 정보를 한 곳에서",
+    "google": "Google로 시작하기",
+    "loading": "로그인 중...",
+    "failed": "로그인에 실패했어요. 다시 시도해주세요.",
+    "failedRetry": "로그인에 실패했어요. 잠시 후 다시 시도해주세요.",
+    "terms": "로그인하면 서비스 이용약관 및 개인정보처리방침에 동의하게 됩니다"
+  },
+  "info": {
+    "title": "정보",
+    "subtitle": "우리 아이 맞춤 음식·건강·활동 정보를 확인하세요",
+    "foods": "음식 가이드",
+    "foodsDesc": "우리 아이가 먹어도 되는 음식, 위험한 음식",
+    "health": "건강 가이드",
+    "healthDesc": "나이에 맞는 검진·백신·질환 정보",
+    "walk": "활동 가이드",
+    "walkDesc": "종·나이별 적정 운동량과 산책·놀이 팁",
+    "care": "생활 관리 가이드",
+    "careDesc": "양치·털·미용·발톱·귀·목욕 주기와 방법"
+  },
+  "dashboard": {
+    "mapTitle": "지도",
+    "mapDesc": "실종 신고·동물병원·애견카페/동반식당을 한눈에",
+    "walksTitle": "산책 기록",
+    "walksDesc": "경로·거리·시간을 기록하고 좋은 산책로를 공유해요",
+    "scheduleTitle": "일정",
+    "scheduleDesc": "진료·접종·구충·미용·양치 등 다음 예정·경과 모아보기",
+    "communityRecent": "커뮤니티 최근 글",
+    "write": "글쓰기 →"
+  },
+  "petSection": {
+    "heroTitle": "우리 아이를 등록해볼까요?",
+    "heroDesc": "아이를 등록하면 견종·나이에 꼭 맞는<br></br>음식·건강·활동 정보를 받아볼 수 있어요.",
+    "registerFirst": "+ 첫 아이 등록하기",
+    "featFood": "음식 안전",
+    "featSchedule": "건강 일정",
+    "featCommunity": "커뮤니티",
+    "othersCount": "다른 아이들 {count}마리",
+    "collapse": "접기 ▲",
+    "expand": "펼치기 ▼"
+  },
+  "vaccAlerts": {
+    "otherTitle": "다른 아이 일정",
+    "allTitle": "일정 알림",
+    "moreCount": "외 {count}건 더",
+    "viewAll": "일정 전체 보기 →"
+  },
+  "summary": {
+    "detail": "상세",
+    "recordSection": "📝 기록하기",
+    "guideSection": "📚 맞춤 가이드",
+    "weight": "체중",
+    "care": "관리",
+    "medical": "진료",
+    "guideFood": "음식",
+    "guideHealth": "건강",
+    "guideActivity": "활동",
+    "guideLife": "생활"
+  }
+}
