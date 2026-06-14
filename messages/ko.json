@@ -319,7 +319,44 @@
     "submitting": "등록 중...",
     "submit": "실종 제보 등록"
   },
-  "map": {},
+  "map": {
+    "category": {
+      "lost": "실종",
+      "hospital": "동물병원",
+      "cafe": "애견카페",
+      "restaurant": "동반식당",
+      "favorite": "즐겨찾기"
+    },
+    "empty": {
+      "lost": "주변에 등록된 실종 신고가 없어요.",
+      "hospital": "주변에서 동물병원을 찾지 못했어요.",
+      "cafe": "주변에서 애견카페를 찾지 못했어요.",
+      "restaurant": "주변에서 애견동반식당을 찾지 못했어요.",
+      "favorite": "저장한 즐겨찾기가 없어요. 장소를 선택해 ☆를 눌러보세요."
+    },
+    "emptyNoFilter": "위 필터에서 보고 싶은 항목을 선택하세요.",
+    "selectFilter": "필터를 선택하세요",
+    "countLost": "실종 신고 {count}건",
+    "countFavorite": "즐겨찾기 {count}곳",
+    "countNearby": "주변 {count}곳",
+    "loading": "불러오는 중…",
+    "searchPlaceholder": "{label} 내 검색 (예: 응급실, 24시)",
+    "searchReset": "검색 초기화",
+    "searchButton": "검색",
+    "report": "+ 제보",
+    "researchHere": "이 지역에서 재검색",
+    "currentLocation": "현재 위치로",
+    "walkRecord": "산책 기록",
+    "nameUnknown": "이름 미상",
+    "cat": "고양이",
+    "dog": "강아지",
+    "lostDetail": "실종 상세보기 →",
+    "call": "📞 전화",
+    "directions": "🧭 길찾기",
+    "kakaoDetail": "ℹ️ 카카오맵 상세",
+    "favSaved": "★ 즐겨찾기됨",
+    "favSave": "☆ 즐겨찾기"
+  },
   "profile": {
     "title": "프로필 편집",
     "back": "뒤로",
@@ -342,9 +379,42 @@
     "typeReply": "님이 답글을 남겼어요",
     "typeLike": "님이 회원님의 글을 좋아해요"
   },
-  "invite": {},
-  "system": {},
-  "manifest": {},
+  "invite": {
+    "loading": "초대 정보를 불러오는 중...",
+    "invalidTitle": "유효하지 않은 초대예요",
+    "invalidDesc": "링크가 잘못되었거나 만료되었어요.",
+    "home": "홈으로",
+    "unusableTitle": "사용할 수 없는 초대예요",
+    "expiredDesc": "초대가 만료되었어요.",
+    "alreadyUsed": "이미 사용되었거나 취소된 초대예요.",
+    "invitedBy": "{name}님이",
+    "invitedBySomeone": "누군가",
+    "invitedSuffix": "초대했어요",
+    "petFallback": "반려동물",
+    "joinDesc1": "의 공동 관리에 참여하면",
+    "joinDesc2": "모든 기록을 함께 보고 남길 수 있어요.",
+    "joining": "참여 중...",
+    "joinButton": "공동 관리 참여하기",
+    "later": "나중에",
+    "errorExpired": "만료된 초대예요.",
+    "acceptFailed": "초대를 수락하지 못했어요."
+  },
+  "system": {
+    "offlineMetaTitle": "오프라인 - 펫케어",
+    "offlineTitle": "오프라인 상태예요",
+    "offlineDesc": "인터넷 연결을 확인한 뒤 다시 시도해주세요.",
+    "unavailableMetaTitle": "서비스 연결 오류 - 펫케어",
+    "unavailableTitle": "서버에 연결할 수 없어요",
+    "unavailableDesc1": "데이터베이스 서버가 응답하지 않고 있어요.",
+    "unavailableDesc2": "잠시 후 다시 시도해 주세요.",
+    "unavailableNote": "(백엔드 일시정지 또는 점검 중일 수 있습니다)",
+    "retry": "다시 시도"
+  },
+  "manifest": {
+    "name": "펫케어 - 반려동물 맞춤 건강 정보",
+    "shortName": "펫케어",
+    "description": "견종과 나이에 맞는 음식, 건강, 산책 정보를 한 곳에서"
+  },
   "weight": {
     "title": "체중 기록",
     "addRecord": "+ 기록",
@@ -460,7 +530,15 @@
     "submit": "등록",
     "noComments": "아직 댓글이 없어요"
   },
-  "walkPhoto": {},
+  "walkPhoto": {
+    "cardBrand": "🐾 펫케어 · {date}",
+    "composeFailed": "이미지를 만들지 못했어요. 다른 사진으로 시도해주세요.",
+    "shareTitle": "오늘의 산책",
+    "composing": "만드는 중…",
+    "makeCard": "📸 사진에 기록 입혀 공유 카드 만들기",
+    "cardAlt": "산책 기록 카드",
+    "share": "공유"
+  },
   "ui": {
     "onboardingAriaLabel": "앱 둘러보기",
     "onboardingSkip": "건너뛰기",
@@ -536,5 +614,49 @@
     "roleMember": "구성원",
     "remove": "내보내기",
     "leave": "공동 관리에서 나가기"
+  },
+  "scan": {
+    "errRecognizeFailed": "인식에 실패했어요.",
+    "errNoRecords": "인식된 기록이 없어요. 다른 사진으로 시도해주세요.",
+    "errScanFailed": "스캔에 실패했어요. 직접 입력해주세요.",
+    "errSelectRecords": "저장할 기록을 선택해주세요.",
+    "errSavePartial": "일부 저장에 실패했어요. 다시 시도해주세요.",
+    "title": "사진으로 기록 추가",
+    "pickDesc": "영수증·세부내역서·진료이력서·접종증명서를 촬영하면<br></br>여러 건도 한 번에 인식해 드려요.",
+    "pickButton": "📷 사진 선택",
+    "aiNotice": "AI 인식 결과이니 저장 전 꼭 확인·수정하세요.",
+    "scanning": "🔍 인식 중…",
+    "scanningNote": "여러 건이면 시간이 조금 걸려요",
+    "reviewSummary": "인식된 <b>{count}건</b> · 저장할 항목을 확인·수정하세요.",
+    "typeMedical": "🏥 진료",
+    "typeCare": "📋 관리",
+    "namePlaceholder": "항목명",
+    "diagnosisPlaceholder": "진단/사유",
+    "treatmentPlaceholder": "처치/처방",
+    "costPlaceholder": "비용(원)",
+    "saveCount": "{count}건 저장"
+  },
+  "petDetail": {
+    "errSaveFailed": "저장에 실패했어요. 다시 시도해주세요.",
+    "errDeleteFailed": "삭제에 실패했어요. 다시 시도해주세요.",
+    "loading": "불러오는 중...",
+    "back": "뒤로",
+    "edit": "수정",
+    "photo": "사진",
+    "name": "이름",
+    "breedCat": "묘종",
+    "breedDog": "견종",
+    "birthYear": "태어난 년도",
+    "birthMonth": "태어난 월",
+    "monthN": "{n}월",
+    "gender": "성별",
+    "genderMale": "♂ 수컷",
+    "genderFemale": "♀ 암컷",
+    "weight": "몸무게 (kg)",
+    "saveProfile": "저장하기",
+    "scanButton": "📷 영수증·이력서 스캔으로 기록 추가",
+    "deletePet": "반려동물 삭제",
+    "deleteModalTitle": "{name} 삭제",
+    "deleteModalDesc": "삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?"
   }
 }

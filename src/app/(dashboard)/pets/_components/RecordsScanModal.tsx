@@ -62,6 +62,7 @@ export function RecordsScanModal({
   onClose: () => void
 }) {
   const t = useTranslations('scan')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -206,12 +207,12 @@ export function RecordsScanModal({
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <input className="input text-sm py-1.5" placeholder="진단/사유" value={r.diagnosis || r.name}
+                      <input className="input text-sm py-1.5" placeholder={t('diagnosisPlaceholder')} value={r.diagnosis || r.name}
                         onChange={e => update(i, { diagnosis: e.target.value, name: e.target.value })} />
                       <div className="grid grid-cols-2 gap-2">
-                        <input className="input text-sm py-1.5" placeholder="처치/처방" value={r.treatment}
+                        <input className="input text-sm py-1.5" placeholder={t('treatmentPlaceholder')} value={r.treatment}
                           onChange={e => update(i, { treatment: e.target.value })} />
-                        <input className="input text-sm py-1.5" type="number" inputMode="numeric" placeholder="비용(원)" value={r.cost}
+                        <input className="input text-sm py-1.5" type="number" inputMode="numeric" placeholder={t('costPlaceholder')} value={r.cost}
                           onChange={e => update(i, { cost: e.target.value })} />
                       </div>
                     </div>
@@ -225,7 +226,7 @@ export function RecordsScanModal({
         {phase === 'review' && (
           <div className="px-4 py-3 border-t border-gray-100">
             <button onClick={save} disabled={saving || includedCount === 0} className="btn-primary w-full py-2.5 text-sm">
-              {saving ? '저장 중...' : `${includedCount}건 저장`}
+              {saving ? tc('saving') : t('saveCount', { count: includedCount })}
             </button>
           </div>
         )}
