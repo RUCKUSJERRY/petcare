@@ -168,6 +168,12 @@ export function addMonths(dateStr: string, months: number): string {
   return new Date(Date.UTC(y, m - 1 + months, d)).toISOString().slice(0, 10)
 }
 
+/** 날짜 문자열(YYYY-MM-DD)에 일수를 더해 반환 (시간대 영향 없이 UTC 기준) */
+export function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}
+
 /** 건강 관리 카테고리별 권장 재시행 주기(개월). null = 권장 주기 없음 */
 export function careDefaultIntervalMonths(category: string): number | null {
   return ({
@@ -180,6 +186,26 @@ export function careDefaultIntervalMonths(category: string): number | null {
   } as Record<string, number | null>)[category] ?? null
 }
 
+/**
+ * 관리 카테고리별 권장 재시행 주기(일).
+ * 미용·양치·발톱 등 생활 관리까지 포함해 "일" 단위로 통일. null = 권장 주기 없음.
+ */
+export function careRecommendedCycleDays(category: string): number | null {
+  return ({
+    접종: 365,
+    심장사상충: 30,
+    구충: 90,
+    외부기생충: 30,
+    건강검진: 365,
+    양치: 1,
+    발톱: 28,
+    미용: 56,
+    목욕: 28,
+    귀청소: 21,
+    기타: null,
+  } as Record<string, number | null>)[category] ?? null
+}
+
 /** 건강 관리 카테고리별 아이콘 */
 export function careCategoryIcon(category: string): string {
   return {
@@ -188,6 +214,12 @@ export function careCategoryIcon(category: string): string {
     구충:       '🐛',
     외부기생충: '🦟',
     건강검진:   '🩺',
+    미용:       '✂️',
+    양치:       '🪥',
+    발톱:       '💅',
+    목욕:       '🛁',
+    귀청소:     '👂',
+    진료:       '🏥',
     기타:       '📋',
   }[category] ?? '📋'
 }

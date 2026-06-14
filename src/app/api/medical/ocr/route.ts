@@ -7,31 +7,42 @@ export const maxDuration = 30
 // Gemini 모델 (무료 등급 가능). 필요 시 GEMINI_MODEL로 교체.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 
-// 진료 영수증/세부내역서에서 추출할 필드 스키마
+// 한 이미지에서 여러 건(이력서·접종증명서 등)을 추출하기 위한 배열 스키마.
 const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    visited_on: { type: 'string', description: '진료일 YYYY-MM-DD. 없으면 빈 문자열' },
-    clinic: { type: 'string', description: '동물병원 이름. 없으면 빈 문자열' },
-    reason: { type: 'string', description: '내원 사유/증상. 없으면 빈 문자열' },
-    diagnosis: { type: 'string', description: '진단명. 없으면 빈 문자열' },
-    treatment: { type: 'string', description: '처치/치료 항목 요약. 없으면 빈 문자열' },
-    medication: { type: 'string', description: '처방약. 없으면 빈 문자열' },
-    cost: { type: 'integer', description: '총 결제 금액(원), 숫자만. 없으면 0' },
+    records: {
+      type: 'array',
+      description: '이미지에서 인식된 진료/관리 항목들. 영수증 1장이면 1건, 이력서/증명서면 여러 건.',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['medical', 'care'], description: "병원 진료/검사/수술이면 'medical', 접종/구충/심장사상충/외부기생충/건강검진/미용/양치/발톱/목욕/귀청소면 'care'" },
+          date: { type: 'string', description: '시행/진료일 YYYY-MM-DD. 연도 불명확하면 빈 문자열' },
+          clinic: { type: 'string', description: '병원/업체명. 없으면 빈 문자열' },
+          category: { type: 'string', description: "care일 때만: 접종/심장사상충/구충/외부기생충/건강검진/미용/양치/발톱/목욕/귀청소/기타 중 하나. medical이면 빈 문자열" },
+          name: { type: 'string', description: 'care: 항목명/백신명(예: 종합백신 DHPPL). medical: 진단명 또는 내원사유 요약' },
+          next_due: { type: 'string', description: '다음 예정일이 적혀 있으면 YYYY-MM-DD, 없으면 빈 문자열' },
+          reason: { type: 'string', description: 'medical: 증상/내원 사유. 없으면 빈 문자열' },
+          diagnosis: { type: 'string', description: 'medical: 진단명. 없으면 빈 문자열' },
+          treatment: { type: 'string', description: 'medical: 처치/검사 항목 요약(쉼표). 없으면 빈 문자열' },
+          medication: { type: 'string', description: 'medical: 처방약. 없으면 빈 문자열' },
+          cost: { type: 'integer', description: '해당 건 금액(원, 숫자만). 없으면 0' },
+        },
+        required: ['type', 'date', 'category', 'name', 'cost'],
+      },
+    },
   },
-  required: ['visited_on', 'clinic', 'reason', 'diagnosis', 'treatment', 'medication', 'cost'],
+  required: ['records'],
 }
 
-const PROMPT = `너는 동물병원 진료 영수증·세부내역서 이미지를 분석하는 보조 도구야.
-이미지에서 아래 정보를 추출해 JSON으로만 답해.
-- visited_on: 진료/결제 날짜를 YYYY-MM-DD 형식으로. 연도가 없으면 추정하지 말고 빈 문자열.
-- clinic: 병원 상호명.
-- reason: 내원 사유나 증상이 적혀 있으면.
-- diagnosis: 진단명이 적혀 있으면.
-- treatment: 진료/처치 항목(예: 혈액검사, 엑스레이, 주사 등)을 쉼표로 요약.
-- medication: 처방약 이름.
-- cost: 총 결제금액을 숫자(원)로. 콤마·원 표기는 제거.
-확실하지 않은 값은 비워 둬(빈 문자열 또는 0). 추측하지 마.`
+const PROMPT = `너는 동물병원 영수증·세부내역서·진료이력서·접종증명서 이미지를 분석하는 보조 도구야.
+이미지에 여러 날짜/항목이 리스트로 적혀 있을 수 있으니, 보이는 모든 건을 각각의 record로 추출해 JSON으로만 답해.
+- 단일 영수증이면 보통 1건, 진료이력서/접종증명서면 날짜별로 여러 건이 될 수 있어.
+- 각 건을 'medical'(병원 진료/검사/수술/처치) 또는 'care'(접종/구충/심장사상충/외부기생충/건강검진/미용/양치/발톱/목욕/귀청소)로 분류해.
+- date는 YYYY-MM-DD. 연도가 불명확하면 빈 문자열로 두고 추측하지 마.
+- cost는 콤마·'원' 제거한 숫자. 합계만 있으면 합계를 첫 건에 넣어도 돼.
+- 확실하지 않은 값은 비워 둬(빈 문자열 또는 0). 없는 정보를 지어내지 마.`
 
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClient()
@@ -107,8 +118,9 @@ export async function POST(req: Request) {
     if (!text) {
       return NextResponse.json({ error: 'empty_result', message: '인식 결과가 비어 있어요.' }, { status: 502 })
     }
-    const fields = JSON.parse(text)
-    return NextResponse.json({ ok: true, fields })
+    const parsed = JSON.parse(text)
+    const records = Array.isArray(parsed?.records) ? parsed.records : []
+    return NextResponse.json({ ok: true, records })
   } catch (err) {
     console.error('[ocr] error', err)
     return NextResponse.json(

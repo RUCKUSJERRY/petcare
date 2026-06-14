@@ -23,7 +23,7 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
       <div className="flex items-center gap-2 mb-1">
         <span aria-hidden>🗓️</span>
         <span className="font-semibold text-amber-800 text-sm">
-          {selectedPetId ? '다른 아이 건강 일정' : '건강 일정 알림'}
+          {selectedPetId ? '다른 아이 일정' : '일정 알림'}
         </span>
       </div>
       {shown.slice(0, 4).map((v, i) => {
@@ -45,7 +45,7 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
         <p className="text-xs text-amber-600 pt-0.5">외 {shown.length - 4}건 더</p>
       )}
       <Link href="/schedule" className="block text-xs text-amber-700 font-semibold pt-1">
-        건강 일정 전체 보기 →
+        일정 전체 보기 →
       </Link>
     </div>
   )

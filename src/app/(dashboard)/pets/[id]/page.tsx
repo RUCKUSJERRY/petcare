@@ -14,6 +14,7 @@ import { WeightSection } from '../_components/WeightSection'
 import { CareSection } from '../_components/CareSection'
 import { MedicalSection } from '../_components/MedicalSection'
 import { PetMembers } from '../_components/PetMembers'
+import { RecordsScanModal } from '../_components/RecordsScanModal'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -31,6 +32,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showScan, setShowScan] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [uid, setUid] = useState<string | null>(null)
@@ -250,6 +252,13 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 내 아이 기록 (조회 모드에서만) */}
       {!editing && (
         <>
+          {/* 영수증·이력서 사진으로 여러 건 한 번에 등록 */}
+          <button
+            onClick={() => setShowScan(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-primary-300 bg-primary-50 text-primary-700 text-sm font-medium"
+          >
+            📷 영수증·이력서 스캔으로 기록 추가
+          </button>
           <div ref={weightRef}>
             <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
           </div>
@@ -276,6 +285,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         >
           반려동물 삭제
         </button>
+      )}
+
+      {/* 사진 스캔으로 기록 추가 모달 */}
+      {showScan && (
+        <RecordsScanModal petId={params.id} onClose={() => setShowScan(false)} />
       )}
 
       {/* 삭제 확인 모달 */}

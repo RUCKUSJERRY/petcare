@@ -4,10 +4,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useMyPets } from '@/hooks/useMyPets'
-import { addMonths, careCategoryIcon, careDefaultIntervalMonths } from '@/lib/utils'
+import { addDays, careCategoryIcon, careRecommendedCycleDays } from '@/lib/utils'
 import type { CareCategory } from '@/types'
 
-const CATEGORIES: CareCategory[] = ['접종', '심장사상충', '구충', '외부기생충', '건강검진', '기타']
+const CATEGORIES: CareCategory[] = [
+  '접종', '심장사상충', '구충', '외부기생충', '건강검진',
+  '미용', '양치', '발톱', '목욕', '귀청소', '기타',
+]
 
 const NAME_PLACEHOLDER: Record<CareCategory, string> = {
   '접종': '예: 종합백신 DHPPL',
@@ -15,6 +18,11 @@ const NAME_PLACEHOLDER: Record<CareCategory, string> = {
   '구충': '예: 드론탈, 파나쿠어',
   '외부기생충': '예: 넥스가드, 프론트라인',
   '건강검진': '예: 혈액검사, 엑스레이',
+  '미용': '예: 전체미용, 위생미용',
+  '양치': '예: 양치, 치석 관리',
+  '발톱': '예: 발톱 깎기',
+  '목욕': '예: 목욕',
+  '귀청소': '예: 귀 세정',
   '기타': '항목명',
 }
 
@@ -43,13 +51,13 @@ export function ScheduleAddForm({
     category: '접종' as CareCategory,
     vaccine_name: '',
     vaccinated_on: today,
-    next_due_on: addMonths(today, careDefaultIntervalMonths('접종') ?? 0),
+    next_due_on: addDays(today, careRecommendedCycleDays('접종') ?? 0),
     clinic: '',
   })
 
   const suggestDue = (category: CareCategory, vaccinatedOn: string) => {
-    const months = careDefaultIntervalMonths(category)
-    return months ? addMonths(vaccinatedOn, months) : ''
+    const days = careRecommendedCycleDays(category)
+    return days ? addDays(vaccinatedOn, days) : ''
   }
   const setCategory = (category: CareCategory) =>
     setForm(f => ({ ...f, category, next_due_on: dueTouched ? f.next_due_on : suggestDue(category, f.vaccinated_on) }))
@@ -84,7 +92,7 @@ export function ScheduleAddForm({
   return (
     <div className="card space-y-2.5">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">건강 일정 추가</h2>
+        <h2 className="font-bold text-gray-900">일정 추가</h2>
         <button onClick={onClose} className="text-sm text-gray-400">취소</button>
       </div>
 

@@ -88,8 +88,8 @@ export default async function DashboardPage() {
         >
           <span className="text-xl" aria-hidden>🗓️</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">건강 일정</p>
-            <p className="text-xs text-gray-400">접종·심장사상충·구충 등 다음 예정일 모아보기</p>
+            <p className="text-sm font-semibold text-gray-900">일정</p>
+            <p className="text-xs text-gray-400">진료·접종·구충·미용·양치 등 다음 예정·경과 모아보기</p>
           </div>
           <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
