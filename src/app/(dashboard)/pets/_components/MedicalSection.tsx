@@ -2,11 +2,11 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ddayBadge, ddayToneClass } from '@/lib/utils'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
-import { deleteImageByUrl } from '@/lib/upload'
+import { deleteImageByUrl, uploadImage, validateImage } from '@/lib/upload'
 import type { MedicalRecord } from '@/types'
 
 const won = (n: number) => n.toLocaleString('ko-KR') + '원'
@@ -34,8 +34,59 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [form, setForm] = useState({ ...EMPTY, visited_on: today })
+  // OCR 스캔 상태
+  const [scanning, setScanning] = useState(false)
+  const [scanMsg, setScanMsg] = useState<string | null>(null)
+  const scanInputRef = useRef<HTMLInputElement>(null)
 
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  // 영수증/세부내역서 사진을 올려 진료 내용을 자동으로 채운다.
+  const scanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (scanInputRef.current) scanInputRef.current.value = ''
+    if (!file) return
+    const invalid = validateImage(file)
+    if (invalid) { setScanMsg(invalid); return }
+
+    setScanning(true); setScanMsg(null); setError(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('로그인이 필요해요')
+      // 1) 사진 업로드(영수증 사진으로도 저장)
+      const url = await uploadImage('pet-photos', file, user.id)
+      setPhotoUrl(url) // 영수증 사진으로도 함께 저장됨
+
+      // 2) OCR 호출
+      const res = await fetch('/api/medical/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setScanMsg(json?.message || '인식에 실패했어요. 직접 입력해주세요.')
+        return
+      }
+      const fz = json.fields ?? {}
+      // 비어 있는 칸만 채워 사용자가 입력한 값은 보존
+      setForm(f => ({
+        ...f,
+        visited_on: f.visited_on === today && fz.visited_on ? fz.visited_on : (f.visited_on || fz.visited_on || ''),
+        clinic: f.clinic || fz.clinic || '',
+        reason: f.reason || fz.reason || '',
+        diagnosis: f.diagnosis || fz.diagnosis || '',
+        treatment: f.treatment || fz.treatment || '',
+        medication: f.medication || fz.medication || '',
+        cost: f.cost || (fz.cost ? String(fz.cost) : ''),
+      }))
+      setScanMsg('✓ 인식 완료 — AI가 채운 내용이니 확인·수정 후 저장하세요.')
+    } catch {
+      setScanMsg('스캔에 실패했어요. 직접 입력해주세요.')
+    } finally {
+      setScanning(false)
+    }
+  }
 
   const { data: records = [] } = useQuery({
     queryKey: ['medical', petId],
@@ -121,6 +172,20 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
 
       {adding && (
         <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+          {/* 영수증/세부내역서 스캔 → 자동 입력 */}
+          <button
+            type="button"
+            onClick={() => scanInputRef.current?.click()}
+            disabled={scanning}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-primary-300 bg-primary-50 text-primary-700 text-sm font-medium disabled:opacity-60"
+          >
+            {scanning ? '🔍 인식 중…' : '📷 영수증·내역서 스캔으로 자동 입력'}
+          </button>
+          <input ref={scanInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={scanReceipt} />
+          {scanMsg && (
+            <p className={`text-xs ${scanMsg.startsWith('✓') ? 'text-primary-600' : 'text-red-500'}`}>{scanMsg}</p>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">진료일</label>

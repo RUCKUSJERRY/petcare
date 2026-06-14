@@ -22,6 +22,13 @@ const sections = [
     desc: '종·나이별 적정 운동량과 산책·놀이 팁',
     accent: 'bg-green-50',
   },
+  {
+    href: '/care',
+    icon: '🧼',
+    title: '생활 관리 가이드',
+    desc: '양치·털·미용·발톱·귀·목욕 주기와 방법',
+    accent: 'bg-amber-50',
+  },
 ]
 
 export default function InfoPage() {

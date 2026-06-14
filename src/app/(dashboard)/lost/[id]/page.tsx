@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { timeAgo } from '@/lib/utils'
+import { ShareButton } from '@/components/ui/ShareButton'
 import type { LostPet, LostPetSighting } from '@/types'
 
 export default function LostDetailPage({ params }: { params: { id: string } }) {
@@ -130,6 +131,15 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
           <button onClick={() => setShowContact(true)} className="btn-primary w-full py-3">연락처 보기</button>
         )
       )}
+
+      {/* 널리 알리기 — 비로그인도 볼 수 있는 공개 페이지 링크 공유 */}
+      <ShareButton
+        path={`/share/lost/${pet.id}`}
+        title={`${pet.name ?? '이름 미상'} 를 찾고 있어요`}
+        text={pet.area_text ? `${pet.area_text}에서 실종되었어요. 목격 정보를 부탁드려요.` : '실종된 반려동물을 찾고 있어요.'}
+        label="실종 신고 공유하기"
+        className="btn-secondary w-full py-3 flex items-center justify-center gap-2 text-sm font-medium"
+      />
 
       {isAuthor && pet.status === 'active' && (
         <button onClick={markFound} className="w-full py-3 rounded-lg border border-green-300 text-green-600 text-sm font-semibold hover:bg-green-50">

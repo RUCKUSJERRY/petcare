@@ -14,6 +14,7 @@ type Tab = 'mine' | 'shared'
 type WalkRow = Walk & {
   pet?: { name: string } | null
   author?: { display_name: string } | null
+  comments?: { count: number }[] | null
 }
 
 export default function WalksPage() {
@@ -39,7 +40,7 @@ export default function WalksPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('walks')
-        .select('*, author:profiles(display_name)')
+        .select('*, author:profiles(display_name), comments:walk_comments(count)')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -109,6 +110,12 @@ export default function WalksPage() {
                   <span><b className="text-sm text-gray-900">{formatDistance(w.distance_m)}</b> 거리</span>
                   <span><b className="text-sm text-gray-900">{formatDuration(w.duration_s)}</b> 시간</span>
                   <span><b className="text-sm text-gray-900">{formatPace(w.distance_m, w.duration_s)}</b></span>
+                  {tab === 'shared' && (
+                    <span className="ml-auto flex items-center gap-2 text-gray-500">
+                      <span>❤️ {w.like_count ?? 0}</span>
+                      <span>💬 {w.comments?.[0]?.count ?? 0}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </Link>

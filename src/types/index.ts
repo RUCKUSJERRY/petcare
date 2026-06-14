@@ -32,6 +32,18 @@ export interface Pet {
   breed?: Breed
 }
 
+export type PetMemberRole = 'owner' | 'member'
+
+/** 반려동물 공동 관리 구성원 */
+export interface PetMember {
+  pet_id: string
+  user_id: string
+  role: PetMemberRole
+  created_at: string
+  // join
+  profile?: Pick<Profile, 'display_name' | 'avatar_url'>
+}
+
 export type FoodCategory = '육류' | '채소' | '과일' | '유제품' | '기타'
 
 /** 음식 마스터 (종 무관) */
@@ -299,8 +311,20 @@ export interface Walk {
   is_public: boolean
   area_text: string | null
   note: string | null
+  like_count: number
   created_at: string
   // join (공유 피드용)
   pet_name?: string | null
   author_name?: string | null
+}
+
+/** 산책 댓글 */
+export interface WalkComment {
+  id: string
+  walk_id: string
+  user_id: string
+  content: string
+  created_at: string
+  // join
+  author?: Pick<Profile, 'display_name' | 'avatar_url'>
 }

@@ -5,10 +5,12 @@ import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor } from '@/lib/u
 import Link from 'next/link'
 import type { CareAlert, Pet } from '@/types'
 
+// 맞춤 '가이드' 바로가기 (기록과 구분되도록 라벨 명확화)
 const QUICK_LINKS = [
   { href: '/foods', emoji: '🥩', label: '음식' },
-  { href: '/health', emoji: '🏥', label: '건강' },
+  { href: '/health', emoji: '🩺', label: '건강' },
   { href: '/walk', emoji: '🎾', label: '활동' },
+  { href: '/care', emoji: '🧼', label: '관리' },
 ]
 
 /**
@@ -72,8 +74,9 @@ export function SelectedPetSummary({
         </div>
       )}
 
-      {/* 빠른 기록 입력 (아이 상세의 해당 폼을 바로 열어줌) */}
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      {/* 빠른 '기록' 입력 (아이 상세의 해당 폼을 바로 열어줌) */}
+      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">📝 기록하기</p>
+      <div className="grid grid-cols-3 gap-2">
         <Link
           href={`/pets/${pet.id}?add=weight`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
@@ -84,7 +87,7 @@ export function SelectedPetSummary({
           href={`/pets/${pet.id}?add=care`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>🩺</span> 건강
+          <span aria-hidden>💉</span> 건강관리
         </Link>
         <Link
           href={`/pets/${pet.id}?add=medical`}
@@ -94,8 +97,9 @@ export function SelectedPetSummary({
         </Link>
       </div>
 
-      {/* 맞춤 정보 바로가기 (선택된 아이 기준으로 필터됨) */}
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      {/* 맞춤 '가이드' 바로가기 (선택된 아이 기준으로 필터됨) — 기록과 구분 */}
+      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">📚 맞춤 가이드</p>
+      <div className="grid grid-cols-4 gap-2">
         {QUICK_LINKS.map(l => (
           <Link
             key={l.href}

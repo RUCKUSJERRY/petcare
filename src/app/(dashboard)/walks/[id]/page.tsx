@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { ShareButton } from '@/components/ui/ShareButton'
+import { WalkSocial } from '../_components/WalkSocial'
 import type { Walk } from '@/types'
 
 type WalkRow = Walk & {
@@ -84,8 +86,8 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
 
   const notice = kakaoNotice(mapStatus)
 
-  if (!walk) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
-
+  // 주의: walk 로딩 중에도 지도 컨테이너는 항상 렌더링해야 한다.
+  // (로딩 중 early-return 하면 useKakaoMap이 컨테이너를 찾지 못해 지도가 회색으로 남는 버그)
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -94,11 +96,21 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk.title || '산책'}</h1>
-        <div className="w-6" />
+        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || '산책'}</h1>
+        {walk?.is_public ? (
+          <ShareButton
+            path={`/walks/${walk.id}`}
+            title={walk.title || '산책 경로'}
+            text="이 산책 경로를 확인해보세요"
+            iconOnly
+            className="text-gray-400 hover:text-primary-600 w-6 h-6 flex items-center justify-center"
+          />
+        ) : (
+          <div className="w-6" />
+        )}
       </div>
 
-      {/* 경로 지도 */}
+      {/* 경로 지도 — 항상 마운트 (조건부 렌더 시 카카오맵 초기화 실패로 회색 표시) */}
       <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
         <div ref={mapRef} className="absolute inset-0" />
         {notice && (
@@ -108,6 +120,10 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
         )}
       </div>
 
+      {!walk ? (
+        <div className="text-gray-400 text-center py-6">불러오는 중...</div>
+      ) : (
+      <>
       {/* 통계 */}
       <div className="card grid grid-cols-3 gap-2 text-center">
         <div>
@@ -127,7 +143,13 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
       {/* 메타 */}
       <div className="card space-y-1.5 text-sm">
         <div className="flex justify-between"><span className="text-gray-400">날짜</span>
-          <span className="text-gray-700">{new Date(walk.started_at).toLocaleString('ko-KR')}</span></div>
+          <span className="text-gray-700">{new Date(walk.started_at).toLocaleDateString('ko-KR')}</span></div>
+        <div className="flex justify-between"><span className="text-gray-400">시작 · 종료</span>
+          <span className="text-gray-700 tabular-nums">
+            {new Date(walk.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            {' ~ '}
+            {new Date(walk.ended_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+          </span></div>
         {walk.pet?.name && (
           <div className="flex justify-between"><span className="text-gray-400">함께한 아이</span>
             <span className="text-gray-700">{walk.pet.name}</span></div>
@@ -162,6 +184,14 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
+      {/* 공유된 산책: 좋아요 + 댓글 (커뮤니티 게시판처럼) */}
+      {walk.is_public && (
+        <>
+          <hr className="border-gray-100" />
+          <WalkSocial walkId={walk.id} initialLikeCount={walk.like_count ?? 0} />
+        </>
+      )}
+
       {showDelete && (
         <ConfirmModal
           title="산책 기록 삭제"
@@ -171,6 +201,8 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}
         />
+      )}
+      </>
       )}
     </div>
   )

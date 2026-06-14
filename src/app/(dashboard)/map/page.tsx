@@ -100,8 +100,9 @@ export default function MapPage() {
   }
 
   const select = (item: ListItem) => {
+    // 목록 펼침 상태(listOpen)는 유지한다. 상세 시트는 목록 위에 겹쳐 뜨고,
+    // 상세를 닫으면 이전에 펼쳐둔 목록이 그대로 보이도록 함.
     setSelected(item)
-    setListOpen(false)
     panMarkerAboveSheet(item.lat, item.lng)
   }
 
@@ -446,6 +447,16 @@ export default function MapPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3" />
           </svg>
         </button>
+      )}
+
+      {/* ── 산책 기록 바로가기 (지도에서 산책 진입) ── */}
+      {!notice && !selected && (
+        <Link
+          href="/walks"
+          className="absolute left-3 bottom-24 z-20 flex items-center gap-1.5 rounded-full bg-primary-500 text-white text-sm font-semibold pl-3 pr-4 py-2.5 shadow-md"
+        >
+          <span aria-hidden>🦮</span> 산책 기록
+        </Link>
       )}
 
       {/* ── 하단: 상세 시트(선택 시) 또는 목록 시트 ── */}
