@@ -33,12 +33,22 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
   const { data: walk, refetch } = useQuery({
     queryKey: ['walk', params.id],
     queryFn: async () => {
+      // profiles 임베드는 이 프로젝트에서 불안정 → 산책 본문만 받고 작성자/펫은 수동 조회
       const { data } = await supabase
         .from('walks')
-        .select('*, pet:pets(name), author:profiles(display_name)')
+        .select('*')
         .eq('id', params.id)
-        .single()
-      return data as WalkRow | null
+        .maybeSingle()
+      if (!data) return null
+      const w = data as WalkRow
+      if (w.pet_id) {
+        const { data: pet } = await supabase.from('pets').select('name').eq('id', w.pet_id).maybeSingle()
+        w.pet = (pet as { name: string } | null) ?? null
+      }
+      const { data: prof } = await supabase
+        .from('profiles').select('display_name').eq('id', w.user_id).maybeSingle()
+      w.author = (prof as { display_name: string } | null) ?? null
+      return w
     },
   })
 

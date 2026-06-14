@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { CareAlert, Pet } from '@/types'
 import { SelectedPetSummary } from './SelectedPetSummary'
+import { VaccAlerts } from './VaccAlerts'
 
 /**
  * 홈의 펫 영역.
@@ -66,10 +67,10 @@ export function PetSection({
       {/* 선택된 아이 요약 카드 */}
       <SelectedPetSummary pets={pets} vaccAlerts={vaccAlerts} />
 
-      {/* 나머지 아이 목록 — 선택된 아이가 있으면 접어두기 (공간 절약) */}
-      {listPets.length > 0 && (
-        <div className="space-y-2">
-          {hasSelection && (
+      {hasSelection ? (
+        // 선택된 아이가 있으면: 다른 아이들 목록 + 다른 아이 건강 일정을 함께 접기/펼치기
+        listPets.length > 0 && (
+          <div className="space-y-2">
             <button
               type="button"
               onClick={() => setOthersOpen(o => !o)}
@@ -79,38 +80,57 @@ export function PetSection({
               <span>다른 아이들 {listPets.length}마리</span>
               <span className="text-gray-400">{othersOpen ? '접기 ▲' : '펼치기 ▼'}</span>
             </button>
+            {othersOpen && (
+              <div className="space-y-2">
+                {listPets.map(pet => <PetRow key={pet.id} pet={pet} />)}
+                {/* 다른 아이 건강 일정도 함께 노출 (접으면 같이 숨김) */}
+                <VaccAlerts pets={pets} alerts={vaccAlerts} />
+              </div>
+            )}
+          </div>
+        )
+      ) : (
+        // 선택이 없으면: 전체 아이 목록 + 전체 건강 일정 알림
+        <>
+          {listPets.length > 0 && (
+            <div className="space-y-2">
+              {listPets.map(pet => <PetRow key={pet.id} pet={pet} />)}
+            </div>
           )}
-          {(!hasSelection || othersOpen) && listPets.map(pet => {
-            const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
-            return (
-              <Link key={pet.id} href={`/pets/${pet.id}`}>
-                <div className="card flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl flex-shrink-0">
-                    {pet.photo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-                    ) : (pet.species === 'cat' ? '🐱' : '🐶')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900">{pet.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
-                        {age.lifeStage}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      {pet.breed?.name_ko} · {age.displayText} · {pet.gender}
-                    </p>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
+          <VaccAlerts pets={pets} alerts={vaccAlerts} />
+        </>
       )}
     </div>
+  )
+}
+
+/** 펫 목록 행 (요약 카드 아래 목록용) */
+function PetRow({ pet }: { pet: Pet }) {
+  const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
+  return (
+    <Link href={`/pets/${pet.id}`}>
+      <div className="card flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl flex-shrink-0">
+          {pet.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
+          ) : (pet.species === 'cat' ? '🐱' : '🐶')}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-900">{pet.name}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
+              {age.lifeStage}
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {pet.breed?.name_ko} · {age.displayText} · {pet.gender}
+          </p>
+        </div>
+        <svg className="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </Link>
   )
 }
