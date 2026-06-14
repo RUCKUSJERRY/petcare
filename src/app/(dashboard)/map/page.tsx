@@ -52,7 +52,8 @@ let lastMapState: { lat: number; lng: number; level: number } | null = null
 
 export default function MapPage() {
   const supabase = createClient()
-  const [category, setCategory] = useState<CategoryKey>('lost')
+  // 지도 진입 시엔 어떤 필터도 선택하지 않은 상태로 시작 (사용자가 직접 선택)
+  const [category, setCategory] = useState<CategoryKey | null>(null)
   const [keyword, setKeyword] = useState('')
   const [appliedKeyword, setAppliedKeyword] = useState('')
   const [items, setItems] = useState<ListItem[]>([])
@@ -145,6 +146,8 @@ export default function MapPage() {
     if (!maps || !map) return
     setNeedsResearch(false)
     clearMarkers()
+    // 선택된 필터가 없으면 아무것도 표시하지 않음
+    if (!category) { setItems([]); setLoading(false); return }
     const cat = CATEGORIES.find(c => c.key === category)!
 
     // 실종: 우리 DB의 active 신고 전체
@@ -309,8 +312,8 @@ export default function MapPage() {
   }, [favorites])
 
   const notice = kakaoNotice(mapStatus)
-  const activeCat = CATEGORIES.find(c => c.key === category)!
-  const showSearch = category !== 'lost' && category !== 'favorite'
+  const activeCat = category ? CATEGORIES.find(c => c.key === category)! : null
+  const showSearch = category === 'hospital' || category === 'cafe' || category === 'restaurant'
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -342,7 +345,7 @@ export default function MapPage() {
                 </svg>
                 <input
                   className="flex-1 bg-transparent px-2 py-2.5 text-sm focus:outline-none"
-                  placeholder={`${activeCat.label} 내 검색 (예: 응급실, 24시)`}
+                  placeholder={`${activeCat?.label ?? ''} 내 검색 (예: 응급실, 24시)`}
                   value={keyword}
                   onChange={e => setKeyword(e.target.value)}
                 />
@@ -368,7 +371,7 @@ export default function MapPage() {
           {CATEGORIES.map(c => (
             <button
               key={c.key}
-              onClick={() => { setCategory(c.key); setKeyword(''); setAppliedKeyword('') }}
+              onClick={() => { setCategory(category === c.key ? null : c.key); setKeyword(''); setAppliedKeyword('') }}
               className={cn(
                 'px-3 py-1.5 rounded-full text-sm font-medium shrink-0 shadow-md border transition-colors',
                 category === c.key
@@ -472,11 +475,12 @@ export default function MapPage() {
           <ListSheet
             items={items}
             loading={loading}
-            emptyText={activeCat.empty}
+            emptyText={activeCat?.empty ?? '위 필터에서 보고 싶은 항목을 선택하세요.'}
             countLabel={
-              category === 'lost' ? `실종 신고 ${items.length}건`
-                : category === 'favorite' ? `즐겨찾기 ${items.length}곳`
-                  : `주변 ${items.length}곳`
+              !category ? '필터를 선택하세요'
+                : category === 'lost' ? `실종 신고 ${items.length}건`
+                  : category === 'favorite' ? `즐겨찾기 ${items.length}곳`
+                    : `주변 ${items.length}곳`
             }
             open={listOpen}
             onToggle={() => setListOpen(o => !o)}
