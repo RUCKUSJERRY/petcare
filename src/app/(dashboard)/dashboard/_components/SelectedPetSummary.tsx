@@ -10,7 +10,7 @@ const QUICK_LINKS = [
   { href: '/foods', emoji: '🥩', label: '음식' },
   { href: '/health', emoji: '🩺', label: '건강' },
   { href: '/walk', emoji: '🎾', label: '활동' },
-  { href: '/care', emoji: '🧼', label: '관리' },
+  { href: '/care', emoji: '🧼', label: '생활' },
 ]
 
 /**
@@ -87,7 +87,7 @@ export function SelectedPetSummary({
           href={`/pets/${pet.id}?add=care`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>💉</span> 건강관리
+          <span aria-hidden>💉</span> 관리
         </Link>
         <Link
           href={`/pets/${pet.id}?add=medical`}
