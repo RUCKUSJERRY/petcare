@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 
 export function BackButton({
@@ -9,6 +10,7 @@ export function BackButton({
   className?: string
   fallbackHref?: string
 }) {
+  const t = useTranslations('ui')
   const router = useRouter()
 
   const handleBack = () => {
@@ -21,7 +23,7 @@ export function BackButton({
   }
 
   return (
-    <button onClick={handleBack} className={className} aria-label="뒤로">
+    <button onClick={handleBack} className={className} aria-label={t('back')}>
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
       </svg>

@@ -11,7 +11,7 @@ import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { daysUntil } from '@/lib/utils'
 import type { LostPet } from '@/types'
 
-function dPlus(lostAt: string, t: (key: string, values?: Record<string, unknown>) => string) {
+function dPlus(lostAt: string, t: (key: string, values?: Record<string, string | number | Date>) => string) {
   const d = -daysUntil(lostAt) // 과거일수록 양수
   return d <= 0 ? t('today') : t('dPlus', { days: d })
 }

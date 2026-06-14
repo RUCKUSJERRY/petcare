@@ -39,7 +39,50 @@
     "countSuffix": "· {count}건",
     "noScheduleThisDay": "이 날에는 예정된 일정이 없어요"
   },
-  "walkSocial": {},
-  "walkPhoto": {},
-  "walks": {}
+  "walkSocial": {
+    "anonymousOwner": "익명의 보호자",
+    "comments": "댓글",
+    "commentPlaceholder": "댓글을 남겨보세요",
+    "commentLoginRequired": "로그인 후 댓글을 남길 수 있어요",
+    "submit": "등록",
+    "noComments": "아직 댓글이 없어요"
+  },
+  "walkPhoto": {
+    "cardBrand": "🐾 펫케어 · {date}",
+    "composeFailed": "이미지를 만들지 못했어요. 다른 사진으로 시도해주세요.",
+    "shareTitle": "오늘의 산책",
+    "composing": "만드는 중…",
+    "makeCard": "📸 사진에 기록 입혀 공유 카드 만들기",
+    "cardAlt": "산책 기록 카드",
+    "share": "공유"
+  },
+  "walks": {
+    "errPermission": "위치 권한이 필요해요. 브라우저 설정에서 위치 접근을 허용해주세요.",
+    "errLoginRequired": "로그인이 필요해요.",
+    "errSaveRetry": "저장에 실패했어요. 다시 시도해주세요.",
+    "defaultTitle": "{m}월 {d}일 산책",
+    "dateLabel": "{m}월 {d}일",
+    "discardConfirm": "이 산책 기록을 저장하지 않고 나갈까요?",
+    "mapFallbackHint": "지도가 없어도 거리·시간 기록은 동작해요.",
+    "pace": "페이스",
+    "autoPausedHint": "자동 일시정지됨 · 움직이면 다시 시작돼요",
+    "pausedHint": "일시정지됨",
+    "trackingStatus": "시작 {time} · 기록점 {points}개",
+    "startTracking": "산책 시작",
+    "resume": "다시 시작",
+    "pause": "일시정지",
+    "finish": "산책 종료",
+    "startTime": "시작",
+    "endTime": "종료",
+    "titleLabel": "제목",
+    "titlePlaceholder": "산책 제목",
+    "withPetOptional": "함께한 아이 (선택)",
+    "petNone": "선택 안 함",
+    "noteOptional": "메모 (선택)",
+    "notePlaceholder": "예: 오프리쉬존, 산책로 추천 포인트",
+    "shareThisRoute": "이 경로를 공유하기",
+    "shareHint": "(커뮤니티에서 좋아요·댓글 가능)",
+    "discard": "저장 안 함",
+    "saveWalk": "저장하기"
+  }
 }

@@ -160,7 +160,7 @@ export default function NewLostPage() {
         {/* 위치 */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1.5">
-            실종 위치 {areaText && <span className="text-primary-600">· {areaText}</span>}
+            {t('locationLabel')} {areaText && <span className="text-primary-600">· {areaText}</span>}
           </label>
           {kakaoNotice(mapStatus) ? (
             <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-400">
@@ -172,40 +172,40 @@ export default function NewLostPage() {
               <div className="flex gap-2 mb-2">
                 <input
                   className="input flex-1"
-                  placeholder="주소·장소 검색 (예: 강남역, 역삼동)"
+                  placeholder={t('searchPlaceholder')}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchAddress() } }}
                 />
                 <button type="button" onClick={searchAddress} className="btn-secondary px-4 text-sm shrink-0">
-                  검색
+                  {t('searchButton')}
                 </button>
               </div>
               {searchError && <p className="text-xs text-red-500 mb-1">{searchError}</p>}
               <div ref={mapRef} className="w-full h-56 rounded-xl border border-gray-200 overflow-hidden bg-gray-100" />
-              <p className="text-xs text-gray-400 mt-1">검색하거나 지도를 탭/핀을 드래그해 실종 위치를 표시하세요.</p>
+              <p className="text-xs text-gray-400 mt-1">{t('mapHint')}</p>
             </>
           )}
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">특징/메모</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('descriptionLabel')}</label>
           <textarea className="input min-h-20" value={form.description} onChange={e => set('description', e.target.value)}
-            placeholder="예: 빨간 목줄, 겁이 많아 다가가면 도망갈 수 있어요" />
+            placeholder={t('descriptionPlaceholder')} />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">연락처</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('contactLabel')}</label>
           <input className="input" value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="010-0000-0000" />
           <label className="flex items-center gap-2 mt-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.contact_public} onChange={e => set('contact_public', e.target.checked)} />
-            상세 페이지에 연락처 공개에 동의해요
+            {t('contactPublicConsent')}
           </label>
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         <button type="submit" disabled={saving} className="btn-primary w-full py-3">
-          {saving ? '등록 중...' : '실종 제보 등록'}
+          {saving ? t('submitting') : t('submit')}
         </button>
       </form>
     </div>

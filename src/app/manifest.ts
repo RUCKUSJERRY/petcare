@@ -1,10 +1,12 @@
 import type { MetadataRoute } from 'next'
+import { getTranslations } from 'next-intl/server'
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const t = await getTranslations('manifest')
   return {
-    name: '펫케어 - 반려동물 맞춤 건강 정보',
-    short_name: '펫케어',
-    description: '견종과 나이에 맞는 음식, 건강, 산책 정보를 한 곳에서',
+    name: t('name'),
+    short_name: t('shortName'),
+    description: t('description'),
     start_url: '/dashboard',
     display: 'standalone',
     background_color: '#f9fafb',

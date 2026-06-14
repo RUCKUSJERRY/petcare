@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { ShareButton } from '@/components/ui/ShareButton'
 import type { PetMember } from '@/types'
 
@@ -13,6 +14,7 @@ import type { PetMember } from '@/types'
  * - 모든 구성원: 목록 조회 + 본인 탈퇴(나가기)
  */
 export function PetMembers({ petId, petName }: { petId: string; petName: string }) {
+  const t = useTranslations('petMembers')
   const supabase = createClient()
   const qc = useQueryClient()
   const router = useRouter()
@@ -50,7 +52,7 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
       .select('token')
       .single()
     setCreating(false)
-    if (e || !data) { setError('초대 링크 생성에 실패했어요.'); return }
+    if (e || !data) { setError(t('errInviteFailed')); return }
     setInviteToken((data as { token: string }).token)
   }
 
@@ -63,7 +65,7 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
 
   const leave = async () => {
     if (!uid) return
-    if (!confirm(`${petName} 공동 관리에서 나갈까요?`)) return
+    if (!confirm(t('leaveConfirm', { name: petName }))) return
     setBusy(true)
     await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', uid)
     setBusy(false)
@@ -75,12 +77,12 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-bold text-gray-900">공동 관리</h2>
-          <p className="text-xs text-gray-400 mt-0.5">가족·친구를 초대해 함께 기록·관리해요</p>
+          <h2 className="font-bold text-gray-900">{t('title')}</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</p>
         </div>
         {isOwner && (
           <button onClick={createInvite} disabled={creating} className="text-sm text-primary-600 font-semibold shrink-0">
-            {creating ? '생성 중…' : '+ 초대'}
+            {creating ? t('creating') : t('invite')}
           </button>
         )}
       </div>
@@ -89,12 +91,12 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
 
       {inviteToken && (
         <div className="bg-primary-50 border border-primary-100 rounded-lg p-3 space-y-2">
-          <p className="text-xs text-gray-600">아래 링크를 보내면 상대가 구성원으로 참여할 수 있어요. (14일간 유효)</p>
+          <p className="text-xs text-gray-600">{t('inviteHint')}</p>
           <ShareButton
             path={`/invite/${inviteToken}`}
-            title={`${petName} 공동 관리 초대`}
-            text={`${petName}를 함께 관리해요. 링크를 열어 참여해주세요.`}
-            label="초대 링크 공유"
+            title={t('shareTitle', { name: petName })}
+            text={t('shareText', { name: petName })}
+            label={t('shareLabel')}
             className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 text-sm"
           />
         </div>
@@ -110,17 +112,17 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
               ) : '🐾'}
             </div>
             <span className="text-sm text-gray-800 flex-1 min-w-0 truncate">
-              {m.profile?.display_name ?? '구성원'}
-              {m.user_id === uid && <span className="text-gray-400"> (나)</span>}
+              {m.profile?.display_name ?? t('member')}
+              {m.user_id === uid && <span className="text-gray-400"> {t('me')}</span>}
             </span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
               m.role === 'owner' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'
             }`}>
-              {m.role === 'owner' ? '소유자' : '구성원'}
+              {m.role === 'owner' ? t('roleOwner') : t('roleMember')}
             </span>
             {isOwner && m.role !== 'owner' && (
               <button onClick={() => removeMember(m.user_id)} disabled={busy}
-                className="text-xs text-gray-300 hover:text-red-500 shrink-0">내보내기</button>
+                className="text-xs text-gray-300 hover:text-red-500 shrink-0">{t('remove')}</button>
             )}
           </div>
         ))}
@@ -129,7 +131,7 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
       {!isOwner && myRole && (
         <button onClick={leave} disabled={busy}
           className="w-full py-2 text-sm text-gray-400 hover:text-red-500">
-          공동 관리에서 나가기
+          {t('leave')}
         </button>
       )}
     </div>

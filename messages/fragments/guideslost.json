@@ -32,5 +32,29 @@
     "emptyHint": "주변에서 잃어버린 아이를 보셨거나, 직접 신고하려면 “+ 제보”를 눌러주세요.",
     "lostAtPrefix": "실종 {date}"
   },
-  "lostNew": {}
+  "lostNew": {
+    "title": "실종 제보",
+    "photoLabel": "사진",
+    "nameLabel": "이름(선택)",
+    "namePlaceholder": "모르면 비워두세요",
+    "lostDateLabel": "실종일",
+    "speciesLabel": "종",
+    "speciesDog": "🐶 강아지",
+    "speciesCat": "🐱 고양이",
+    "genderLabel": "성별(선택)",
+    "locationLabel": "실종 위치",
+    "searchPlaceholder": "주소·장소 검색 (예: 강남역, 역삼동)",
+    "searchButton": "검색",
+    "searchNoResult": "검색 결과가 없어요. 다른 키워드로 시도해보세요.",
+    "mapHint": "검색하거나 지도를 탭/핀을 드래그해 실종 위치를 표시하세요.",
+    "descriptionLabel": "특징/메모",
+    "descriptionPlaceholder": "예: 빨간 목줄, 겁이 많아 다가가면 도망갈 수 있어요",
+    "contactLabel": "연락처",
+    "contactPublicConsent": "상세 페이지에 연락처 공개에 동의해요",
+    "errorNoLocation": "지도를 탭해 실종 위치를 표시해주세요",
+    "errorLoginRequired": "로그인이 필요해요",
+    "errorSubmitFailed": "등록에 실패했어요. 다시 시도해주세요.",
+    "submitting": "등록 중...",
+    "submit": "실종 제보 등록"
+  }
 }

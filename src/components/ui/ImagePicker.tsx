@@ -1,20 +1,21 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteImageByUrl, uploadImage, validateImage } from '@/lib/upload'
 
 /** 업로드 실패 원인을 사용자 친화적 메시지로 변환 */
-function uploadErrorMessage(err: unknown): string {
+function uploadErrorMessage(err: unknown, t: (key: string) => string): string {
   const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase()
-  if (msg.includes('로그인')) return '로그인이 필요해요. 다시 로그인해주세요.'
+  if (msg.includes('로그인')) return t('imgErrLoginRequired')
   if (msg.includes('exceeded') || msg.includes('too large') || msg.includes('413')) {
-    return '파일이 너무 커요. 더 작은 사진을 선택해주세요.'
+    return t('imgErrTooLarge')
   }
   if (msg.includes('fetch') || msg.includes('network') || msg.includes('timeout')) {
-    return '연결이 불안정해요. 네트워크를 확인하고 다시 시도해주세요.'
+    return t('imgErrNetwork')
   }
-  return '업로드에 실패했어요. 다시 시도해주세요.'
+  return t('imgErrGeneric')
 }
 
 /**
@@ -34,6 +35,7 @@ export function ImagePicker({
   onError?: (msg: string) => void
   shape?: 'square' | 'circle'
 }) {
+  const t = useTranslations('ui')
   const inputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [uploading, setUploading] = useState(false)
@@ -63,7 +65,7 @@ export function ImagePicker({
       sessionUrls.current.add(url)
       onUploaded(url)
     } catch (err) {
-      onError?.(uploadErrorMessage(err))
+      onError?.(uploadErrorMessage(err, t))
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -88,13 +90,13 @@ export function ImagePicker({
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt="미리보기" className="w-full h-full object-cover" />
+          <img src={value} alt={t('imgPreviewAlt')} className="w-full h-full object-cover" />
         ) : (
           <span className="text-2xl text-gray-300">📷</span>
         )}
         {uploading && (
           <div className="absolute inset-0 bg-white/70 flex items-center justify-center text-xs text-gray-500">
-            업로드 중
+            {t('imgUploading')}
           </div>
         )}
       </div>
@@ -106,7 +108,7 @@ export function ImagePicker({
           disabled={uploading}
           className="btn-secondary text-sm py-1.5 px-3"
         >
-          {value ? '사진 변경' : '사진 추가'}
+          {value ? t('imgChange') : t('imgAdd')}
         </button>
         {value && (
           <button
@@ -114,7 +116,7 @@ export function ImagePicker({
             onClick={handleRemove}
             className="text-xs text-gray-400 hover:text-red-500"
           >
-            제거
+            {t('imgRemove')}
           </button>
         )}
       </div>

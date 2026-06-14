@@ -226,7 +226,7 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
                 {r.note && <p className="text-xs text-gray-400 whitespace-pre-wrap">{r.note}</p>}
 
                 {r.photo_url && (
-                  <ImageLightbox src={r.photo_url} alt="처방전/영수증"
+                  <ImageLightbox src={r.photo_url} alt={t('photoAlt')}
                     className="w-16 h-16 rounded-lg object-cover border border-gray-100" />
                 )}
 
@@ -235,7 +235,7 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ddayToneClass(badge.tone)}`}>
                       {badge.text}
                     </span>
-                    <span className="text-xs text-gray-400">다음 내원 {r.next_visit_on}</span>
+                    <span className="text-xs text-gray-400">{t('nextVisitAt', { date: r.next_visit_on })}</span>
                   </div>
                 )}
               </div>

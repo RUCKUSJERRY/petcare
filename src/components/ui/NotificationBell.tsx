@@ -157,8 +157,8 @@ export function NotificationBell() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-800 leading-snug">
                       <span aria-hidden className="mr-1">{typeIcon[n.type]}</span>
-                      <span className="font-semibold">{n.actor_name ?? '익명의 보호자'}</span>
-                      {typeText[n.type]}
+                      <span className="font-semibold">{n.actor_name ?? t('notifAnonymous')}</span>
+                      {t(typeTextKey[n.type])}
                     </p>
                     {n.post_title && (
                       <p className="text-xs text-gray-400 truncate mt-0.5">“{n.post_title}”</p>
@@ -176,7 +176,7 @@ export function NotificationBell() {
             onClick={() => setOpen(false)}
             className="block text-center text-sm text-primary-600 font-semibold py-2.5 border-t border-gray-100 hover:bg-gray-50"
           >
-            전체 보기
+            {t('notifViewAll')}
           </Link>
         </div>
       )}

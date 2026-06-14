@@ -30,6 +30,9 @@
     "deletePostFailed": "삭제에 실패했어요.",
     "deletePostTitle": "글 삭제",
     "deletePostConfirm": "삭제한 글은 복구할 수 없어요. 정말 삭제할까요?",
-    "deleting": "삭제 중..."
+    "deleting": "삭제 중...",
+    "searchPlaceholder": "제목 검색",
+    "searchClear": "검색 지우기",
+    "search": "검색"
   }
 }
