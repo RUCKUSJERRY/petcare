@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Pet, PostCategory, Post } from '@/types'
@@ -11,6 +12,7 @@ const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상'
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const t = useTranslations('community')
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +77,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.category) {
-      setError('카테고리를 선택해주세요')
+      setError(t('categoryRequired'))
       return
     }
     setSaving(true)
@@ -92,14 +94,14 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       .eq('id', params.id)
     setSaving(false)
     if (updErr) {
-      setError('수정에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(t('updateFailed'))
       return
     }
     router.push(`/community/${params.id}`)
     router.refresh()
   }
 
-  if (!loaded) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
+  if (!loaded) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>
 
   return (
     <div className="px-4 py-6">

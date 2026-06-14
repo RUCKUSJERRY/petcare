@@ -8,6 +8,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { formatDistance, formatDuration, formatPace, haversineMeters } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
 import { WalkPhotoCard } from '../_components/WalkPhotoCard'
 
@@ -22,6 +23,8 @@ const hhmm = (ms: number) =>
 export default function WalkTrackPage() {
   const router = useRouter()
   const supabase = createClient()
+  const t = useTranslations('walks')
+  const tc = useTranslations('common')
   const { data: pets } = useMyPets()
   const { selectedPetId } = useSelectedPet()
 
@@ -142,7 +145,7 @@ export default function WalkTrackPage() {
 
   const start = () => {
     if (!navigator.geolocation) {
-      setGeoError('이 기기에서는 위치 추적을 사용할 수 없어요.')
+      setGeoError(t('errNoGeo'))
       return
     }
     setGeoError(null)

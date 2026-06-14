@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
@@ -19,6 +20,7 @@ type WalkRow = Walk & {
 
 export default function WalksPage() {
   const supabase = createClient()
+  const t = useTranslations('walks')
   const [tab, setTab] = useState<Tab>('mine')
 
   const { data: mine = [], isLoading: mineLoading } = useQuery({
@@ -76,15 +78,15 @@ export default function WalksPage() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <PageHeader title="산책" fallbackHref="/dashboard" />
+      <PageHeader title={t('title')} fallbackHref="/dashboard" />
 
       <Link href="/walks/track" className="btn-primary w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2">
-        🐾 산책 시작하기
+        🐾 {t('startWalk')}
       </Link>
 
       {/* 탭 */}
       <div className="flex bg-gray-100 rounded-lg p-0.5">
-        {([['mine', '내 산책'], ['shared', '공유 경로']] as const).map(([v, label]) => (
+        {([['mine', t('tabMine')], ['shared', t('tabShared')]] as const).map(([v, label]) => (
           <button
             key={v}
             onClick={() => setTab(v)}
@@ -104,8 +106,8 @@ export default function WalksPage() {
         <div className="card text-center py-12 text-gray-400">
           <div className="text-4xl mb-3">🦮</div>
           {tab === 'mine'
-            ? '아직 산책 기록이 없어요. 위에서 산책을 시작해보세요.'
-            : '아직 공유된 경로가 없어요. 좋은 산책로를 가장 먼저 공유해보세요!'}
+            ? t('emptyMine')
+            : t('emptyShared')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -116,21 +118,21 @@ export default function WalksPage() {
                   <span className="text-xl shrink-0" aria-hidden>🦮</span>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-gray-900 truncate">
-                      {w.title || '산책'}
+                      {w.title || t('walkFallback')}
                     </p>
                     <p className="text-xs text-gray-400">
                       {tab === 'mine'
                         ? <>{w.pet?.name ? `${w.pet.name} · ` : ''}{timeAgo(w.started_at)}</>
-                        : <>{w.author?.display_name ?? '익명'} · {timeAgo(w.started_at)}</>}
+                        : <>{w.author?.display_name ?? t('anonymous')} · {timeAgo(w.started_at)}</>}
                     </p>
                   </div>
                   {tab === 'mine' && w.is_public && (
-                    <span className="text-[10px] font-medium text-primary-600 bg-primary-50 rounded-full px-2 py-0.5 shrink-0">공유중</span>
+                    <span className="text-[10px] font-medium text-primary-600 bg-primary-50 rounded-full px-2 py-0.5 shrink-0">{t('sharing')}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-xs text-gray-600 border-t border-gray-50 pt-2">
-                  <span><b className="text-sm text-gray-900">{formatDistance(w.distance_m)}</b> 거리</span>
-                  <span><b className="text-sm text-gray-900">{formatDuration(w.duration_s)}</b> 시간</span>
+                  <span><b className="text-sm text-gray-900">{formatDistance(w.distance_m)}</b> {t('distance')}</span>
+                  <span><b className="text-sm text-gray-900">{formatDuration(w.duration_s)}</b> {t('time')}</span>
                   <span><b className="text-sm text-gray-900">{formatPace(w.distance_m, w.duration_s)}</b></span>
                   {tab === 'shared' && (
                     <span className="ml-auto flex items-center gap-2 text-gray-500">

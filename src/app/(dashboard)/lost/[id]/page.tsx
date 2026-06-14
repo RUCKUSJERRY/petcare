@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
@@ -13,6 +14,8 @@ import type { LostPet, LostPetSighting } from '@/types'
 export default function LostDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const qc = useQueryClient()
+  const t = useTranslations('lost')
+  const tc = useTranslations('common')
   const [me, setMe] = useState<string | null>(null)
   const [showContact, setShowContact] = useState(false)
   const [text, setText] = useState('')
@@ -49,7 +52,7 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
         const { data: profs } = await supabase.from('profiles').select('id, display_name, avatar_url').in('id', ids)
         for (const p of (profs ?? []) as any[]) map.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url })
       }
-      return rows.map(r => ({ ...r, author: map.get(r.user_id) ?? { display_name: '익명의 보호자', avatar_url: null } }))
+      return rows.map(r => ({ ...r, author: map.get(r.user_id) ?? { display_name: t('anonymousGuardian'), avatar_url: null } }))
     },
   })
 
@@ -83,15 +86,15 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
     qc.invalidateQueries({ queryKey: ['lost-sightings', params.id] })
   }
 
-  if (!pet) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
+  if (!pet) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <PageHeader title="실종 신고" fallbackHref="/lost" />
+      <PageHeader title={t('reportTitle')} fallbackHref="/lost" />
 
       {pet.status === 'found' && (
         <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 text-sm text-center font-medium">
-          ✅ 가족 품으로 돌아갔어요
+          {t('foundBanner')}
         </div>
       )}
 
@@ -102,11 +105,11 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
 
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-gray-900">{pet.name ?? '이름 미상'}</h1>
-          <span className="text-sm text-gray-400">{pet.species === 'cat' ? '고양이' : '강아지'}</span>
+          <h1 className="text-xl font-bold text-gray-900">{pet.name ?? t('unknownName')}</h1>
+          <span className="text-sm text-gray-400">{pet.species === 'cat' ? t('speciesCat') : t('speciesDog')}</span>
         </div>
         <p className="text-sm text-gray-500">
-          {pet.breed?.name_ko ?? ''}{pet.gender ? ` · ${pet.gender}` : ''} · 실종일 {pet.lost_at}
+          {pet.breed?.name_ko ?? ''}{pet.gender ? ` · ${pet.gender}` : ''} · {t('lostDateLabel')} {pet.lost_at}
         </p>
         {pet.area_text && <p className="text-sm text-gray-500">📍 {pet.area_text}</p>}
       </div>
@@ -128,22 +131,22 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
         showContact ? (
           <a href={`tel:${pet.contact}`} className="btn-primary w-full py-3 block text-center">📞 {pet.contact}</a>
         ) : (
-          <button onClick={() => setShowContact(true)} className="btn-primary w-full py-3">연락처 보기</button>
+          <button onClick={() => setShowContact(true)} className="btn-primary w-full py-3">{t('showContact')}</button>
         )
       )}
 
       {/* 널리 알리기 — 비로그인도 볼 수 있는 공개 페이지 링크 공유 */}
       <ShareButton
         path={`/share/lost/${pet.id}`}
-        title={`${pet.name ?? '이름 미상'} 를 찾고 있어요`}
-        text={pet.area_text ? `${pet.area_text}에서 실종되었어요. 목격 정보를 부탁드려요.` : '실종된 반려동물을 찾고 있어요.'}
-        label="실종 신고 공유하기"
+        title={t('shareSearchingTitle', { name: pet.name ?? t('unknownName') })}
+        text={pet.area_text ? t('shareTextWithArea', { area: pet.area_text }) : t('shareTextNoArea')}
+        label={t('shareReportLabel')}
         className="btn-secondary w-full py-3 flex items-center justify-center gap-2 text-sm font-medium"
       />
 
       {isAuthor && pet.status === 'active' && (
         <button onClick={markFound} className="w-full py-3 rounded-lg border border-green-300 text-green-600 text-sm font-semibold hover:bg-green-50">
-          ✓ 찾았어요 (신고 종료)
+          {t('markFound')}
         </button>
       )}
 
@@ -170,7 +173,7 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">{s.author?.display_name ?? '익명의 보호자'}</span>
+                  <span className="text-sm font-medium text-gray-900">{s.author?.display_name ?? t('anonymousGuardian')}</span>
                   <span className="text-xs text-gray-400">{timeAgo(s.created_at)}</span>
                 </div>
                 <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{s.content}</p>

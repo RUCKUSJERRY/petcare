@@ -1,9 +1,11 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { Pet } from '@/types'
 
 export default async function PetsPage() {
+  const t = await getTranslations('pets')
   const supabase = await createServerSupabaseClient()
   await supabase.auth.getUser()
 
@@ -16,18 +18,18 @@ export default async function PetsPage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">내 아이</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
         <Link href="/pets/new" className="btn-primary text-sm py-1.5 px-3">
-          + 등록
+          {t('register')}
         </Link>
       </div>
 
       {!pets || pets.length === 0 ? (
         <div className="card text-center py-12">
           <div className="text-4xl mb-3">🐶</div>
-          <p className="text-gray-500 text-sm">아직 등록된 반려동물이 없어요</p>
+          <p className="text-gray-500 text-sm">{t('empty')}</p>
           <Link href="/pets/new" className="btn-primary inline-block mt-4 text-sm">
-            첫 아이 등록하기
+            {t('registerFirst')}
           </Link>
         </div>
       ) : (
