@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { timeAgo } from '@/lib/utils'
 import { useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { notifyNewComment } from '../_actions'
 import type { Comment } from '@/types'
 
@@ -21,6 +22,8 @@ export function CommentSection({
   initialComments: Comment[]
   currentUserId: string | null
 }) {
+  const t = useTranslations('community')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [text, setText] = useState('')
@@ -41,21 +44,21 @@ export function CommentSection({
       .select('display_name, avatar_url')
       .eq('id', userId)
       .maybeSingle()
-    myAuthorRef.current = (data as Author) ?? { display_name: '익명의 보호자', avatar_url: null }
+    myAuthorRef.current = (data as Author) ?? { display_name: t('anonymous'), avatar_url: null }
     return myAuthorRef.current
   }
 
   // 새 댓글/답글 작성. parentId가 있으면 답글.
   const addComment = async (content: string, parentId: string | null) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('로그인이 필요해요'); return false }
+    if (!user) { setError(t('loginRequired')); return false }
 
     const { data, error: insErr } = await supabase
       .from('comments')
       .insert({ post_id: postId, user_id: user.id, content, parent_id: parentId })
       .select('*')
       .single()
-    if (insErr || !data) { setError('저장에 실패했어요. 다시 시도해주세요.'); return false }
+    if (insErr || !data) { setError(t('saveCommentFailed')); return false }
 
     const author = await getMyAuthor(user.id)
     setComments(prev => [...prev, { ...(data as Comment), author }])
@@ -91,7 +94,7 @@ export function CommentSection({
       .from('comments')
       .update({ content, updated_at: now })
       .eq('id', id)
-    if (updErr) { setError('수정에 실패했어요'); return }
+    if (updErr) { setError(t('editFailed')); return }
     setComments(prev => prev.map(c => c.id === id ? { ...c, content, updated_at: now } : c))
     setEditingId(null)
   }
@@ -102,7 +105,7 @@ export function CommentSection({
     // 부모를 지우면 답글도 함께 제거(DB는 cascade, UI도 동일하게)
     setComments(c => c.filter(x => x.id !== id && x.parent_id !== id))
     const { error: delErr } = await supabase.from('comments').delete().eq('id', id)
-    if (delErr) { setComments(prev); setError('삭제에 실패했어요. 다시 시도해주세요.') }
+    if (delErr) { setComments(prev); setError(t('deleteCommentFailed')) }
   }
 
   const topLevel = comments
@@ -127,10 +130,10 @@ export function CommentSection({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-gray-900">
-              {c.author?.display_name ?? '익명의 보호자'}
+              {c.author?.display_name ?? t('anonymous')}
             </span>
             <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
-            {isEdited(c) && <span className="text-xs text-gray-300">(수정됨)</span>}
+            {isEdited(c) && <span className="text-xs text-gray-300">{t('edited')}</span>}
           </div>
 
           {editing ? (
@@ -142,8 +145,8 @@ export function CommentSection({
                 onChange={e => setEditText(e.target.value)}
                 autoFocus
               />
-              <button onClick={() => saveEdit(c.id)} className="btn-primary px-3 text-sm shrink-0">저장</button>
-              <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 shrink-0">취소</button>
+              <button onClick={() => saveEdit(c.id)} className="btn-primary px-3 text-sm shrink-0">{tc('save')}</button>
+              <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 shrink-0">{tc('cancel')}</button>
             </div>
           ) : (
             <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{c.content}</p>
@@ -157,7 +160,7 @@ export function CommentSection({
                   onClick={() => { setReplyTo(replyTo === c.id ? null : c.id); setReplyText('') }}
                   className="text-xs text-gray-400 hover:text-primary-600"
                 >
-                  답글
+                  {t('reply')}
                 </button>
               )}
               {mine && (
@@ -166,22 +169,22 @@ export function CommentSection({
                     onClick={() => { setEditingId(c.id); setEditText(c.content) }}
                     className="text-xs text-gray-400 hover:text-primary-600"
                   >
-                    수정
+                    {t('edit')}
                   </button>
                   {confirmDeleteId === c.id ? (
                     <>
-                      <span className="text-xs text-gray-500">삭제할까요?</span>
+                      <span className="text-xs text-gray-500">{t('deleteConfirmShort')}</span>
                       <button
                         onClick={() => remove(c.id)}
                         className="text-xs text-red-500 font-semibold"
                       >
-                        삭제
+                        {tc('delete')}
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
                         className="text-xs text-gray-400"
                       >
-                        취소
+                        {tc('cancel')}
                       </button>
                     </>
                   ) : (
@@ -189,7 +192,7 @@ export function CommentSection({
                       onClick={() => setConfirmDeleteId(c.id)}
                       className="text-xs text-gray-400 hover:text-red-500"
                     >
-                      삭제
+                      {tc('delete')}
                     </button>
                   )}
                 </>
@@ -202,7 +205,7 @@ export function CommentSection({
             <div className="mt-2 flex gap-2">
               <input
                 className="input flex-1 py-1.5 text-sm"
-                placeholder="답글을 입력하세요"
+                placeholder={t('replyPlaceholder')}
                 value={replyText}
                 maxLength={1000}
                 onChange={e => setReplyText(e.target.value)}
@@ -214,7 +217,7 @@ export function CommentSection({
                 disabled={!replyText.trim()}
                 className="btn-primary px-3 text-sm shrink-0"
               >
-                등록
+                {t('submit')}
               </button>
             </div>
           )}
@@ -233,20 +236,20 @@ export function CommentSection({
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-gray-900">
-        댓글 <span className="text-primary-500">{comments.length}</span>
+        {t('comment')} <span className="text-primary-500">{comments.length}</span>
       </h3>
 
       {/* 입력 */}
       <form onSubmit={submitTop} className="flex gap-2">
         <input
           className="input flex-1"
-          placeholder="댓글을 입력하세요"
+          placeholder={t('commentPlaceholder')}
           maxLength={1000}
           value={text}
           onChange={e => setText(e.target.value)}
         />
         <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">
-          등록
+          {t('submit')}
         </button>
       </form>
       {error && <p className="text-sm text-red-500 -mt-2">{error}</p>}
@@ -254,7 +257,7 @@ export function CommentSection({
       {/* 목록 */}
       <div className="space-y-4">
         {topLevel.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">첫 댓글을 남겨보세요</p>
+          <p className="text-sm text-gray-400 text-center py-4">{t('emptyComments')}</p>
         ) : (
           topLevel.map(c => renderComment(c, false))
         )}

@@ -1,0 +1,21 @@
+{ "map":{}, "profile":{
+  "title": "프로필 편집",
+  "back": "뒤로",
+  "photo": "프로필 사진",
+  "nickname": "닉네임",
+  "nicknamePlaceholder": "커뮤니티에 표시될 이름",
+  "nicknameHint": "커뮤니티 글·댓글에 이 이름이 표시돼요",
+  "nameRequired": "닉네임을 입력해주세요",
+  "saveFailed": "저장에 실패했어요. 다시 시도해주세요.",
+  "saved": "저장됐어요 ✓",
+  "saveButton": "저장하기",
+  "viewOnboarding": "사용 안내 다시 보기"
+}, "notifications":{
+  "title": "알림",
+  "markAllRead": "모두 읽음",
+  "empty": "아직 알림이 없어요",
+  "anonymous": "익명의 보호자",
+  "typeComment": "님이 댓글을 남겼어요",
+  "typeReply": "님이 답글을 남겼어요",
+  "typeLike": "님이 회원님의 글을 좋아해요"
+}, "invite":{}, "system":{}, "manifest":{} }

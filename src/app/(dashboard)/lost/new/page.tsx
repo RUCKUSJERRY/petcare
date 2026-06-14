@@ -1,6 +1,7 @@
 'use client'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
@@ -11,6 +12,7 @@ import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import type { Species } from '@/types'
 
 export default function NewLostPage() {
+  const t = useTranslations('lostNew')
   const supabase = createClient()
   const router = useRouter()
   const qc = useQueryClient()
@@ -78,17 +80,17 @@ export default function NewLostPage() {
         map.setLevel(4)
         placeRef.current(ll)
       } else {
-        setSearchError('검색 결과가 없어요. 다른 키워드로 시도해보세요.')
+        setSearchError(t('searchNoResult'))
       }
     })
   }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pos) { setError('지도를 탭해 실종 위치를 표시해주세요'); return }
+    if (!pos) { setError(t('errorNoLocation')); return }
     setSaving(true); setError(null)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('로그인이 필요해요'); setSaving(false); return }
+    if (!user) { setError(t('errorLoginRequired')); setSaving(false); return }
     const { data, error: insErr } = await supabase.from('lost_pets').insert({
       user_id: user.id,
       name: form.name.trim() || null,
@@ -103,28 +105,28 @@ export default function NewLostPage() {
       contact_public: form.contact_public,
     }).select('id').single()
     setSaving(false)
-    if (insErr || !data) { setError('등록에 실패했어요. 다시 시도해주세요.'); return }
+    if (insErr || !data) { setError(t('errorSubmitFailed')); return }
     qc.invalidateQueries({ queryKey: ['lost-pets'] })
     router.push(`/lost/${(data as { id: string }).id}`)
   }
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <PageHeader title="실종 제보" fallbackHref="/lost" />
+      <PageHeader title={t('title')} fallbackHref="/lost" />
 
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1.5">사진</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1.5">{t('photoLabel')}</label>
           <ImagePicker bucket="pet-photos" value={photoUrl} onUploaded={setPhotoUrl} onError={setError} shape="square" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">이름(선택)</label>
-            <input className="input" value={form.name} onChange={e => set('name', e.target.value)} placeholder="모르면 비워두세요" />
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('nameLabel')}</label>
+            <input className="input" value={form.name} onChange={e => set('name', e.target.value)} placeholder={t('namePlaceholder')} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">실종일</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('lostDateLabel')}</label>
             <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
               value={form.lost_at} onChange={e => set('lost_at', e.target.value)} />
           </div>
@@ -132,18 +134,18 @@ export default function NewLostPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">종</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('speciesLabel')}</label>
             <div className="grid grid-cols-2 gap-2">
               {(['dog', 'cat'] as const).map(sp => (
                 <button key={sp} type="button" onClick={() => set('species', sp)}
                   className={`py-2 rounded-lg border text-sm font-medium ${form.species === sp ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'}`}>
-                  {sp === 'dog' ? '🐶 강아지' : '🐱 고양이'}
+                  {sp === 'dog' ? t('speciesDog') : t('speciesCat')}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">성별(선택)</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('genderLabel')}</label>
             <div className="grid grid-cols-2 gap-2">
               {['수컷', '암컷'].map(g => (
                 <button key={g} type="button" onClick={() => set('gender', form.gender === g ? '' : g)}

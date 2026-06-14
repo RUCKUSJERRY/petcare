@@ -3,10 +3,12 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendPushToUser } from '@/lib/push'
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 
 async function actorName(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, userId: string) {
+  const t = await getTranslations('community')
   const { data } = await supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle()
-  return (data as { display_name?: string } | null)?.display_name ?? '익명의 보호자'
+  return (data as { display_name?: string } | null)?.display_name ?? t('anonymous')
 }
 
 /**
@@ -29,9 +31,10 @@ export async function toggleLike(postId: string, like: boolean): Promise<{ error
     const { data: post } = await supabase.from('posts').select('user_id, title').eq('id', postId).maybeSingle()
     const p = post as { user_id: string; title: string } | null
     if (p && p.user_id !== user.id) {
+      const t = await getTranslations('community')
       await sendPushToUser(p.user_id, {
-        title: '펫케어',
-        body: `${await actorName(supabase, user.id)}님이 회원님의 글을 좋아해요`,
+        title: t('pushTitle'),
+        body: t('likePushBody', { name: await actorName(supabase, user.id) }),
         url: `/community/${postId}`,
         tag: `like-${postId}`,
       })
@@ -72,10 +75,15 @@ export async function notifyNewComment(commentId: string): Promise<void> {
   }
   if (!recipientId || recipientId === user.id) return
 
+  const t = await getTranslations('community')
   const name = await actorName(supabase, user.id)
   await sendPushToUser(recipientId, {
-    title: '펫케어',
-    body: `${name}님이 ${isReply ? '답글' : '댓글'}을 남겼어요: ${comment.content.slice(0, 40)}`,
+    title: t('pushTitle'),
+    body: t('commentPushBody', {
+      name,
+      kind: isReply ? t('reply') : t('comment'),
+      content: comment.content.slice(0, 40),
+    }),
     url: `/community/${comment.post_id}`,
     tag: `comment-${comment.post_id}`,
   })

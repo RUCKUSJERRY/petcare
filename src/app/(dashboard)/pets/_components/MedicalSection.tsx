@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { ddayBadge, ddayToneClass } from '@/lib/utils'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
@@ -24,6 +25,8 @@ const EMPTY = {
 }
 
 export function MedicalSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
+  const t = useTranslations('medical')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
   const today = new Date().toISOString().slice(0, 10)
@@ -57,11 +60,11 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
 
   const add = async () => {
     if (!form.reason.trim() && !form.diagnosis.trim()) {
-      setError('증상(내원 사유)이나 진단 중 하나는 입력해주세요')
+      setError(t('errReasonOrDiagnosis'))
       return
     }
     if (form.next_visit_on && form.next_visit_on < form.visited_on) {
-      setError('다음 내원 예정일은 진료일 이후여야 해요')
+      setError(t('errNextVisitAfter'))
       return
     }
     setSaving(true); setError(null)
@@ -80,7 +83,7 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
     })
     setSaving(false)
     if (insErr) {
-      setError('저장에 실패했어요')
+      setError(t('errSaveFailed'))
       // 저장 실패 시 방금 올린 사진은 고아가 되므로 정리
       if (photoUrl) deleteImageByUrl(photoUrl)
       return
@@ -111,11 +114,11 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-bold text-gray-900">진료 기록</h2>
-          <p className="text-xs text-gray-400 mt-0.5">병원 방문·진단·처치 이력 (이사·병원 변경 시 그대로 조회)</p>
+          <h2 className="font-bold text-gray-900">{t('title')}</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</p>
         </div>
         <button onClick={toggleAdding} className="text-sm text-primary-600 font-semibold shrink-0">
-          {adding ? '취소' : '+ 기록'}
+          {adding ? tc('cancel') : t('addRecord')}
         </button>
       </div>
 
@@ -123,50 +126,50 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
         <div className="space-y-2 bg-gray-50 rounded-lg p-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">진료일</label>
+              <label className="text-xs text-gray-500 block mb-0.5">{t('visitedOn')}</label>
               <input className="input" type="date" max={today}
                 value={form.visited_on} onChange={e => set('visited_on', e.target.value)} />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">병원</label>
-              <input className="input" placeholder="병원명 (선택)"
+              <label className="text-xs text-gray-500 block mb-0.5">{t('clinic')}</label>
+              <input className="input" placeholder={t('clinicPlaceholder')}
                 value={form.clinic} onChange={e => set('clinic', e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">증상 · 내원 사유</label>
-            <input className="input" placeholder="예: 구토, 절뚝거림, 정기검진"
+            <label className="text-xs text-gray-500 block mb-0.5">{t('reason')}</label>
+            <input className="input" placeholder={t('reasonPlaceholder')}
               value={form.reason} onChange={e => set('reason', e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">진단</label>
-            <input className="input" placeholder="예: 외이염, 슬개골 탈구 1기"
+            <label className="text-xs text-gray-500 block mb-0.5">{t('diagnosis')}</label>
+            <input className="input" placeholder={t('diagnosisPlaceholder')}
               value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">처치 · 치료</label>
-            <textarea className="input min-h-[60px]" placeholder="예: 귀 세정, 소염 주사"
+            <label className="text-xs text-gray-500 block mb-0.5">{t('treatment')}</label>
+            <textarea className="input min-h-[60px]" placeholder={t('treatmentPlaceholder')}
               value={form.treatment} onChange={e => set('treatment', e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">처방약</label>
-              <input className="input" placeholder="예: 항생제 7일분"
+              <label className="text-xs text-gray-500 block mb-0.5">{t('medication')}</label>
+              <input className="input" placeholder={t('medicationPlaceholder')}
                 value={form.medication} onChange={e => set('medication', e.target.value)} />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">비용 (원)</label>
-              <input className="input" type="number" inputMode="numeric" min={0} placeholder="예: 45000"
+              <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
+              <input className="input" type="number" inputMode="numeric" min={0} placeholder={t('costPlaceholder')}
                 value={form.cost} onChange={e => set('cost', e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">다음 내원 예정일 (선택)</label>
+            <label className="text-xs text-gray-500 block mb-0.5">{t('nextVisit')}</label>
             <input className="input" type="date"
               value={form.next_visit_on} onChange={e => set('next_visit_on', e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">처방전 · 영수증 사진 (선택)</label>
+            <label className="text-xs text-gray-500 block mb-1">{t('photoLabel')}</label>
             <ImagePicker
               bucket="pet-photos"
               value={photoUrl}
@@ -177,13 +180,13 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-            {saving ? '저장 중...' : '저장'}
+            {saving ? tc('saving') : tc('save')}
           </button>
         </div>
       )}
 
       {records.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-3">아직 진료 기록이 없어요</p>
+        <p className="text-sm text-gray-400 text-center py-3">{t('empty')}</p>
       ) : (
         <div className="space-y-2">
           {records.map(r => {
@@ -197,14 +200,14 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
                   {r.clinic && <span className="text-xs text-gray-500 truncate">{r.clinic}</span>}
                   {confirmDeleteId === r.id ? (
                     <div className="ml-auto flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-gray-500">삭제할까요?</span>
-                      <button onClick={() => remove(r)} className="text-xs text-red-500 font-semibold">삭제</button>
-                      <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">취소</button>
+                      <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
+                      <button onClick={() => remove(r)} className="text-xs text-red-500 font-semibold">{tc('delete')}</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">{tc('cancel')}</button>
                     </div>
                   ) : (
                     <button onClick={() => setConfirmDeleteId(r.id)}
-                      className="ml-auto text-xs text-gray-300 hover:text-red-500 shrink-0" aria-label="기록 삭제">
-                      삭제
+                      className="ml-auto text-xs text-gray-300 hover:text-red-500 shrink-0" aria-label={t('deleteAria')}>
+                      {tc('delete')}
                     </button>
                   )}
                 </div>
@@ -215,7 +218,7 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
                     {r.diagnosis && r.reason && <span className="font-normal text-gray-500"> · {r.reason}</span>}
                   </p>
                 )}
-                {r.treatment && <p className="text-sm text-gray-600 whitespace-pre-wrap">처치: {r.treatment}</p>}
+                {r.treatment && <p className="text-sm text-gray-600 whitespace-pre-wrap">{t('treatmentLabel', { treatment: r.treatment })}</p>}
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
                   {r.medication && <span>💊 {r.medication}</span>}
                   {r.cost != null && <span>💳 {won(r.cost)}</span>}

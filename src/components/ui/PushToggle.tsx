@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -14,6 +15,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export function PushToggle() {
+  const t = useTranslations('ui')
   const [supported, setSupported] = useState(false)
   const [enabled, setEnabled] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -42,7 +44,7 @@ export function PushToggle() {
     setBusy(true); setError(null)
     try {
       const perm = await Notification.requestPermission()
-      if (perm !== 'granted') { setError('알림 권한이 거부되었어요. 브라우저 설정에서 허용해주세요.'); return }
+      if (perm !== 'granted') { setError(t('pushPermissionDenied')); return }
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -56,7 +58,7 @@ export function PushToggle() {
       if (!res.ok) throw new Error('save failed')
       setEnabled(true)
     } catch {
-      setError('알림 설정에 실패했어요. 다시 시도해주세요.')
+      setError(t('pushEnableFailed'))
     } finally {
       setBusy(false)
     }
@@ -77,7 +79,7 @@ export function PushToggle() {
       }
       setEnabled(false)
     } catch {
-      setError('해제에 실패했어요. 다시 시도해주세요.')
+      setError(t('pushDisableFailed'))
     } finally {
       setBusy(false)
     }
@@ -88,14 +90,14 @@ export function PushToggle() {
     try {
       const res = await fetch('/api/push/test', { method: 'POST' })
       const d = await res.json()
-      if (!res.ok) { setError(`테스트 실패: ${d.error ?? res.status}`); return }
+      if (!res.ok) { setError(t('pushTestFailed', { error: d.error ?? res.status })); return }
       // 진단 결과 안내
-      if (!d.vapidConfigured) setDiag('⚠️ 서버에 VAPID 키가 설정되지 않았어요 (환경변수 확인 필요)')
-      else if (!d.serviceRoleConfigured) setDiag('⚠️ 서버에 SERVICE_ROLE 키가 없어요 (환경변수 확인 필요)')
-      else if (d.subscriptions === 0) setDiag('⚠️ 저장된 구독이 없어요. 토글을 껐다 다시 켜보세요')
-      else setDiag('✅ 발송했어요. 잠시 후 OS 알림(우측 하단)을 확인하세요')
+      if (!d.vapidConfigured) setDiag(t('pushDiagNoVapid'))
+      else if (!d.serviceRoleConfigured) setDiag(t('pushDiagNoServiceRole'))
+      else if (d.subscriptions === 0) setDiag(t('pushDiagNoSubscriptions'))
+      else setDiag(t('pushDiagSent'))
     } catch {
-      setError('테스트 중 오류가 발생했어요')
+      setError(t('pushTestError'))
     } finally {
       setBusy(false)
     }
@@ -105,8 +107,8 @@ export function PushToggle() {
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-700">푸시 알림</p>
-          <p className="text-xs text-gray-400">댓글·답글·좋아요·건강 일정 알림을 기기로 받기</p>
+          <p className="text-sm font-medium text-gray-700">{t('pushTitle')}</p>
+          <p className="text-xs text-gray-400">{t('pushDesc')}</p>
         </div>
         {supported ? (
           <button
@@ -114,17 +116,17 @@ export function PushToggle() {
             disabled={busy}
             className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${enabled ? 'bg-primary-500' : 'bg-gray-300'} disabled:opacity-60`}
             aria-pressed={enabled}
-            aria-label="푸시 알림 토글"
+            aria-label={t('pushToggleLabel')}
           >
             <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${enabled ? 'left-6' : 'left-1'}`} />
           </button>
         ) : (
-          <span className="text-xs text-gray-400 shrink-0">미지원 기기</span>
+          <span className="text-xs text-gray-400 shrink-0">{t('pushUnsupported')}</span>
         )}
       </div>
       {enabled && (
         <button onClick={sendTest} disabled={busy} className="text-xs text-primary-600 font-medium disabled:opacity-60">
-          테스트 알림 보내기
+          {t('pushSendTest')}
         </button>
       )}
       {error && <p className="text-xs text-red-500">{error}</p>}

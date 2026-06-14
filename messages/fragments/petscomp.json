@@ -1,0 +1,32 @@
+{
+  "weight": {
+    "title": "체중 기록",
+    "addRecord": "+ 기록",
+    "errInvalidWeight": "체중을 올바르게 입력해주세요",
+    "errSaveFailed": "저장에 실패했어요",
+    "latestMeasured": "최근 측정 {date}",
+    "weightPlaceholder": "체중(kg)",
+    "empty": "아직 기록이 없어요",
+    "deleteConfirm": "삭제할까요?",
+    "collapse": "접기",
+    "showMore": "이전 기록 {count}건 더 보기"
+  },
+  "care": {
+    "title": "관리 기록",
+    "subtitle": "접종·구충·미용·양치·발톱 등 주기적으로 챙기는 관리",
+    "addRecord": "+ 기록",
+    "errNameRequired": "항목명을 입력해주세요",
+    "errDueAfter": "다음 예정일은 시행일 이후여야 해요",
+    "errSaveFailed": "저장에 실패했어요",
+    "performedOn": "시행일",
+    "nextDue": "다음 예정일",
+    "autoCycle": "· 권장 주기 자동",
+    "clinicPlaceholder": "병원 (선택)",
+    "filterAll": "전체",
+    "empty": "아직 기록이 없어요",
+    "deleteConfirm": "삭제할까요?",
+    "deleteAria": "기록 삭제",
+    "performedAt": "시행 {date}",
+    "nextScheduled": "다음 예정 {date}"
+  }
+}

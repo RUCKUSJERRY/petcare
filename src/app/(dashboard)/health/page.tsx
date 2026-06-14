@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, guideMatchScore, lifeStageColor } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
@@ -11,6 +12,7 @@ import { CardSkeletonList } from '@/components/ui/Skeleton'
 import type { HealthGuide, Pet } from '@/types'
 
 export default function HealthPage() {
+  const t = useTranslations('healthGuide')
   const { selectedPetId } = useSelectedPet()
 
   const { data: petsAll, isLoading: petsLoading } = useMyPets()
@@ -49,19 +51,19 @@ export default function HealthPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <PageHeader title="건강 가이드" />
+      <PageHeader title={t('title')} />
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3">
-        ⓘ 일반적인 참고 정보예요. 우리 아이의 정확한 건강 상태와 진단은 수의사와 상담하세요.
+        {t('disclaimer')}
       </div>
 
       {isLoading ? (
         <CardSkeletonList count={4} />
       ) : petGuides.length === 0 ? (
         <div className="card text-center py-10 space-y-3">
-          <p className="text-gray-400">반려동물을 먼저 등록해주세요</p>
+          <p className="text-gray-400">{t('noPets')}</p>
           <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">
-            반려동물 등록하기
+            {t('registerPet')}
           </Link>
         </div>
       ) : (
@@ -77,7 +79,7 @@ export default function HealthPage() {
 
             {guides.length === 0 ? (
               <div className="card text-sm text-gray-400 py-4 text-center">
-                현재 나이에 해당하는 가이드가 없어요
+                {t('noGuides')}
               </div>
             ) : (
               guides.map((guide: HealthGuide) => (

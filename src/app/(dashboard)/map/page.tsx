@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 import type { MapFavorite } from '@/types'
 
 type CategoryKey = 'lost' | 'hospital' | 'cafe' | 'restaurant' | 'favorite'
@@ -18,16 +19,14 @@ const escapeHtml = (s: string) =>
 
 const CATEGORIES: {
   key: CategoryKey
-  label: string
   icon: string
   keyword: string | null
-  empty: string
 }[] = [
-  { key: 'lost', label: '실종', icon: '🐾', keyword: null, empty: '주변에 등록된 실종 신고가 없어요.' },
-  { key: 'hospital', label: '동물병원', icon: '🏥', keyword: '동물병원', empty: '주변에서 동물병원을 찾지 못했어요.' },
-  { key: 'cafe', label: '애견카페', icon: '☕', keyword: '애견카페', empty: '주변에서 애견카페를 찾지 못했어요.' },
-  { key: 'restaurant', label: '동반식당', icon: '🍽️', keyword: '애견동반식당', empty: '주변에서 애견동반식당을 찾지 못했어요.' },
-  { key: 'favorite', label: '즐겨찾기', icon: '⭐', keyword: '__fav__', empty: '저장한 즐겨찾기가 없어요. 장소를 선택해 ☆를 눌러보세요.' },
+  { key: 'lost', icon: '🐾', keyword: null },
+  { key: 'hospital', icon: '🏥', keyword: '동물병원' },
+  { key: 'cafe', icon: '☕', keyword: '애견카페' },
+  { key: 'restaurant', icon: '🍽️', keyword: '애견동반식당' },
+  { key: 'favorite', icon: '⭐', keyword: '__fav__' },
 ]
 
 // 하단 리스트/시트용 정규화 아이템
@@ -52,6 +51,7 @@ let lastMapState: { lat: number; lng: number; level: number } | null = null
 
 export default function MapPage() {
   const supabase = createClient()
+  const t = useTranslations('map')
   // 지도 진입 시엔 어떤 필터도 선택하지 않은 상태로 시작 (사용자가 직접 선택)
   const [category, setCategory] = useState<CategoryKey | null>(null)
   const [keyword, setKeyword] = useState('')
@@ -162,8 +162,8 @@ export default function MapPage() {
           const rows = (data ?? []) as any[]
           const list: ListItem[] = rows.map(it => ({
             key: it.id, kind: 'lost' as const,
-            title: it.name ?? '이름 미상',
-            subtitle: it.area_text || (it.species === 'cat' ? '고양이' : '강아지'),
+            title: it.name ?? t('nameUnknown'),
+            subtitle: it.area_text || (it.species === 'cat' ? t('cat') : t('dog')),
             lat: it.lat, lng: it.lng, emoji: it.species === 'cat' ? '🐱' : '🐶',
             species: it.species, url: `/lost/${it.id}`,
           }))

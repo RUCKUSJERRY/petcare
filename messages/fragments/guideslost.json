@@ -1,0 +1,36 @@
+{
+  "healthGuide": {
+    "title": "건강 가이드",
+    "disclaimer": "ⓘ 일반적인 참고 정보예요. 우리 아이의 정확한 건강 상태와 진단은 수의사와 상담하세요.",
+    "noPets": "반려동물을 먼저 등록해주세요",
+    "registerPet": "반려동물 등록하기",
+    "noGuides": "현재 나이에 해당하는 가이드가 없어요"
+  },
+  "careGuide": {
+    "title": "생활 관리 가이드",
+    "disclaimer": "ⓘ 양치·털·미용·발톱·귀·목욕 등 일상 관리 정보예요. 견종·연령·피부 상태에 따라 다를 수 있으니 수의사·미용사와 상담하세요.",
+    "collapse": "접기 ▲",
+    "expand": "자세히 ▼",
+    "methodLabel": "방법",
+    "emptyHint": "아이를 등록하면 견종·나이에 맞춰 보여드려요.",
+    "registerPet": "반려동물 등록하기"
+  },
+  "walkGuide": {
+    "title": "활동 가이드",
+    "noPets": "반려동물을 먼저 등록해주세요",
+    "registerPet": "반려동물 등록하기",
+    "noGuides": "현재 나이에 해당하는 가이드가 없어요",
+    "dailyMinutes": "일일 권장 분",
+    "intensity": "강도"
+  },
+  "lost": {
+    "reportButton": "+ 제보",
+    "today": "오늘",
+    "dPlus": "D+{days}",
+    "mapUnknownName": "실종",
+    "emptyTitle": "등록된 실종 신고가 없어요.",
+    "emptyHint": "주변에서 잃어버린 아이를 보셨거나, 직접 신고하려면 “+ 제보”를 눌러주세요.",
+    "lostAtPrefix": "실종 {date}"
+  },
+  "lostNew": {}
+}

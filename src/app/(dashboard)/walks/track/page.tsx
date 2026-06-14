@@ -170,7 +170,7 @@ export default function WalkTrackPage() {
       onPosition,
       err => {
         if (err.code === err.PERMISSION_DENIED) {
-          setGeoError('위치 권한이 필요해요. 브라우저 설정에서 위치 접근을 허용해주세요.')
+          setGeoError(t('errPermission'))
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
