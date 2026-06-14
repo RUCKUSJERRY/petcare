@@ -249,7 +249,10 @@ export interface WeightLog {
   created_at: string
 }
 
-export type CareCategory = '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진' | '기타'
+export type CareCategory =
+  | '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진'
+  | '미용' | '양치' | '발톱' | '목욕' | '귀청소'
+  | '기타'
 
 /** 건강 관리 기록 (접종·심장사상충약·구충 등 주기적 관리 항목) */
 export interface CareRecord {

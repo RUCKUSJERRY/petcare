@@ -3,10 +3,13 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { addMonths, careCategoryIcon, careDefaultIntervalMonths, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { addDays, careCategoryIcon, careRecommendedCycleDays, ddayBadge, ddayToneClass } from '@/lib/utils'
 import type { CareCategory, CareRecord } from '@/types'
 
-const CATEGORIES: CareCategory[] = ['접종', '심장사상충', '구충', '외부기생충', '건강검진', '기타']
+const CATEGORIES: CareCategory[] = [
+  '접종', '심장사상충', '구충', '외부기생충', '건강검진',
+  '미용', '양치', '발톱', '목욕', '귀청소', '기타',
+]
 
 // 카테고리별 항목명 입력 힌트
 const NAME_PLACEHOLDER: Record<CareCategory, string> = {
@@ -15,6 +18,11 @@ const NAME_PLACEHOLDER: Record<CareCategory, string> = {
   '구충': '예: 드론탈, 파나쿠어',
   '외부기생충': '예: 넥스가드, 프론트라인',
   '건강검진': '예: 혈액검사, 엑스레이',
+  '미용': '예: 전체미용, 위생미용',
+  '양치': '예: 양치, 치석 관리',
+  '발톱': '예: 발톱 깎기',
+  '목욕': '예: 목욕',
+  '귀청소': '예: 귀 세정',
   '기타': '항목명',
 }
 
@@ -33,14 +41,14 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
     category: '접종' as CareCategory,
     vaccine_name: '',
     vaccinated_on: today,
-    next_due_on: addMonths(today, careDefaultIntervalMonths('접종') ?? 0),
+    next_due_on: addDays(today, careRecommendedCycleDays('접종') ?? 0),
     clinic: '',
   })
 
   // 카테고리·시행일 변경 시 다음 예정일을 권장 주기로 자동 제안(사용자가 안 건드린 경우)
   const suggestDue = (category: CareCategory, vaccinatedOn: string) => {
-    const months = careDefaultIntervalMonths(category)
-    return months ? addMonths(vaccinatedOn, months) : ''
+    const days = careRecommendedCycleDays(category)
+    return days ? addDays(vaccinatedOn, days) : ''
   }
   const setCategory = (category: CareCategory) =>
     setForm(f => ({ ...f, category, next_due_on: dueTouched ? f.next_due_on : suggestDue(category, f.vaccinated_on) }))
@@ -91,7 +99,10 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
   return (
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">건강 관리 기록</h2>
+        <div>
+          <h2 className="font-bold text-gray-900">관리 기록</h2>
+          <p className="text-xs text-gray-400 mt-0.5">접종·구충·미용·양치·발톱 등 주기적으로 챙기는 관리</p>
+        </div>
         <button
           onClick={() => setAdding(a => !a)}
           className="text-sm text-primary-600 font-semibold"

@@ -3,15 +3,14 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
-import type { CareCategory } from '@/types'
 
 type ScheduleItem = {
   id: string
   pet_id: string
   pet_name: string
   pet_species: string
-  category: CareCategory
-  vaccine_name: string
+  category: string
+  title: string
   next_due_on: string
 }
 
@@ -198,7 +197,7 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
                       <span className="text-xs text-gray-300">·</span>
                       <span className="text-xs text-gray-400">{i.category}</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{i.vaccine_name}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
                     {badge.text}
