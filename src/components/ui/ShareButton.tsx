@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 /**
@@ -13,7 +14,7 @@ export function ShareButton({
   path,
   title,
   text,
-  label = '공유',
+  label,
   className,
   iconOnly = false,
 }: {
@@ -24,7 +25,9 @@ export function ShareButton({
   className?: string
   iconOnly?: boolean
 }) {
+  const t = useTranslations('ui')
   const [copied, setCopied] = useState(false)
+  const shareLabel = label ?? t('share')
 
   const share = async () => {
     const url = typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : path
@@ -43,7 +46,7 @@ export function ShareButton({
       setTimeout(() => setCopied(false), 1800)
     } catch {
       // 클립보드도 막힌 환경: 프롬프트로 링크 노출
-      window.prompt('링크를 복사하세요', url)
+      window.prompt(t('shareCopyPrompt'), url)
     }
   }
 
@@ -51,21 +54,21 @@ export function ShareButton({
     <button
       type="button"
       onClick={share}
-      aria-label={label}
+      aria-label={shareLabel}
       className={
         className ??
         'flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-gray-600 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors'
       }
     >
       {copied ? (
-        iconOnly ? <span aria-hidden>✓</span> : <>✓ 링크 복사됨</>
+        iconOnly ? <span aria-hidden>✓</span> : <>{t('shareCopied')}</>
       ) : (
         <>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
           </svg>
-          {!iconOnly && label}
+          {!iconOnly && shareLabel}
         </>
       )}
     </button>

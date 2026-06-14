@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useMyPets } from '@/hooks/useMyPets'
 import { addDays, careCategoryIcon, careRecommendedCycleDays } from '@/lib/utils'
 import type { CareCategory } from '@/types'
+import { useTranslations } from 'next-intl'
 
 const CATEGORIES: CareCategory[] = [
   '접종', '심장사상충', '구충', '외부기생충', '건강검진',
@@ -39,6 +40,8 @@ export function ScheduleAddForm({
   onClose: () => void
 }) {
   const supabase = createClient()
+  const t = useTranslations('schedule')
+  const tc = useTranslations('common')
   const qc = useQueryClient()
   const { data: pets = [] } = useMyPets()
   const today = new Date().toISOString().slice(0, 10)
@@ -68,10 +71,10 @@ export function ScheduleAddForm({
   const petId = form.pet_id || pets[0]?.id || ''
 
   const add = async () => {
-    if (!petId) { setError('등록된 아이가 없어요'); return }
-    if (!form.vaccine_name.trim()) { setError('항목명을 입력해주세요'); return }
+    if (!petId) { setError(t('errNoPet')); return }
+    if (!form.vaccine_name.trim()) { setError(t('errNoName')); return }
     if (form.next_due_on && form.next_due_on < form.vaccinated_on) {
-      setError('다음 예정일은 시행일 이후여야 해요'); return
+      setError(t('errDueBeforeDone')); return
     }
     setSaving(true); setError(null)
     const { error: insErr } = await supabase.from('vaccination_records').insert({
@@ -83,7 +86,7 @@ export function ScheduleAddForm({
       clinic: form.clinic.trim() || null,
     })
     setSaving(false)
-    if (insErr) { setError('저장에 실패했어요'); return }
+    if (insErr) { setError(t('errSaveFailed')); return }
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     qc.invalidateQueries({ queryKey: ['care', petId] })
     onClose()
@@ -92,8 +95,8 @@ export function ScheduleAddForm({
   return (
     <div className="card space-y-2.5">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">일정 추가</h2>
-        <button onClick={onClose} className="text-sm text-gray-400">취소</button>
+        <h2 className="font-bold text-gray-900">{t('addTitle')}</h2>
+        <button onClick={onClose} className="text-sm text-gray-400">{tc('cancel')}</button>
       </div>
 
       {/* 아이 선택 */}
@@ -142,16 +145,16 @@ export function ScheduleAddForm({
       />
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-xs text-gray-500 block mb-0.5">시행일</label>
+          <label className="text-xs text-gray-500 block mb-0.5">{t('doneDate')}</label>
           <input className="input" type="date" max={today}
             value={form.vaccinated_on}
             onChange={e => setVaccinatedOn(e.target.value)} />
         </div>
         <div>
           <label className="text-xs text-gray-500 block mb-0.5">
-            다음 예정일
+            {t('nextDate')}
             {!dueTouched && form.next_due_on && (
-              <span className="text-primary-500 ml-1">· 자동</span>
+              <span className="text-primary-500 ml-1">{t('autoSuffix')}</span>
             )}
           </label>
           <input className="input" type="date"
@@ -161,13 +164,13 @@ export function ScheduleAddForm({
       </div>
       <input
         className="input"
-        placeholder="병원 (선택)"
+        placeholder={t('clinicPlaceholder')}
         value={form.clinic}
         onChange={e => setForm(f => ({ ...f, clinic: e.target.value }))}
       />
       {error && <p className="text-sm text-red-500">{error}</p>}
       <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-        {saving ? '저장 중...' : '저장'}
+        {saving ? tc('saving') : tc('save')}
       </button>
     </div>
   )

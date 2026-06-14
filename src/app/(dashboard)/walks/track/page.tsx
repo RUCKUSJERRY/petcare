@@ -8,6 +8,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { formatDistance, formatDuration, formatPace, haversineMeters } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
 import { WalkPhotoCard } from '../_components/WalkPhotoCard'
 
@@ -22,6 +23,8 @@ const hhmm = (ms: number) =>
 export default function WalkTrackPage() {
   const router = useRouter()
   const supabase = createClient()
+  const t = useTranslations('walks')
+  const tc = useTranslations('common')
   const { data: pets } = useMyPets()
   const { selectedPetId } = useSelectedPet()
 
@@ -142,7 +145,7 @@ export default function WalkTrackPage() {
 
   const start = () => {
     if (!navigator.geolocation) {
-      setGeoError('이 기기에서는 위치 추적을 사용할 수 없어요.')
+      setGeoError(t('errNoGeo'))
       return
     }
     setGeoError(null)
@@ -167,7 +170,7 @@ export default function WalkTrackPage() {
       onPosition,
       err => {
         if (err.code === err.PERMISSION_DENIED) {
-          setGeoError('위치 권한이 필요해요. 브라우저 설정에서 위치 접근을 허용해주세요.')
+          setGeoError(t('errPermission'))
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -193,7 +196,7 @@ export default function WalkTrackPage() {
     setElapsed(Math.floor(runningMsRef.current / 1000))
     setPaused(false)
     const now = new Date()
-    setTitle(`${now.getMonth() + 1}월 ${now.getDate()}일 산책`)
+    setTitle(t('defaultTitle', { m: now.getMonth() + 1, d: now.getDate() }))
     setPhase('finished')
   }
 
@@ -202,7 +205,7 @@ export default function WalkTrackPage() {
   const save = async () => {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); setGeoError('로그인이 필요해요.'); return }
+    if (!user) { setSaving(false); setGeoError(t('errLoginRequired')); return }
     const { data, error } = await supabase.from('walks').insert({
       user_id: user.id,
       pet_id: petId || null,
@@ -216,16 +219,17 @@ export default function WalkTrackPage() {
       note: note.trim() || null,
     }).select('id').single()
     setSaving(false)
-    if (error) { setGeoError('저장에 실패했어요. 다시 시도해주세요.'); return }
+    if (error) { setGeoError(t('errSaveRetry')); return }
     router.replace(`/walks/${(data as { id: string }).id}`)
   }
 
   const discard = () => {
-    if (confirm('이 산책 기록을 저장하지 않고 나갈까요?')) router.replace('/walks')
+    if (confirm(t('discardConfirm'))) router.replace('/walks')
   }
 
   const notice = kakaoNotice(mapStatus)
-  const finishedDateLabel = `${new Date(startedAtRef.current || Date.now()).getMonth() + 1}월 ${new Date(startedAtRef.current || Date.now()).getDate()}일`
+  const finishedDate = new Date(startedAtRef.current || Date.now())
+  const finishedDateLabel = t('dateLabel', { m: finishedDate.getMonth() + 1, d: finishedDate.getDate() })
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-[60] bg-gray-100 overflow-hidden flex flex-col">
@@ -236,7 +240,7 @@ export default function WalkTrackPage() {
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white/90 p-6 text-center text-sm text-gray-500 max-w-xs">
               {notice}
-              <p className="mt-2 text-xs text-gray-400">지도가 없어도 거리·시간 기록은 동작해요.</p>
+              <p className="mt-2 text-xs text-gray-400">{t('mapFallbackHint')}</p>
             </div>
           </div>
         )}
@@ -245,15 +249,15 @@ export default function WalkTrackPage() {
         <div className="absolute top-3 inset-x-3 z-10 bg-white/95 rounded-2xl shadow-md px-4 py-3 grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="text-2xl font-bold text-primary-600 tabular-nums">{formatDistance(distance)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">거리</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('distance')}</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-gray-900 tabular-nums">{formatDuration(elapsed)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">시간{paused && phase === 'tracking' ? ' ⏸' : ''}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('time')}{paused && phase === 'tracking' ? ' ⏸' : ''}</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-gray-900 tabular-nums">{formatPace(distance, elapsed)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">페이스</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('pace')}</div>
           </div>
         </div>
 
@@ -261,8 +265,8 @@ export default function WalkTrackPage() {
           <div className="absolute bottom-3 inset-x-3 z-10 flex items-center justify-center">
             <span className="text-xs text-gray-600 bg-white/90 rounded-full px-3 py-1 shadow-sm">
               {paused
-                ? (autoPausedRef.current ? '자동 일시정지됨 · 움직이면 다시 시작돼요' : '일시정지됨')
-                : `시작 ${hhmm(startedAtRef.current)} · 기록점 ${points}개`}
+                ? (autoPausedRef.current ? t('autoPausedHint') : t('pausedHint'))
+                : t('trackingStatus', { time: hhmm(startedAtRef.current), points })}
             </span>
           </div>
         )}
@@ -275,10 +279,10 @@ export default function WalkTrackPage() {
         {phase === 'idle' && (
           <div className="space-y-2">
             <button onClick={start} className="btn-primary w-full py-3.5 text-base font-semibold">
-              ▶ 산책 시작
+              ▶ {t('startTracking')}
             </button>
             <button onClick={() => router.back()} className="w-full py-2 text-sm text-gray-400">
-              취소
+              {tc('cancel')}
             </button>
           </div>
         )}
@@ -287,15 +291,15 @@ export default function WalkTrackPage() {
           <div className="grid grid-cols-2 gap-2">
             {paused ? (
               <button onClick={doResume} className="py-3.5 rounded-lg bg-primary-500 text-white text-base font-semibold">
-                ▶ 다시 시작
+                ▶ {t('resume')}
               </button>
             ) : (
               <button onClick={() => doPause(false)} className="py-3.5 rounded-lg bg-gray-700 text-white text-base font-semibold">
-                ⏸ 일시정지
+                ⏸ {t('pause')}
               </button>
             )}
             <button onClick={finish} className="py-3.5 rounded-lg bg-red-500 text-white text-base font-semibold">
-              ■ 산책 종료
+              ■ {t('finish')}
             </button>
           </div>
         )}
@@ -304,38 +308,38 @@ export default function WalkTrackPage() {
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {/* 시작/종료 시각 요약 */}
             <div className="flex justify-center gap-4 text-xs text-gray-500">
-              <span>시작 <b className="text-gray-700 tabular-nums">{hhmm(startedAtRef.current)}</b></span>
-              <span>종료 <b className="text-gray-700 tabular-nums">{hhmm(endedAtRef.current)}</b></span>
+              <span>{t('startTime')} <b className="text-gray-700 tabular-nums">{hhmm(startedAtRef.current)}</b></span>
+              <span>{t('endTime')} <b className="text-gray-700 tabular-nums">{hhmm(endedAtRef.current)}</b></span>
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">제목</label>
-              <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="산책 제목" />
+              <label className="text-xs text-gray-500 block mb-1">{t('titleLabel')}</label>
+              <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder={t('titlePlaceholder')} />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">함께한 아이 (선택)</label>
+              <label className="text-xs text-gray-500 block mb-1">{t('withPetOptional')}</label>
               <select className="input" value={petId} onChange={e => setPetId(e.target.value)}>
-                <option value="">선택 안 함</option>
+                <option value="">{t('petNone')}</option>
                 {(pets ?? []).map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">메모 (선택)</label>
-              <input className="input" value={note} onChange={e => setNote(e.target.value)} placeholder="예: 오프리쉬존, 산책로 추천 포인트" />
+              <label className="text-xs text-gray-500 block mb-1">{t('noteOptional')}</label>
+              <input className="input" value={note} onChange={e => setNote(e.target.value)} placeholder={t('notePlaceholder')} />
             </div>
             <label className="flex items-center gap-2.5 py-1 cursor-pointer">
               <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="w-4 h-4 accent-primary-500" />
-              <span className="text-sm text-gray-700">이 경로를 공유하기 <span className="text-gray-400">(커뮤니티에서 좋아요·댓글 가능)</span></span>
+              <span className="text-sm text-gray-700">{t('shareThisRoute')} <span className="text-gray-400">{t('shareHint')}</span></span>
             </label>
 
             {/* 사진에 기록 입혀 공유 카드 만들기 */}
             <WalkPhotoCard distanceM={distRef.current} durationS={elapsed} dateLabel={finishedDateLabel} />
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={discard} className="btn-secondary py-3 text-sm">저장 안 함</button>
+              <button onClick={discard} className="btn-secondary py-3 text-sm">{t('discard')}</button>
               <button onClick={save} disabled={saving} className="btn-primary py-3 text-sm">
-                {saving ? '저장 중...' : '저장하기'}
+                {saving ? tc('saving') : t('saveWalk')}
               </button>
             </div>
           </div>

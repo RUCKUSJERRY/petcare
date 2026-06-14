@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { uploadImage, validateImage } from '@/lib/upload'
 import type { CareCategory } from '@/types'
 
@@ -60,6 +61,8 @@ export function RecordsScanModal({
   petId: string
   onClose: () => void
 }) {
+  const t = useTranslations('scan')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -87,13 +90,13 @@ export function RecordsScanModal({
         body: JSON.stringify({ imageUrl: url }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(json?.message || '인식에 실패했어요.'); setPhase('pick'); return }
+      if (!res.ok) { setError(json?.message || t('errRecognizeFailed')); setPhase('pick'); return }
       const parsed = (json.records ?? []) as Record<string, unknown>[]
-      if (parsed.length === 0) { setError('인식된 기록이 없어요. 다른 사진으로 시도해주세요.'); setPhase('pick'); return }
+      if (parsed.length === 0) { setError(t('errNoRecords')); setPhase('pick'); return }
       setRows(parsed.map(toRow))
       setPhase('review')
     } catch {
-      setError('스캔에 실패했어요. 직접 입력해주세요.')
+      setError(t('errScanFailed'))
       setPhase('pick')
     }
   }
@@ -103,7 +106,7 @@ export function RecordsScanModal({
 
   const save = async () => {
     const picked = rows.filter(r => r.include)
-    if (picked.length === 0) { setError('저장할 기록을 선택해주세요.'); return }
+    if (picked.length === 0) { setError(t('errSelectRecords')); return }
     setSaving(true); setError(null)
 
     const careRows = picked.filter(r => r.type === 'care').map(r => ({
@@ -138,7 +141,7 @@ export function RecordsScanModal({
       if (e) failed = true
     }
     setSaving(false)
-    if (failed) { setError('일부 저장에 실패했어요. 다시 시도해주세요.'); return }
+    if (failed) { setError(t('errSavePartial')); return }
 
     qc.invalidateQueries({ queryKey: ['care', petId] })
     qc.invalidateQueries({ queryKey: ['medical', petId] })
@@ -155,7 +158,7 @@ export function RecordsScanModal({
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h2 className="font-bold text-gray-900">사진으로 기록 추가</h2>
+          <h2 className="font-bold text-gray-900">{t('title')}</h2>
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 text-gray-500">✕</button>
         </div>
 
@@ -165,29 +168,29 @@ export function RecordsScanModal({
           {phase === 'pick' && (
             <div className="text-center py-8 space-y-3">
               <div className="text-4xl">🧾</div>
-              <p className="text-sm text-gray-600">영수증·세부내역서·진료이력서·접종증명서를 촬영하면<br />여러 건도 한 번에 인식해 드려요.</p>
+              <p className="text-sm text-gray-600">{t.rich('pickDesc', { br: () => <br /> })}</p>
               <button onClick={() => inputRef.current?.click()} className="btn-primary px-5 py-2.5 text-sm">
-                📷 사진 선택
+                {t('pickButton')}
               </button>
-              <p className="text-xs text-gray-400">AI 인식 결과이니 저장 전 꼭 확인·수정하세요.</p>
+              <p className="text-xs text-gray-400">{t('aiNotice')}</p>
             </div>
           )}
 
           {phase === 'scanning' && (
-            <div className="text-center py-12 text-gray-500">🔍 인식 중…<br /><span className="text-xs text-gray-400">여러 건이면 시간이 조금 걸려요</span></div>
+            <div className="text-center py-12 text-gray-500">{t('scanning')}<br /><span className="text-xs text-gray-400">{t('scanningNote')}</span></div>
           )}
 
           {phase === 'review' && (
             <>
-              <p className="text-xs text-gray-500">인식된 <b>{rows.length}건</b> · 저장할 항목을 확인·수정하세요.</p>
+              <p className="text-xs text-gray-500">{t.rich('reviewSummary', { count: rows.length, b: (chunks) => <b>{chunks}</b> })}</p>
               {rows.map((r, i) => (
                 <div key={i} className={`rounded-xl border p-3 space-y-2 ${r.include ? 'border-gray-200' : 'border-gray-100 opacity-50'}`}>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" checked={r.include} onChange={e => update(i, { include: e.target.checked })} className="w-4 h-4 accent-primary-500" />
                     <select value={r.type} onChange={e => update(i, { type: e.target.value as Row['type'] })}
                       className="text-xs font-semibold border border-gray-200 rounded-md px-1.5 py-1">
-                      <option value="medical">🏥 진료</option>
-                      <option value="care">📋 관리</option>
+                      <option value="medical">{t('typeMedical')}</option>
+                      <option value="care">{t('typeCare')}</option>
                     </select>
                     <input type="date" value={r.date} onChange={e => update(i, { date: e.target.value })}
                       className="text-xs border border-gray-200 rounded-md px-1.5 py-1 flex-1" />
@@ -199,17 +202,17 @@ export function RecordsScanModal({
                         className="input text-sm py-1.5">
                         {CARE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
-                      <input className="input text-sm py-1.5" placeholder="항목명" value={r.name}
+                      <input className="input text-sm py-1.5" placeholder={t('namePlaceholder')} value={r.name}
                         onChange={e => update(i, { name: e.target.value })} />
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <input className="input text-sm py-1.5" placeholder="진단/사유" value={r.diagnosis || r.name}
+                      <input className="input text-sm py-1.5" placeholder={t('diagnosisPlaceholder')} value={r.diagnosis || r.name}
                         onChange={e => update(i, { diagnosis: e.target.value, name: e.target.value })} />
                       <div className="grid grid-cols-2 gap-2">
-                        <input className="input text-sm py-1.5" placeholder="처치/처방" value={r.treatment}
+                        <input className="input text-sm py-1.5" placeholder={t('treatmentPlaceholder')} value={r.treatment}
                           onChange={e => update(i, { treatment: e.target.value })} />
-                        <input className="input text-sm py-1.5" type="number" inputMode="numeric" placeholder="비용(원)" value={r.cost}
+                        <input className="input text-sm py-1.5" type="number" inputMode="numeric" placeholder={t('costPlaceholder')} value={r.cost}
                           onChange={e => update(i, { cost: e.target.value })} />
                       </div>
                     </div>
@@ -223,7 +226,7 @@ export function RecordsScanModal({
         {phase === 'review' && (
           <div className="px-4 py-3 border-t border-gray-100">
             <button onClick={save} disabled={saving || includedCount === 0} className="btn-primary w-full py-2.5 text-sm">
-              {saving ? '저장 중...' : `${includedCount}건 저장`}
+              {saving ? tc('saving') : t('saveCount', { count: includedCount })}
             </button>
           </div>
         )}

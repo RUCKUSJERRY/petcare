@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor, pickBestPerActivityType } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
@@ -32,6 +33,7 @@ const intensityColor = (i: string) => ({
 }[i] ?? 'bg-gray-100 text-gray-700')
 
 export default function WalkPage() {
+  const t = useTranslations('walkGuide')
   const { selectedPetId } = useSelectedPet()
 
   const { data: petsAll, isLoading: petsLoading } = useMyPets()
@@ -68,15 +70,15 @@ export default function WalkPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <PageHeader title="활동 가이드" />
+      <PageHeader title={t('title')} />
 
       {isLoading ? (
         <CardSkeletonList count={3} />
       ) : petGuides.length === 0 ? (
         <div className="card text-center py-10 space-y-3">
-          <p className="text-gray-400">반려동물을 먼저 등록해주세요</p>
+          <p className="text-gray-400">{t('noPets')}</p>
           <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">
-            반려동물 등록하기
+            {t('registerPet')}
           </Link>
         </div>
       ) : (
@@ -93,7 +95,7 @@ export default function WalkPage() {
 
             {orderedTypes.length === 0 ? (
               <div className="card text-sm text-gray-400 py-4 text-center">
-                현재 나이에 해당하는 가이드가 없어요
+                {t('noGuides')}
               </div>
             ) : (
               orderedTypes.map(type => {
@@ -114,13 +116,13 @@ export default function WalkPage() {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 text-center bg-primary-50 rounded-xl px-3 py-2.5">
                         <div className="text-2xl font-bold text-primary-600">{guide.daily_minutes}</div>
-                        <div className="text-xs text-primary-400 mt-0.5">일일 권장 분</div>
+                        <div className="text-xs text-primary-400 mt-0.5">{t('dailyMinutes')}</div>
                       </div>
                       <div className="flex-1 text-center bg-gray-50 rounded-xl px-3 py-2.5">
                         <div className={`text-sm font-semibold px-2 py-1 rounded-full inline-block ${intensityColor(guide.intensity)}`}>
                           {guide.intensity}
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">강도</div>
+                        <div className="text-xs text-gray-400 mt-1">{t('intensity')}</div>
                       </div>
                     </div>
 

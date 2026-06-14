@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { timeAgo } from '@/lib/utils'
 import type { WalkComment } from '@/types'
+import { useTranslations } from 'next-intl'
 
 /**
  * 공유된 산책에 대한 좋아요 + 댓글 (커뮤니티 게시판처럼).
@@ -18,6 +19,8 @@ export function WalkSocial({
   initialLikeCount: number
 }) {
   const supabase = createClient()
+  const t = useTranslations('walkSocial')
+  const tc = useTranslations('common')
   const qc = useQueryClient()
   const [uid, setUid] = useState<string | null>(null)
   const [liked, setLiked] = useState(false)
@@ -52,7 +55,7 @@ export function WalkSocial({
           map.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url })
         }
       }
-      return rows.map(r => ({ ...r, author: map.get(r.user_id) ?? { display_name: '익명의 보호자', avatar_url: null } }))
+      return rows.map(r => ({ ...r, author: map.get(r.user_id) ?? { display_name: t('anonymousOwner'), avatar_url: null } }))
     },
   })
 
@@ -103,22 +106,22 @@ export function WalkSocial({
 
       <div className="space-y-3">
         <h3 className="font-semibold text-gray-900 text-sm">
-          댓글 <span className="text-primary-500">{comments.length}</span>
+          {t('comments')} <span className="text-primary-500">{comments.length}</span>
         </h3>
         <form onSubmit={addComment} className="flex gap-2">
           <input
             className="input flex-1"
-            placeholder={uid ? '댓글을 남겨보세요' : '로그인 후 댓글을 남길 수 있어요'}
+            placeholder={uid ? t('commentPlaceholder') : t('commentLoginRequired')}
             maxLength={1000}
             value={text}
             disabled={!uid}
             onChange={e => setText(e.target.value)}
           />
-          <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">등록</button>
+          <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">{t('submit')}</button>
         </form>
         <div className="space-y-3">
           {comments.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-3">아직 댓글이 없어요</p>
+            <p className="text-sm text-gray-400 text-center py-3">{t('noComments')}</p>
           ) : comments.map(c => (
             <div key={c.id} className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm shrink-0 overflow-hidden">
@@ -129,10 +132,10 @@ export function WalkSocial({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">{c.author?.display_name ?? '익명의 보호자'}</span>
+                  <span className="text-sm font-medium text-gray-900">{c.author?.display_name ?? t('anonymousOwner')}</span>
                   <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
                   {c.user_id === uid && (
-                    <button onClick={() => removeComment(c.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">삭제</button>
+                    <button onClick={() => removeComment(c.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">{tc('delete')}</button>
                   )}
                 </div>
                 <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{c.content}</p>

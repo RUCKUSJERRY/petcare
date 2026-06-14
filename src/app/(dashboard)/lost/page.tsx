@@ -1,6 +1,7 @@
 'use client'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -10,12 +11,13 @@ import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { daysUntil } from '@/lib/utils'
 import type { LostPet } from '@/types'
 
-function dPlus(lostAt: string) {
+function dPlus(lostAt: string, t: (key: string, values?: Record<string, string | number | Date>) => string) {
   const d = -daysUntil(lostAt) // 과거일수록 양수
-  return d <= 0 ? '오늘' : `D+${d}`
+  return d <= 0 ? t('today') : t('dPlus', { days: d })
 }
 
 export default function LostListPage() {
+  const t = useTranslations('lost')
   const supabase = createClient()
 
   const { data: items = [], isLoading } = useQuery({
@@ -40,7 +42,7 @@ export default function LostListPage() {
       const pos = new maps.LatLng(it.lat, it.lng)
       const marker = new maps.Marker({ position: pos, map })
       const iw = new maps.InfoWindow({
-        content: `<div style="padding:6px 10px;font-size:12px;">${it.species === 'cat' ? '🐱' : '🐶'} ${it.name ?? '실종'} · ${it.area_text ?? ''}</div>`,
+        content: `<div style="padding:6px 10px;font-size:12px;">${it.species === 'cat' ? '🐱' : '🐶'} ${it.name ?? t('mapUnknownName')} · ${it.area_text ?? ''}</div>`,
       })
       maps.event.addListener(marker, 'click', () => iw.open(map, marker))
       bounds.extend(pos)
@@ -51,8 +53,8 @@ export default function LostListPage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader title="실종 신고" fallbackHref="/map" />
-        <Link href="/lost/new" className="btn-primary text-sm py-1.5 px-3 shrink-0">+ 제보</Link>
+        <PageHeader title={t('reportTitle')} fallbackHref="/map" />
+        <Link href="/lost/new" className="btn-primary text-sm py-1.5 px-3 shrink-0">{t('reportButton')}</Link>
       </div>
 
       {/* 지도 */}
@@ -72,8 +74,8 @@ export default function LostListPage() {
       ) : items.length === 0 ? (
         <div className="card text-center py-12 text-gray-400">
           <div className="text-4xl mb-3">🐾</div>
-          등록된 실종 신고가 없어요.
-          <p className="text-xs mt-2">주변에서 잃어버린 아이를 보셨거나, 직접 신고하려면 “+ 제보”를 눌러주세요.</p>
+          {t('emptyTitle')}
+          <p className="text-xs mt-2">{t('emptyHint')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -88,14 +90,14 @@ export default function LostListPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900 truncate">{it.name ?? '이름 미상'}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold shrink-0">{dPlus(it.lost_at)}</span>
+                    <span className="font-bold text-gray-900 truncate">{it.name ?? t('unknownName')}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold shrink-0">{dPlus(it.lost_at, t)}</span>
                   </div>
                   <p className="text-sm text-gray-500 truncate">
-                    {it.breed?.name_ko ?? (it.species === 'cat' ? '고양이' : '강아지')}
+                    {it.breed?.name_ko ?? (it.species === 'cat' ? t('speciesCat') : t('speciesDog'))}
                     {it.area_text ? ` · ${it.area_text}` : ''}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">실종 {it.lost_at}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('lostAtPrefix', { date: it.lost_at })}</p>
                 </div>
                 <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

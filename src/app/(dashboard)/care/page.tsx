@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor } from '@/lib/utils'
 import { careGuidesForSpecies, type CareGuideStage, type CareGuideTopic } from '@/lib/careGuideData'
@@ -26,6 +27,7 @@ function GuideCard({
   stage: CareGuideStage
   size: '소형' | '중형' | '대형' | null
 }) {
+  const t = useTranslations('careGuide')
   const [open, setOpen] = useState(false)
   // 해당 나이단계(또는 공통) 노트만, 크기 제약이 있으면 일치할 때만
   const notes = guide.notes.filter(
@@ -40,7 +42,7 @@ function GuideCard({
           <div className="font-semibold text-gray-900">{guide.topic}</div>
           <div className="text-xs text-primary-600 font-medium mt-0.5">🔁 {guide.frequency}</div>
         </div>
-        <span className="text-gray-400 text-sm shrink-0">{open ? '접기 ▲' : '자세히 ▼'}</span>
+        <span className="text-gray-400 text-sm shrink-0">{open ? t('collapse') : t('expand')}</span>
       </button>
 
       {notes.length > 0 && (
@@ -60,7 +62,7 @@ function GuideCard({
         <div className="space-y-3 pt-1">
           {guide.steps && guide.steps.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 mb-1">방법</p>
+              <p className="text-xs font-semibold text-gray-500 mb-1">{t('methodLabel')}</p>
               <ol className="space-y-1 text-sm text-gray-600">
                 {guide.steps.map((s, i) => (
                   <li key={i} className="flex gap-2">
@@ -85,6 +87,7 @@ function GuideCard({
 }
 
 export default function CarePage() {
+  const t = useTranslations('careGuide')
   const { selectedPetId } = useSelectedPet()
   const { data: petsAll, isLoading } = useMyPets()
 
@@ -103,10 +106,10 @@ export default function CarePage() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <PageHeader title="생활 관리 가이드" fallbackHref="/info" />
+      <PageHeader title={t('title')} fallbackHref="/info" />
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3">
-        ⓘ 양치·털·미용·발톱·귀·목욕 등 일상 관리 정보예요. 견종·연령·피부 상태에 따라 다를 수 있으니 수의사·미용사와 상담하세요.
+        {t('disclaimer')}
       </div>
 
       {pet && age && (
@@ -131,8 +134,8 @@ export default function CarePage() {
 
       {!pet && !isLoading && (
         <div className="card text-center py-6 space-y-2">
-          <p className="text-sm text-gray-400">아이를 등록하면 견종·나이에 맞춰 보여드려요.</p>
-          <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">반려동물 등록하기</Link>
+          <p className="text-sm text-gray-400">{t('emptyHint')}</p>
+          <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">{t('registerPet')}</Link>
         </div>
       )}
     </div>

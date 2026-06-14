@@ -6,6 +6,7 @@ import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { ShareButton } from '@/components/ui/ShareButton'
@@ -20,6 +21,8 @@ type WalkRow = Walk & {
 export default function WalkDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const supabase = createClient()
+  const t = useTranslations('walks')
+  const tc = useTranslations('common')
   const qc = useQueryClient()
   const [uid, setUid] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
@@ -101,17 +104,17 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || '산책'}</h1>
+        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || t('walkFallback')}</h1>
         {walk?.is_public ? (
           <ShareButton
             path={`/walks/${walk.id}`}
-            title={walk.title || '산책 경로'}
-            text="이 산책 경로를 확인해보세요"
+            title={walk.title || t('shareTitle')}
+            text={t('shareText')}
             iconOnly
             className="text-gray-400 hover:text-primary-600 w-6 h-6 flex items-center justify-center"
           />
@@ -131,41 +134,41 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {!walk ? (
-        <div className="text-gray-400 text-center py-6">불러오는 중...</div>
+        <div className="text-gray-400 text-center py-6">{t('loading')}</div>
       ) : (
       <>
       {/* 통계 */}
       <div className="card grid grid-cols-3 gap-2 text-center">
         <div>
           <div className="text-xl font-bold text-primary-600 tabular-nums">{formatDistance(walk.distance_m)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">거리</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('distance')}</div>
         </div>
         <div>
           <div className="text-xl font-bold text-gray-900 tabular-nums">{formatDuration(walk.duration_s)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">시간</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('time')}</div>
         </div>
         <div>
           <div className="text-xl font-bold text-gray-900 tabular-nums">{formatPace(walk.distance_m, walk.duration_s)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">평균 페이스</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('avgPace')}</div>
         </div>
       </div>
 
       {/* 메타 */}
       <div className="card space-y-1.5 text-sm">
-        <div className="flex justify-between"><span className="text-gray-400">날짜</span>
+        <div className="flex justify-between"><span className="text-gray-400">{t('date')}</span>
           <span className="text-gray-700">{new Date(walk.started_at).toLocaleDateString('ko-KR')}</span></div>
-        <div className="flex justify-between"><span className="text-gray-400">시작 · 종료</span>
+        <div className="flex justify-between"><span className="text-gray-400">{t('startEnd')}</span>
           <span className="text-gray-700 tabular-nums">
             {new Date(walk.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
             {' ~ '}
             {new Date(walk.ended_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
           </span></div>
         {walk.pet?.name && (
-          <div className="flex justify-between"><span className="text-gray-400">함께한 아이</span>
+          <div className="flex justify-between"><span className="text-gray-400">{t('withPet')}</span>
             <span className="text-gray-700">{walk.pet.name}</span></div>
         )}
         {!isOwner && walk.author?.display_name && (
-          <div className="flex justify-between"><span className="text-gray-400">공유자</span>
+          <div className="flex justify-between"><span className="text-gray-400">{t('sharedBy')}</span>
             <span className="text-gray-700">{walk.author.display_name}</span></div>
         )}
         {walk.note && (
@@ -183,13 +186,13 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
               ? 'w-full py-3 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 text-sm font-medium'
               : 'btn-primary w-full py-3 text-sm'}
           >
-            {walk.is_public ? '★ 공유 중 — 공유 해제하기' : '☆ 이 경로 공유하기'}
+            {walk.is_public ? t('unshare') : t('shareRoute')}
           </button>
           <button
             onClick={() => setShowDelete(true)}
             className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
           >
-            산책 기록 삭제
+            {t('deleteWalk')}
           </button>
         </div>
       )}
@@ -204,9 +207,9 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
 
       {showDelete && (
         <ConfirmModal
-          title="산책 기록 삭제"
-          description="삭제한 기록은 복구할 수 없어요. 정말 삭제할까요?"
-          confirmLabel="삭제"
+          title={t('deleteWalk')}
+          description={t('deleteConfirm')}
+          confirmLabel={tc('delete')}
           destructive
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}

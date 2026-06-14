@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 type ScheduleItem = {
   id: string
@@ -13,8 +14,6 @@ type ScheduleItem = {
   title: string
   next_due_on: string
 }
-
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 /** 로컬 기준 YYYY-MM-DD (시간대 영향 없이) */
 function toYMD(d: Date) {
@@ -29,6 +28,8 @@ function toYMD(d: Date) {
  * 일정이 있는 날에 점·건수를 표시하고, 날짜를 누르면 그 날의 일정을 아래에 보여준다.
  */
 export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
+  const t = useTranslations('schedule')
+  const WEEKDAYS = t.raw('weekdays') as string[]
   const todayYMD = toYMD(new Date())
   const [cursor, setCursor] = useState(() => {
     const n = new Date()
@@ -62,7 +63,7 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
     })
   }, [cursor])
 
-  const monthLabel = `${cursor.getFullYear()}년 ${cursor.getMonth() + 1}월`
+  const monthLabel = t('monthLabel', { year: cursor.getFullYear(), month: cursor.getMonth() + 1 })
   const move = (delta: number) =>
     setCursor(c => new Date(c.getFullYear(), c.getMonth() + delta, 1))
 
@@ -88,7 +89,7 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
       <div className="card space-y-3">
         {/* 월 네비게이션 (가운데 라벨을 누르면 연/월 선택 패널) */}
         <div className="flex items-center justify-between">
-          <button onClick={() => move(-1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="이전 달">‹</button>
+          <button onClick={() => move(-1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label={t('prevMonth')}>‹</button>
           <button
             onClick={openPicker}
             className="flex items-center gap-1 font-bold text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100"
@@ -97,16 +98,16 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
             {monthLabel}
             <span className="text-xs text-gray-400">{pickerOpen ? '▲' : '▼'}</span>
           </button>
-          <button onClick={() => move(1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="다음 달">›</button>
+          <button onClick={() => move(1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label={t('nextMonth')}>›</button>
         </div>
 
         {/* 연/월 선택 패널: 연도 먼저 고른 뒤 월 선택 */}
         {pickerOpen ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <button onClick={() => setPickerYear(y => y - 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="이전 연도">‹</button>
-              <span className="font-bold text-gray-900">{pickerYear}년</span>
-              <button onClick={() => setPickerYear(y => y + 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label="다음 연도">›</button>
+              <button onClick={() => setPickerYear(y => y - 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label={t('prevYear')}>‹</button>
+              <span className="font-bold text-gray-900">{t('yearLabel', { year: pickerYear })}</span>
+              <button onClick={() => setPickerYear(y => y + 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500" aria-label={t('nextYear')}>›</button>
             </div>
             <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 12 }, (_, i) => {
@@ -120,12 +121,12 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
                       isCurrent ? 'bg-primary-500 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100',
                     ].join(' ')}
                   >
-                    {i + 1}월
+                    {t('monthShort', { month: i + 1 })}
                   </button>
                 )
               })}
             </div>
-            <button onClick={goToday} className="w-full text-sm text-primary-600 font-semibold py-1">오늘로</button>
+            <button onClick={goToday} className="w-full text-sm text-primary-600 font-semibold py-1">{t('goToday')}</button>
           </div>
         ) : (
         <>
@@ -179,11 +180,11 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
       {/* 선택한 날짜의 일정 */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-500">
-          {selected ? selected.replace(/-/g, '.') : '날짜를 선택하세요'}
-          {selectedItems.length > 0 && <span className="text-gray-400 font-normal"> · {selectedItems.length}건</span>}
+          {selected ? selected.replace(/-/g, '.') : t('pickDate')}
+          {selectedItems.length > 0 && <span className="text-gray-400 font-normal"> {t('countSuffix', { count: selectedItems.length })}</span>}
         </h2>
         {selectedItems.length === 0 ? (
-          <div className="card text-center py-6 text-sm text-gray-400">이 날에는 예정된 일정이 없어요</div>
+          <div className="card text-center py-6 text-sm text-gray-400">{t('noScheduleThisDay')}</div>
         ) : (
           selectedItems.map(i => {
             const badge = ddayBadge(i.next_due_on)

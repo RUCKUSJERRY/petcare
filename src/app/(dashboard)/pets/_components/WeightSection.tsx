@@ -3,9 +3,12 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { WeightLog } from '@/types'
 
 export function WeightSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
+  const t = useTranslations('weight')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
   const [adding, setAdding] = useState(defaultOpen)
@@ -32,7 +35,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
 
   const add = async () => {
     const w = parseFloat(form.weight_kg)
-    if (!w || w <= 0) { setError('체중을 올바르게 입력해주세요'); return }
+    if (!w || w <= 0) { setError(t('errInvalidWeight')); return }
     setSaving(true); setError(null)
     const { error: insErr } = await supabase.from('weight_logs').insert({
       pet_id: petId,
@@ -40,7 +43,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
       measured_on: form.measured_on,
     })
     setSaving(false)
-    if (insErr) { setError('저장에 실패했어요'); return }
+    if (insErr) { setError(t('errSaveFailed')); return }
     setForm({ weight_kg: '', measured_on: new Date().toISOString().slice(0, 10) })
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
@@ -62,12 +65,12 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   return (
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">체중 기록</h2>
+        <h2 className="font-bold text-gray-900">{t('title')}</h2>
         <button
           onClick={() => setAdding(a => !a)}
           className="text-sm text-primary-600 font-semibold"
         >
-          {adding ? '취소' : '+ 기록'}
+          {adding ? tc('cancel') : t('addRecord')}
         </button>
       </div>
 
@@ -80,7 +83,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               {diff > 0 ? '▲' : '▼'} {Math.abs(diff)}kg
             </span>
           )}
-          <span className="text-xs text-gray-400 ml-auto">최근 측정 {latest.measured_on}</span>
+          <span className="text-xs text-gray-400 ml-auto">{t('latestMeasured', { date: latest.measured_on })}</span>
         </div>
       )}
 
@@ -96,7 +99,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               type="number"
               step="0.1"
               min="0"
-              placeholder="체중(kg)"
+              placeholder={t('weightPlaceholder')}
               value={form.weight_kg}
               onChange={e => setForm(f => ({ ...f, weight_kg: e.target.value }))}
             />
@@ -110,14 +113,14 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-            {saving ? '저장 중...' : '저장'}
+            {saving ? tc('saving') : tc('save')}
           </button>
         </div>
       )}
 
       {/* 목록 */}
       {logs.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-3">아직 기록이 없어요</p>
+        <p className="text-sm text-gray-400 text-center py-3">{t('empty')}</p>
       ) : (
         <div className="space-y-1">
           {visibleLogs.map(log => (
@@ -126,18 +129,18 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               <span className="font-medium text-gray-800">{log.weight_kg}kg</span>
               {confirmDeleteId === log.id ? (
                 <div className="ml-auto flex items-center gap-2">
-                  <span className="text-xs text-gray-500">삭제할까요?</span>
+                  <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
                   <button
                     onClick={() => remove(log.id)}
                     className="text-xs text-red-500 font-semibold"
                   >
-                    삭제
+                    {tc('delete')}
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(null)}
                     className="text-xs text-gray-400"
                   >
-                    취소
+                    {tc('cancel')}
                   </button>
                 </div>
               ) : (
@@ -145,7 +148,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
                   onClick={() => setConfirmDeleteId(log.id)}
                   className="ml-auto text-xs text-gray-300 hover:text-red-500"
                 >
-                  삭제
+                  {tc('delete')}
                 </button>
               )}
             </div>
@@ -155,7 +158,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               onClick={() => setShowAll(v => !v)}
               className="w-full text-xs text-primary-600 font-medium pt-1 hover:underline"
             >
-              {showAll ? '접기' : `이전 기록 ${logs.length - 5}건 더 보기`}
+              {showAll ? t('collapse') : t('showMore', { count: logs.length - 5 })}
             </button>
           )}
         </div>

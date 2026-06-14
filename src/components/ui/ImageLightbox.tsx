@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
 /**
@@ -15,6 +16,7 @@ export function ImageLightbox({
   alt?: string
   className?: string
 }) {
+  const tc = useTranslations('common')
   const [open, setOpen] = useState(false)
 
   // 모달 열렸을 때 배경 스크롤 잠금 + ESC 닫기
@@ -52,7 +54,7 @@ export function ImageLightbox({
           <button
             onClick={() => setOpen(false)}
             className="absolute top-4 right-4 text-white/80 hover:text-white"
-            aria-label="닫기"
+            aria-label={tc('close')}
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

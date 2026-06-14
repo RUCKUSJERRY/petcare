@@ -2,6 +2,7 @@
 
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import type { CareAlert, Pet } from '@/types'
 
@@ -11,6 +12,7 @@ import type { CareAlert, Pet } from '@/types'
  */
 export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] }) {
   const { selectedPetId } = useSelectedPet()
+  const t = useTranslations('vaccAlerts')
 
   const shown = selectedPetId
     ? alerts.filter(a => a.pet_id !== selectedPetId)
@@ -23,7 +25,7 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
       <div className="flex items-center gap-2 mb-1">
         <span aria-hidden>🗓️</span>
         <span className="font-semibold text-amber-800 text-sm">
-          {selectedPetId ? '다른 아이 일정' : '일정 알림'}
+          {selectedPetId ? t('otherTitle') : t('allTitle')}
         </span>
       </div>
       {shown.slice(0, 4).map((v, i) => {
@@ -42,10 +44,10 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
         )
       })}
       {shown.length > 4 && (
-        <p className="text-xs text-amber-600 pt-0.5">외 {shown.length - 4}건 더</p>
+        <p className="text-xs text-amber-600 pt-0.5">{t('moreCount', { count: shown.length - 4 })}</p>
       )}
       <Link href="/schedule" className="block text-xs text-amber-700 font-semibold pt-1">
-        일정 전체 보기 →
+        {t('viewAll')}
       </Link>
     </div>
   )

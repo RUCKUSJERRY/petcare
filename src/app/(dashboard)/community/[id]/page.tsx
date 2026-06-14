@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { categoryColor, timeAgo } from '@/lib/utils'
 import type { Comment, PostListItem } from '@/types'
@@ -12,6 +13,7 @@ import { ShareButton } from '@/components/ui/ShareButton'
 
 export default async function PostDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient()
+  const t = await getTranslations('community')
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: postData } = await supabase
@@ -44,7 +46,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   }
   const comments = rawComments.map(c => ({
     ...c,
-    author: authorMap.get(c.user_id) ?? { display_name: '익명의 보호자', avatar_url: null },
+    author: authorMap.get(c.user_id) ?? { display_name: t('anonymous'), avatar_url: null },
   })) as Comment[]
 
   let likedByMe = false
@@ -69,8 +71,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           <ShareButton
             path={`/community/${post.id}`}
             title={post.title}
-            text="펫케어 커뮤니티 글을 확인해보세요"
-            label="공유"
+            text={t('shareText')}
+            label={t('share')}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600"
           />
           {isAuthor && (
@@ -79,7 +81,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 href={`/community/${post.id}/edit`}
                 className="text-sm text-primary-600 font-semibold"
               >
-                수정
+                {t('edit')}
               </Link>
               <DeletePostButton postId={post.id} imageUrl={post.image_url} />
             </>
@@ -101,11 +103,11 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         <h1 className="text-xl font-bold text-gray-900">{post.title}</h1>
 
         <div className="flex items-center gap-2 text-sm text-gray-400">
-          <span>{post.author_name ?? '익명의 보호자'}</span>
+          <span>{post.author_name ?? t('anonymous')}</span>
           <span>·</span>
           <span>{timeAgo(post.created_at)}</span>
           {post.updated_at !== post.created_at && (
-            <span className="text-xs text-gray-300">(수정됨)</span>
+            <span className="text-xs text-gray-300">{t('edited')}</span>
           )}
         </div>
 

@@ -10,6 +10,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { addDays, careRecommendedCycleDays, cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
 import { ScheduleAddForm } from './_components/ScheduleAddForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
+import { useTranslations } from 'next-intl'
 
 type View = 'list' | 'calendar'
 
@@ -28,6 +29,8 @@ type ScheduleItem = {
 
 export default function SchedulePage() {
   const supabase = createClient()
+  const t = useTranslations('schedule')
+  const tc = useTranslations('common')
   const { selectedPetId } = useSelectedPet()
   const [view, setView] = useState<View>('list')
   const [adding, setAdding] = useState(false)
@@ -90,7 +93,7 @@ export default function SchedulePage() {
       const medItems: ScheduleItem[] = ((medRows ?? []) as MedRow[]).map(m => ({
         id: m.id, pet_id: m.pet_id, ...meta(m.pet_id),
         kind: 'medical' as const, category: '진료',
-        title: m.diagnosis || m.reason || '진료 예약',
+        title: m.diagnosis || m.reason || t('medicalFallback'),
         last_on: m.visited_on, next_due_on: m.next_visit_on, estimated: false,
       }))
 
@@ -127,9 +130,9 @@ export default function SchedulePage() {
             {/* 마지막 시행 후 경과 + 다음 예정(권장이면 표시) */}
             <p className="text-xs text-gray-400 mt-0.5">
               {daysSince != null && (
-                <>마지막 {daysSince === 0 ? '오늘' : `${daysSince}일 전`} · </>
+                <>{t('lastLabel')} {daysSince === 0 ? t('today') : t('daysAgo', { n: daysSince })} · </>
               )}
-              다음 {i.next_due_on}{i.estimated && <span className="text-gray-300"> (권장)</span>}
+              {t('nextLabel')} {i.next_due_on}{i.estimated && <span className="text-gray-300"> {t('recommended')}</span>}
             </p>
           </div>
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
@@ -143,16 +146,16 @@ export default function SchedulePage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader title="일정" fallbackHref="/dashboard" />
+        <PageHeader title={t('title')} fallbackHref="/dashboard" />
         {selectedName && (
-          <span className="text-sm text-primary-600 font-medium shrink-0">{selectedName} 기준</span>
+          <span className="text-sm text-primary-600 font-medium shrink-0">{t('petBasis', { name: selectedName })}</span>
         )}
       </div>
 
       {/* 보기 전환 + 추가 */}
       <div className="flex items-center gap-2">
         <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
-          {([['list', '목록'], ['calendar', '캘린더']] as const).map(([v, label]) => (
+          {([['list', t('viewList')], ['calendar', t('viewCalendar')]] as const).map(([v, label]) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -169,7 +172,7 @@ export default function SchedulePage() {
           onClick={() => setAdding(a => !a)}
           className={cn('text-sm py-1.5 px-3 shrink-0', adding ? 'btn-secondary' : 'btn-primary')}
         >
-          {adding ? '닫기' : '+ 일정'}
+          {adding ? tc('close') : t('addSchedule')}
         </button>
       </div>
 
@@ -183,9 +186,9 @@ export default function SchedulePage() {
         <div className="card text-center py-12 text-gray-400">
           <div className="text-4xl mb-3">🗓️</div>
           {selectedName
-            ? `${selectedName}는 예정된 건강 일정이 없어요.`
-            : '다음 예정일이 등록된 건강 기록이 없어요.'}
-          <p className="text-xs mt-2">위 “+ 일정”을 눌러 다음 예정일을 등록해보세요.</p>
+            ? t('emptyPet', { name: selectedName })
+            : t('emptyAll')}
+          <p className="text-xs mt-2">{t('emptyHint')}</p>
         </div>
       ) : view === 'calendar' ? (
         <ScheduleCalendar items={visible} />
@@ -193,19 +196,19 @@ export default function SchedulePage() {
         <div className="space-y-5">
           {overdue.length > 0 && (
             <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-red-500">지난 일정 {overdue.length}</h2>
+              <h2 className="text-sm font-semibold text-red-500">{t('sectionOverdue', { count: overdue.length })}</h2>
               <div className="space-y-2">{overdue.map(i => <Row key={i.id} i={i} />)}</div>
             </section>
           )}
           {soon.length > 0 && (
             <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-amber-600">임박한 일정 (7일 이내) {soon.length}</h2>
+              <h2 className="text-sm font-semibold text-amber-600">{t('sectionSoon', { count: soon.length })}</h2>
               <div className="space-y-2">{soon.map(i => <Row key={i.id} i={i} />)}</div>
             </section>
           )}
           {later.length > 0 && (
             <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-gray-500">예정된 일정 {later.length}</h2>
+              <h2 className="text-sm font-semibold text-gray-500">{t('sectionLater', { count: later.length })}</h2>
               <div className="space-y-2">{later.map(i => <Row key={i.id} i={i} />)}</div>
             </section>
           )}

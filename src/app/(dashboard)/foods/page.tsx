@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -51,6 +52,7 @@ function cn(...c: (string | false | null | undefined)[]) {
 type FoodRow = FoodItem & { food_safety: FoodSafety[] }
 
 export default function FoodsPage() {
+  const t = useTranslations('foods')
   const { selectedPetId } = useSelectedPet()
 
   const [search, setSearch] = useState('')
@@ -142,10 +144,10 @@ export default function FoodsPage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader title="음식 안전 정보" />
+        <PageHeader title={t('title')} />
         {activePet && (
           <span className="text-sm text-primary-600 font-medium shrink-0">
-            {activePet.species === 'cat' ? '🐱' : '🐶'} {activePet.name} 기준
+            {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
           </span>
         )}
       </div>
@@ -153,7 +155,7 @@ export default function FoodsPage() {
       {/* 펫이 없거나 1마리일 때만 종 탭 직접 노출 */}
       {showSpeciesTabs && (
         <div className="flex gap-2">
-          {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
+          {([['dog', `🐶 ${t('dog')}`], ['cat', `🐱 ${t('cat')}`]] as const).map(([sp, label]) => (
             <button
               key={sp}
               onClick={() => {
@@ -176,7 +178,7 @@ export default function FoodsPage() {
 
       <input
         className="input"
-        placeholder="음식 이름 검색..."
+        placeholder={t('searchPlaceholder')}
         value={search}
         onChange={e => setSearch(e.target.value)}
       />
@@ -212,7 +214,7 @@ export default function FoodsPage() {
       {isLoading ? (
         <CardSkeletonList count={5} />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">검색 결과가 없어요</div>
+        <div className="text-center py-12 text-gray-400">{t('noResults')}</div>
       ) : (
         <div className="space-y-2">
           {filtered.map(({ food, safety }) => {
@@ -237,16 +239,16 @@ export default function FoodsPage() {
                 {safety.reason && <p className="text-sm text-gray-600">{safety.reason}</p>}
                 {rule?.note && (
                   <p className={cn('text-xs px-2.5 py-1.5 rounded-lg font-medium', cautionBg[effectiveSafety])}>
-                    {breedName ?? '우리 아이'} 주의: {rule.note}
+                    {t('breedCaution', { breed: breedName ?? t('defaultBreed'), note: rule.note })}
                   </p>
                 )}
                 {!rule?.note && safety.caution && (
                   <p className={cn('text-xs px-2.5 py-1.5 rounded-lg', cautionBg[effectiveSafety])}>
-                    주의: {safety.caution}
+                    {t('caution', { caution: safety.caution })}
                   </p>
                 )}
                 {safety.source && (
-                  <p className="text-[11px] text-gray-400 text-right">출처: {safety.source}</p>
+                  <p className="text-[11px] text-gray-400 text-right">{t('source', { source: safety.source })}</p>
                 )}
               </div>
             )
@@ -255,8 +257,7 @@ export default function FoodsPage() {
       )}
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
-        ⓘ 본 정보는 ASPCA·AKC 등 공개 자료를 참고한 일반적인 안내이며, 개체별 건강 상태에 따라 다를 수 있어요.
-        이상 증상이 있거나 급여 여부가 불확실하면 반드시 수의사와 상담하세요.
+        {t('disclaimer')}
       </div>
     </div>
   )

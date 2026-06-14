@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +19,7 @@ export function FilterScroller({
   children: React.ReactNode
   className?: string
 }) {
+  const t = useTranslations('ui')
   const ref = useRef<HTMLDivElement>(null)
   const [canLeft, setCanLeft] = useState(false)
   const [canRight, setCanRight] = useState(false)
@@ -57,7 +59,7 @@ export function FilterScroller({
         <button
           type="button"
           onClick={() => nudge(-180)}
-          aria-label="이전 필터 보기"
+          aria-label={t('filterPrev')}
           className="absolute left-0 top-1/2 -translate-y-1/2 h-full pr-5 pl-1 flex items-center bg-gradient-to-r from-white via-white to-transparent text-gray-500"
         >
           <span className="w-6 h-6 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center text-xs">◀</span>
@@ -69,7 +71,7 @@ export function FilterScroller({
         <button
           type="button"
           onClick={() => nudge(180)}
-          aria-label="다음 필터 보기"
+          aria-label={t('filterNext')}
           className="absolute right-0 top-1/2 -translate-y-1/2 h-full pl-5 pr-1 flex items-center bg-gradient-to-l from-white via-white to-transparent text-gray-500"
         >
           <span className="w-6 h-6 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center text-xs">▶</span>

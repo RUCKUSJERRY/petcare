@@ -1,11 +1,14 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { timeAgo, categoryColor } from '@/lib/utils'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem } from '@/types'
 import { PetSection } from './_components/PetSection'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
+  const t = await getTranslations('dashboard')
+  const tCommon = await getTranslations('common')
   const { data: { user } } = await supabase.auth.getUser()
 
   // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 (공동 관리 아이 포함)
@@ -59,8 +62,8 @@ export default async function DashboardPage() {
       <Link href="/map" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
         <span className="text-xl" aria-hidden>🗺️</span>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900">지도</p>
-          <p className="text-xs text-gray-400">실종 신고·동물병원·애견카페/동반식당을 한눈에</p>
+          <p className="text-sm font-semibold text-gray-900">{t('mapTitle')}</p>
+          <p className="text-xs text-gray-400">{t('mapDesc')}</p>
         </div>
         <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -71,8 +74,8 @@ export default async function DashboardPage() {
       <Link href="/walks" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
         <span className="text-xl" aria-hidden>🦮</span>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900">산책 기록</p>
-          <p className="text-xs text-gray-400">경로·거리·시간을 기록하고 좋은 산책로를 공유해요</p>
+          <p className="text-sm font-semibold text-gray-900">{t('walksTitle')}</p>
+          <p className="text-xs text-gray-400">{t('walksDesc')}</p>
         </div>
         <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -88,8 +91,8 @@ export default async function DashboardPage() {
         >
           <span className="text-xl" aria-hidden>🗓️</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">일정</p>
-            <p className="text-xs text-gray-400">진료·접종·구충·미용·양치 등 다음 예정·경과 모아보기</p>
+            <p className="text-sm font-semibold text-gray-900">{t('scheduleTitle')}</p>
+            <p className="text-xs text-gray-400">{t('scheduleDesc')}</p>
           </div>
           <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -101,13 +104,13 @@ export default async function DashboardPage() {
       {recentPosts.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-500">커뮤니티 최근 글</h2>
+            <h2 className="text-sm font-semibold text-gray-500">{t('communityRecent')}</h2>
             <div className="flex items-center gap-3">
               <Link href="/community" className="text-xs text-gray-400 font-medium">
-                더보기
+                {tCommon('more')}
               </Link>
               <Link href="/community/new" className="text-xs text-primary-600 font-semibold">
-                글쓰기 →
+                {t('write')}
               </Link>
             </div>
           </div>

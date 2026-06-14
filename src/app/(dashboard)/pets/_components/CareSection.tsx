@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { addDays, careCategoryIcon, careRecommendedCycleDays, ddayBadge, ddayToneClass } from '@/lib/utils'
 import type { CareCategory, CareRecord } from '@/types'
 
@@ -27,6 +28,8 @@ const NAME_PLACEHOLDER: Record<CareCategory, string> = {
 }
 
 export function CareSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
+  const t = useTranslations('care')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
   const [adding, setAdding] = useState(defaultOpen)
@@ -68,9 +71,9 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
   })
 
   const add = async () => {
-    if (!form.vaccine_name.trim()) { setError('항목명을 입력해주세요'); return }
+    if (!form.vaccine_name.trim()) { setError(t('errNameRequired')); return }
     if (form.next_due_on && form.next_due_on < form.vaccinated_on) {
-      setError('다음 예정일은 시행일 이후여야 해요'); return
+      setError(t('errDueAfter')); return
     }
     setSaving(true); setError(null)
     const { error: insErr } = await supabase.from('vaccination_records').insert({
@@ -82,7 +85,7 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
       clinic: form.clinic.trim() || null,
     })
     setSaving(false)
-    if (insErr) { setError('저장에 실패했어요'); return }
+    if (insErr) { setError(t('errSaveFailed')); return }
     const now = new Date().toISOString().slice(0, 10)
     setForm({ category: '접종', vaccine_name: '', vaccinated_on: now, next_due_on: suggestDue('접종', now), clinic: '' })
     setDueTouched(false)
@@ -100,14 +103,14 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-bold text-gray-900">관리 기록</h2>
-          <p className="text-xs text-gray-400 mt-0.5">접종·구충·미용·양치·발톱 등 주기적으로 챙기는 관리</p>
+          <h2 className="font-bold text-gray-900">{t('title')}</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</p>
         </div>
         <button
           onClick={() => setAdding(a => !a)}
           className="text-sm text-primary-600 font-semibold"
         >
-          {adding ? '취소' : '+ 기록'}
+          {adding ? tc('cancel') : t('addRecord')}
         </button>
       </div>
 
@@ -138,16 +141,16 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs text-gray-500 block mb-0.5">시행일</label>
+              <label className="text-xs text-gray-500 block mb-0.5">{t('performedOn')}</label>
               <input className="input" type="date" max={today}
                 value={form.vaccinated_on}
                 onChange={e => setVaccinatedOn(e.target.value)} />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">
-                다음 예정일
+                {t('nextDue')}
                 {!dueTouched && form.next_due_on && (
-                  <span className="text-primary-500 ml-1">· 권장 주기 자동</span>
+                  <span className="text-primary-500 ml-1">{t('autoCycle')}</span>
                 )}
               </label>
               <input className="input" type="date"
@@ -157,13 +160,13 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
           </div>
           <input
             className="input"
-            placeholder="병원 (선택)"
+            placeholder={t('clinicPlaceholder')}
             value={form.clinic}
             onChange={e => setForm(f => ({ ...f, clinic: e.target.value }))}
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-            {saving ? '저장 중...' : '저장'}
+            {saving ? tc('saving') : tc('save')}
           </button>
         </div>
       )}
@@ -181,14 +184,14 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
                   : 'bg-white text-gray-500 border-gray-200'
               }`}
             >
-              {c === '전체' ? '전체' : `${careCategoryIcon(c)} ${c}`}
+              {c === '전체' ? t('filterAll') : `${careCategoryIcon(c)} ${c}`}
             </button>
           ))}
         </div>
       )}
 
       {records.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-3">아직 기록이 없어요</p>
+        <p className="text-sm text-gray-400 text-center py-3">{t('empty')}</p>
       ) : (
         <div className="space-y-2">
           {records.filter(r => filter === '전체' || r.category === filter).map(r => {
@@ -202,22 +205,22 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
                   <span className="font-semibold text-sm text-gray-900 truncate">{r.vaccine_name}</span>
                   {confirmDeleteId === r.id ? (
                     <div className="ml-auto flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-gray-500">삭제할까요?</span>
-                      <button onClick={() => remove(r.id)} className="text-xs text-red-500 font-semibold">삭제</button>
-                      <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">취소</button>
+                      <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
+                      <button onClick={() => remove(r.id)} className="text-xs text-red-500 font-semibold">{tc('delete')}</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">{tc('cancel')}</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(r.id)}
                       className="ml-auto text-xs text-gray-300 hover:text-red-500 shrink-0"
-                      aria-label="기록 삭제"
+                      aria-label={t('deleteAria')}
                     >
-                      삭제
+                      {tc('delete')}
                     </button>
                   )}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  시행 {r.vaccinated_on}
+                  {t('performedAt', { date: r.vaccinated_on })}
                   {r.clinic && ` · ${r.clinic}`}
                 </div>
                 {r.next_due_on && badge && (
@@ -225,7 +228,7 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ddayToneClass(badge.tone)}`}>
                       {badge.text}
                     </span>
-                    <span className="text-xs text-gray-400">다음 예정 {r.next_due_on}</span>
+                    <span className="text-xs text-gray-400">{t('nextScheduled', { date: r.next_due_on })}</span>
                   </div>
                 )}
               </div>

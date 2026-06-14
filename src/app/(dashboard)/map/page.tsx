@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 import type { MapFavorite } from '@/types'
 
 type CategoryKey = 'lost' | 'hospital' | 'cafe' | 'restaurant' | 'favorite'
@@ -18,16 +19,14 @@ const escapeHtml = (s: string) =>
 
 const CATEGORIES: {
   key: CategoryKey
-  label: string
   icon: string
   keyword: string | null
-  empty: string
 }[] = [
-  { key: 'lost', label: '실종', icon: '🐾', keyword: null, empty: '주변에 등록된 실종 신고가 없어요.' },
-  { key: 'hospital', label: '동물병원', icon: '🏥', keyword: '동물병원', empty: '주변에서 동물병원을 찾지 못했어요.' },
-  { key: 'cafe', label: '애견카페', icon: '☕', keyword: '애견카페', empty: '주변에서 애견카페를 찾지 못했어요.' },
-  { key: 'restaurant', label: '동반식당', icon: '🍽️', keyword: '애견동반식당', empty: '주변에서 애견동반식당을 찾지 못했어요.' },
-  { key: 'favorite', label: '즐겨찾기', icon: '⭐', keyword: '__fav__', empty: '저장한 즐겨찾기가 없어요. 장소를 선택해 ☆를 눌러보세요.' },
+  { key: 'lost', icon: '🐾', keyword: null },
+  { key: 'hospital', icon: '🏥', keyword: '동물병원' },
+  { key: 'cafe', icon: '☕', keyword: '애견카페' },
+  { key: 'restaurant', icon: '🍽️', keyword: '애견동반식당' },
+  { key: 'favorite', icon: '⭐', keyword: '__fav__' },
 ]
 
 // 하단 리스트/시트용 정규화 아이템
@@ -52,6 +51,7 @@ let lastMapState: { lat: number; lng: number; level: number } | null = null
 
 export default function MapPage() {
   const supabase = createClient()
+  const t = useTranslations('map')
   // 지도 진입 시엔 어떤 필터도 선택하지 않은 상태로 시작 (사용자가 직접 선택)
   const [category, setCategory] = useState<CategoryKey | null>(null)
   const [keyword, setKeyword] = useState('')
@@ -162,8 +162,8 @@ export default function MapPage() {
           const rows = (data ?? []) as any[]
           const list: ListItem[] = rows.map(it => ({
             key: it.id, kind: 'lost' as const,
-            title: it.name ?? '이름 미상',
-            subtitle: it.area_text || (it.species === 'cat' ? '고양이' : '강아지'),
+            title: it.name ?? t('nameUnknown'),
+            subtitle: it.area_text || (it.species === 'cat' ? t('cat') : t('dog')),
             lat: it.lat, lng: it.lng, emoji: it.species === 'cat' ? '🐱' : '🐶',
             species: it.species, url: `/lost/${it.id}`,
           }))
@@ -345,15 +345,15 @@ export default function MapPage() {
                 </svg>
                 <input
                   className="flex-1 bg-transparent px-2 py-2.5 text-sm focus:outline-none"
-                  placeholder={`${activeCat?.label ?? ''} 내 검색 (예: 응급실, 24시)`}
+                  placeholder={t('searchPlaceholder', { label: activeCat ? t(`category.${activeCat.key}`) : '' })}
                   value={keyword}
                   onChange={e => setKeyword(e.target.value)}
                 />
                 {appliedKeyword && (
                   <button type="button" onClick={() => { setKeyword(''); setAppliedKeyword('') }}
-                    className="w-7 h-7 rounded-full text-gray-400 hover:bg-gray-100 shrink-0" aria-label="검색 초기화">✕</button>
+                    className="w-7 h-7 rounded-full text-gray-400 hover:bg-gray-100 shrink-0" aria-label={t('searchReset')}>✕</button>
                 )}
-                <button type="submit" className="bg-primary-500 text-white text-sm font-medium rounded-full px-3 py-1.5 shrink-0">검색</button>
+                <button type="submit" className="bg-primary-500 text-white text-sm font-medium rounded-full px-3 py-1.5 shrink-0">{t('searchButton')}</button>
               </div>
             </form>
           ) : (
@@ -361,7 +361,7 @@ export default function MapPage() {
           )}
           {category === 'lost' && (
             <Link href="/lost/new" className="bg-primary-500 text-white text-sm font-medium rounded-full px-3.5 py-2.5 shadow-md shrink-0 pointer-events-auto">
-              + 제보
+              {t('report')}
             </Link>
           )}
         </div>
@@ -379,7 +379,7 @@ export default function MapPage() {
                   : 'bg-white text-gray-700 border-gray-100'
               )}
             >
-              {c.icon} {c.label}
+              {c.icon} {t(`category.${c.key}`)}
             </button>
           ))}
         </div>
@@ -421,7 +421,7 @@ export default function MapPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              이 지역에서 재검색
+              {t('researchHere')}
             </button>
           </div>
         )}
@@ -444,7 +444,7 @@ export default function MapPage() {
             'absolute right-3 z-20 w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-600 transition-all',
             selected ? 'bottom-[44vh]' : 'bottom-24'
           )}
-          aria-label="현재 위치로"
+          aria-label={t('currentLocation')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3" />
@@ -458,7 +458,7 @@ export default function MapPage() {
           href="/walks"
           className="absolute left-3 bottom-24 z-20 flex items-center gap-1.5 rounded-full bg-primary-500 text-white text-sm font-semibold pl-3 pr-4 py-2.5 shadow-md"
         >
-          <span aria-hidden>🦮</span> 산책 기록
+          <span aria-hidden>🦮</span> {t('walkRecord')}
         </Link>
       )}
 
@@ -475,12 +475,12 @@ export default function MapPage() {
           <ListSheet
             items={items}
             loading={loading}
-            emptyText={activeCat?.empty ?? '위 필터에서 보고 싶은 항목을 선택하세요.'}
+            emptyText={activeCat ? t(`empty.${activeCat.key}`) : t('emptyNoFilter')}
             countLabel={
-              !category ? '필터를 선택하세요'
-                : category === 'lost' ? `실종 신고 ${items.length}건`
-                  : category === 'favorite' ? `즐겨찾기 ${items.length}곳`
-                    : `주변 ${items.length}곳`
+              !category ? t('selectFilter')
+                : category === 'lost' ? t('countLost', { count: items.length })
+                  : category === 'favorite' ? t('countFavorite', { count: items.length })
+                    : t('countNearby', { count: items.length })
             }
             open={listOpen}
             onToggle={() => setListOpen(o => !o)}
@@ -504,12 +504,13 @@ function ListSheet({
   onToggle: () => void
   onSelect: (it: ListItem) => void
 }) {
+  const t = useTranslations('map')
   return (
     <div className="absolute bottom-0 inset-x-0 z-20 bg-white rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.12)]">
       <button onClick={onToggle} className="w-full flex flex-col items-center pt-2 pb-2">
         <span className="w-10 h-1 rounded-full bg-gray-300 mb-2" />
         <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-          {loading ? '불러오는 중…' : countLabel}
+          {loading ? t('loading') : countLabel}
           <span className="text-gray-400">{open ? '▼' : '▲'}</span>
         </span>
       </button>
@@ -554,6 +555,8 @@ function DetailSheet({
   onClose: () => void
   onToggleFav: () => void
 }) {
+  const t = useTranslations('map')
+  const tc = useTranslations('common')
   const [dy, setDy] = useState(0)
   const startRef = useRef<number | null>(null)
 
@@ -589,7 +592,7 @@ function DetailSheet({
         className="relative pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
       >
         <span className="block w-10 h-1 rounded-full bg-gray-300 mx-auto" />
-        <button onClick={onClose} aria-label="닫기"
+        <button onClick={onClose} aria-label={tc('close')}
           className="absolute right-3 top-2 w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center">✕</button>
       </div>
 
@@ -610,23 +613,23 @@ function DetailSheet({
         <div className="grid grid-cols-2 gap-2">
           {item.kind === 'lost' ? (
             <Link href={item.url ?? '#'} className="col-span-2 btn-primary text-center py-2.5 text-sm">
-              실종 상세보기 →
+              {t('lostDetail')}
             </Link>
           ) : (
             <>
               {item.phone ? (
                 <a href={`tel:${item.phone}`} className="btn-secondary text-center py-2.5 text-sm flex items-center justify-center gap-1.5">
-                  📞 전화
+                  {t('call')}
                 </a>
               ) : (
-                <span className="rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-center py-2.5 text-sm flex items-center justify-center gap-1.5">📞 전화</span>
+                <span className="rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-center py-2.5 text-sm flex items-center justify-center gap-1.5">{t('call')}</span>
               )}
               <a href={dirUrl} target="_blank" rel="noopener" className="btn-secondary text-center py-2.5 text-sm flex items-center justify-center gap-1.5">
-                🧭 길찾기
+                {t('directions')}
               </a>
               {item.url && (
                 <a href={item.url} target="_blank" rel="noopener" className="btn-secondary text-center py-2.5 text-sm flex items-center justify-center gap-1.5">
-                  ℹ️ 카카오맵 상세
+                  {t('kakaoDetail')}
                 </a>
               )}
               {isPlace && (item.placeId || isFav) && (
@@ -635,7 +638,7 @@ function DetailSheet({
                     'rounded-lg border py-2.5 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors',
                     isFav ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   )}>
-                  {isFav ? '★ 즐겨찾기됨' : '☆ 즐겨찾기'}
+                  {isFav ? t('favSaved') : t('favSave')}
                 </button>
               )}
             </>

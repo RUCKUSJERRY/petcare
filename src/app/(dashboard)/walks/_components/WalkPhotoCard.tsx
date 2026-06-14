@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { validateImage } from '@/lib/upload'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 /**
  * 산책 사진에 기록(거리·시간·페이스·날짜)을 오버랩한 공유용 이미지 카드를 만든다.
@@ -17,6 +18,8 @@ export function WalkPhotoCard({
   durationS: number
   dateLabel: string
 }) {
+  const t = useTranslations('walkPhoto')
+  const tc = useTranslations('common')
   const inputRef = useRef<HTMLInputElement>(null)
   const [imgUrl, setImgUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -71,7 +74,7 @@ export function WalkPhotoCard({
       const small = Math.round(w * 0.036)
       ctx.font = `500 ${small}px system-ui, -apple-system, sans-serif`
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
-      ctx.fillText(`🐾 펫케어 · ${dateLabel}`, pad, h - pad)
+      ctx.fillText(t('cardBrand', { date: dateLabel }), pad, h - pad)
 
       const blob: Blob | null = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9))
       if (!blob) throw new Error('blob fail')
@@ -79,7 +82,7 @@ export function WalkPhotoCard({
       if (imgUrl) URL.revokeObjectURL(imgUrl)
       setImgUrl(URL.createObjectURL(blob))
     } catch {
-      setError('이미지를 만들지 못했어요. 다른 사진으로 시도해주세요.')
+      setError(t('composeFailed'))
     } finally {
       setBusy(false)
     }
@@ -100,7 +103,7 @@ export function WalkPhotoCard({
     const navAny = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }
     if (navAny.share && navAny.canShare?.({ files: [file] })) {
       try {
-        await navAny.share({ files: [file], title: '오늘의 산책' })
+        await navAny.share({ files: [file], title: t('shareTitle') })
         return
       } catch { /* 취소/실패 → 다운로드 폴백 */ }
     }
@@ -115,17 +118,17 @@ export function WalkPhotoCard({
         disabled={busy}
         className="w-full py-2.5 rounded-lg border border-dashed border-gray-300 text-gray-600 text-sm font-medium disabled:opacity-60"
       >
-        {busy ? '만드는 중…' : '📸 사진에 기록 입혀 공유 카드 만들기'}
+        {busy ? t('composing') : t('makeCard')}
       </button>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={compose} />
       {error && <p className="text-xs text-red-500">{error}</p>}
       {imgUrl && (
         <div className="space-y-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imgUrl} alt="산책 기록 카드" className="w-full rounded-xl border border-gray-100" />
+          <img src={imgUrl} alt={t('cardAlt')} className="w-full rounded-xl border border-gray-100" />
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={download} className="btn-secondary py-2 text-sm">저장</button>
-            <button onClick={share} className="btn-primary py-2 text-sm">공유</button>
+            <button onClick={download} className="btn-secondary py-2 text-sm">{tc('save')}</button>
+            <button onClick={share} className="btn-primary py-2 text-sm">{t('share')}</button>
           </div>
         </div>
       )}
