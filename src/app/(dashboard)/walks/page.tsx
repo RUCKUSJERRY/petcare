@@ -14,7 +14,7 @@ type Tab = 'mine' | 'shared'
 type WalkRow = Walk & {
   pet?: { name: string } | null
   author?: { display_name: string } | null
-  comments?: { count: number }[] | null
+  comment_count?: number
 }
 
 export default function WalksPage() {
@@ -38,13 +38,35 @@ export default function WalksPage() {
   const { data: shared = [], isLoading: sharedLoading } = useQuery({
     queryKey: ['walks', 'shared'],
     queryFn: async () => {
+      // profiles 임베드는 이 프로젝트에서 불안정 → 본문만 받고 작성자/댓글수는 수동 조회
       const { data } = await supabase
         .from('walks')
-        .select('*, author:profiles(display_name), comments:walk_comments(count)')
+        .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(50)
-      return (data ?? []) as WalkRow[]
+      const rows = (data ?? []) as WalkRow[]
+      if (rows.length === 0) return rows
+
+      // 작성자 이름
+      const userIds = Array.from(new Set(rows.map(r => r.user_id)))
+      const { data: profs } = await supabase
+        .from('profiles').select('id, display_name').in('id', userIds)
+      const nameMap = new Map((profs ?? []).map((p: { id: string; display_name: string }) => [p.id, p.display_name]))
+
+      // 댓글 수 (walk_comments 마이그레이션 미적용 시에도 안전하게 0으로)
+      const countMap = new Map<string, number>()
+      const { data: cmts } = await supabase
+        .from('walk_comments').select('walk_id').in('walk_id', rows.map(r => r.id))
+      for (const c of (cmts ?? []) as { walk_id: string }[]) {
+        countMap.set(c.walk_id, (countMap.get(c.walk_id) ?? 0) + 1)
+      }
+
+      return rows.map(r => ({
+        ...r,
+        author: nameMap.has(r.user_id) ? { display_name: nameMap.get(r.user_id)! } : null,
+        comment_count: countMap.get(r.id) ?? 0,
+      }))
     },
     enabled: tab === 'shared',
   })
@@ -113,7 +135,7 @@ export default function WalksPage() {
                   {tab === 'shared' && (
                     <span className="ml-auto flex items-center gap-2 text-gray-500">
                       <span>❤️ {w.like_count ?? 0}</span>
-                      <span>💬 {w.comments?.[0]?.count ?? 0}</span>
+                      <span>💬 {w.comment_count ?? 0}</span>
                     </span>
                   )}
                 </div>

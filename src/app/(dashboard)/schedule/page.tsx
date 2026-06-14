@@ -36,10 +36,10 @@ export default function SchedulePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return [] as ScheduleItem[]
 
+      // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 (공동 관리로 초대받은 아이 포함)
       const { data: pets } = await supabase
         .from('pets')
         .select('id, name, species')
-        .eq('user_id', user.id)
       const petList = (pets ?? []) as { id: string; name: string; species: string }[]
       if (petList.length === 0) return [] as ScheduleItem[]
 
