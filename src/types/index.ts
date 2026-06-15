@@ -314,6 +314,7 @@ export interface Walk {
   is_public: boolean
   area_text: string | null
   note: string | null
+  photo_url: string | null
   like_count: number
   created_at: string
   // join (공유 피드용)

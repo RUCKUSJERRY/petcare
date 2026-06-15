@@ -10,7 +10,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
-import { WalkPhotoCard } from '../_components/WalkPhotoCard'
+import { ImagePicker } from '@/components/ui/ImagePicker'
+import { deleteImageByUrl } from '@/lib/upload'
 
 type Phase = 'idle' | 'tracking' | 'finished'
 
@@ -41,6 +42,8 @@ export default function WalkTrackPage() {
   const [title, setTitle] = useState('')
   const [isPublic, setIsPublic] = useState(false)
   const [note, setNote] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
 
   const mapsRef = useRef<any>(null)
   const mapObjRef = useRef<any>(null)
@@ -217,19 +220,27 @@ export default function WalkTrackPage() {
       path: pathRef.current,
       is_public: isPublic,
       note: note.trim() || null,
+      photo_url: photoUrl,
     }).select('id').single()
     setSaving(false)
-    if (error) { setGeoError(t('errSaveRetry')); return }
+    if (error) {
+      // 저장 실패 시 방금 올린 사진은 고아가 되므로 정리
+      if (photoUrl) deleteImageByUrl(photoUrl)
+      setGeoError(t('errSaveRetry'))
+      return
+    }
     router.replace(`/walks/${(data as { id: string }).id}`)
   }
 
   const discard = () => {
-    if (confirm(t('discardConfirm'))) router.replace('/walks')
+    if (confirm(t('discardConfirm'))) {
+      // 저장하지 않고 폐기 → 업로드된 사진도 정리
+      if (photoUrl) deleteImageByUrl(photoUrl)
+      router.replace('/walks')
+    }
   }
 
   const notice = kakaoNotice(mapStatus)
-  const finishedDate = new Date(startedAtRef.current || Date.now())
-  const finishedDateLabel = t('dateLabel', { m: finishedDate.getMonth() + 1, d: finishedDate.getDate() })
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-[60] bg-gray-100 overflow-hidden flex flex-col">
@@ -333,8 +344,17 @@ export default function WalkTrackPage() {
               <span className="text-sm text-gray-700">{t('shareThisRoute')} <span className="text-gray-400">{t('shareHint')}</span></span>
             </label>
 
-            {/* 사진에 기록 입혀 공유 카드 만들기 */}
-            <WalkPhotoCard distanceM={distRef.current} durationS={elapsed} dateLabel={finishedDateLabel} />
+            {/* 산책 사진 (선택) — 기록과 함께 저장됨 */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">{t('photoOptional')}</label>
+              <ImagePicker
+                bucket="pet-photos"
+                value={photoUrl}
+                onUploaded={url => { setPhotoUrl(url); setPhotoError(null) }}
+                onError={setPhotoError}
+              />
+              {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={discard} className="btn-secondary py-3 text-sm">{t('discard')}</button>

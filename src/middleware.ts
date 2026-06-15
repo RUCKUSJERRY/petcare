@@ -81,12 +81,17 @@ export async function middleware(request: NextRequest) {
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const loginUrl = new URL('/login', request.url)
+    // 로그인 후 원래 가려던 곳(예: 초대 수락 링크)으로 복귀하도록 목적지 보존
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
+    return NextResponse.redirect(loginUrl)
   }
 
-  // 이미 로그인한 사용자가 /login 접근 시 → /dashboard로
+  // 이미 로그인한 사용자가 /login 접근 시 → 보존된 목적지(없으면 /dashboard)로
   if (pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const redirect = request.nextUrl.searchParams.get('redirect')
+    const dest = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard'
+    return NextResponse.redirect(new URL(dest, request.url))
   }
 
   return supabaseResponse

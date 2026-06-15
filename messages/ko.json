@@ -268,7 +268,9 @@
     "shareThisRoute": "이 경로를 공유하기",
     "shareHint": "(커뮤니티에서 좋아요·댓글 가능)",
     "discard": "저장 안 함",
-    "saveWalk": "저장하기"
+    "saveWalk": "저장하기",
+    "photoOptional": "산책 사진 (선택)",
+    "photoAlt": "산책 사진"
   },
   "healthGuide": {
     "title": "건강 가이드",

@@ -22,9 +22,12 @@ function LoginContent() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     setError(null)
+    // 로그인 전 가려던 목적지를 콜백까지 전달해 인증 후 그곳으로 복귀시킨다.
+    const redirect = searchParams.get('redirect')
+    const callback = `${location.origin}/auth/callback${redirect ? `?next=${encodeURIComponent(redirect)}` : ''}`
     const { error: oauthErr } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: { redirectTo: callback },
     })
     // 성공 시엔 구글로 리다이렉트되어 이 줄에 도달하지 않는다.
     // 실패 시 버튼이 '로그인 중...'에 영구 고착되지 않도록 복구한다.

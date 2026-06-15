@@ -11,6 +11,7 @@ import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { ShareButton } from '@/components/ui/ShareButton'
 import { WalkSocial } from '../_components/WalkSocial'
+import { WalkPhotoCard } from '../_components/WalkPhotoCard'
 import type { Walk } from '@/types'
 
 type WalkRow = Walk & {
@@ -175,6 +176,20 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           <div className="pt-1 text-gray-600 whitespace-pre-wrap border-t border-gray-50">{walk.note}</div>
         )}
       </div>
+
+      {/* 산책 사진 + 공유 카드 만들기 */}
+      {walk.photo_url && (
+        <div className="card space-y-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={walk.photo_url} alt={t('photoAlt')} className="w-full rounded-xl border border-gray-100" />
+          <WalkPhotoCard
+            imageUrl={walk.photo_url}
+            distanceM={walk.distance_m}
+            durationS={walk.duration_s}
+            dateLabel={new Date(walk.started_at).toLocaleDateString('ko-KR')}
+          />
+        </div>
+      )}
 
       {/* 소유자 액션 */}
       {isOwner && (

@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  // 로그인 전 가려던 목적지(같은 출처의 상대경로만 허용 — 오픈 리다이렉트 방지)
+  const next = searchParams.get('next')
+  const dest = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
   // 구글 등 OAuth 공급자가 사용자 거부/오류 시 error 파라미터로 돌려보낸다.
   const oauthError = searchParams.get('error')
 
@@ -23,5 +26,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  return NextResponse.redirect(`${origin}/dashboard`)
+  return NextResponse.redirect(`${origin}${dest}`)
 }

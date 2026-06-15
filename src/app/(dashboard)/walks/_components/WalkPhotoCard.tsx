@@ -1,40 +1,41 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { validateImage } from '@/lib/upload'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 
 /**
- * 산책 사진에 기록(거리·시간·페이스·날짜)을 오버랩한 공유용 이미지 카드를 만든다.
+ * 저장된 산책 사진에 기록(거리·시간·페이스·날짜)을 오버랩한 공유용 이미지 카드를 만든다.
  * (Nike Run Club의 사진 공유 카드 벤치마킹) — 캔버스로 합성 후 저장/공유.
+ * 산책 상세 페이지에서, 이미 저장된 사진(imageUrl)으로 생성한다.
  */
 export function WalkPhotoCard({
+  imageUrl,
   distanceM,
   durationS,
   dateLabel,
 }: {
+  imageUrl: string
   distanceM: number
   durationS: number
   dateLabel: string
 }) {
   const t = useTranslations('walkPhoto')
   const tc = useTranslations('common')
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [imgUrl, setImgUrl] = useState<string | null>(null)
+  const [cardUrl, setCardUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const blobRef = useRef<Blob | null>(null)
 
-  const compose = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (inputRef.current) inputRef.current.value = ''
-    if (!file) return
-    const invalid = validateImage(file)
-    if (invalid) { setError(invalid); return }
+  const make = async () => {
     setBusy(true); setError(null)
     try {
-      const bitmap = await createImageBitmap(file)
+      // 저장된 사진을 바이트로 받아 캔버스에 그린다 (CORS 허용 시 캔버스 오염 없음)
+      const res = await fetch(imageUrl)
+      if (!res.ok) throw new Error('fetch failed')
+      const srcBlob = await res.blob()
+      const bitmap = await createImageBitmap(srcBlob)
+
       // 긴 변 1080 기준으로 축소
       const maxDim = 1080
       const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
@@ -79,8 +80,8 @@ export function WalkPhotoCard({
       const blob: Blob | null = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9))
       if (!blob) throw new Error('blob fail')
       blobRef.current = blob
-      if (imgUrl) URL.revokeObjectURL(imgUrl)
-      setImgUrl(URL.createObjectURL(blob))
+      if (cardUrl) URL.revokeObjectURL(cardUrl)
+      setCardUrl(URL.createObjectURL(blob))
     } catch {
       setError(t('composeFailed'))
     } finally {
@@ -89,9 +90,9 @@ export function WalkPhotoCard({
   }
 
   const download = () => {
-    if (!imgUrl) return
+    if (!cardUrl) return
     const a = document.createElement('a')
-    a.href = imgUrl
+    a.href = cardUrl
     a.download = `petcare-walk-${Date.now()}.jpg`
     a.click()
   }
@@ -114,18 +115,17 @@ export function WalkPhotoCard({
     <div className="space-y-2">
       <button
         type="button"
-        onClick={() => inputRef.current?.click()}
+        onClick={make}
         disabled={busy}
         className="w-full py-2.5 rounded-lg border border-dashed border-gray-300 text-gray-600 text-sm font-medium disabled:opacity-60"
       >
         {busy ? t('composing') : t('makeCard')}
       </button>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={compose} />
       {error && <p className="text-xs text-red-500">{error}</p>}
-      {imgUrl && (
+      {cardUrl && (
         <div className="space-y-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imgUrl} alt={t('cardAlt')} className="w-full rounded-xl border border-gray-100" />
+          <img src={cardUrl} alt={t('cardAlt')} className="w-full rounded-xl border border-gray-100" />
           <div className="grid grid-cols-2 gap-2">
             <button onClick={download} className="btn-secondary py-2 text-sm">{tc('save')}</button>
             <button onClick={share} className="btn-primary py-2 text-sm">{t('share')}</button>
