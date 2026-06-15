@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
-import { ImagePicker } from '@/components/ui/ImagePicker'
+import { WalkPhotoComposer } from '../_components/WalkPhotoComposer'
 import { deleteImageByUrl } from '@/lib/upload'
 
 type Phase = 'idle' | 'tracking' | 'finished'
@@ -241,6 +241,8 @@ export default function WalkTrackPage() {
   }
 
   const notice = kakaoNotice(mapStatus)
+  const finishedDate = new Date(startedAtRef.current || Date.now())
+  const finishedDateLabel = t('dateLabel', { m: finishedDate.getMonth() + 1, d: finishedDate.getDate() })
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-[60] bg-gray-100 overflow-hidden flex flex-col">
@@ -344,13 +346,15 @@ export default function WalkTrackPage() {
               <span className="text-sm text-gray-700">{t('shareThisRoute')} <span className="text-gray-400">{t('shareHint')}</span></span>
             </label>
 
-            {/* 산책 사진 (선택) — 기록과 함께 저장됨 */}
+            {/* 산책 사진 → 기록을 입힌 합성 이미지 미리보기 (저장 시 함께 보관) */}
             <div>
               <label className="text-xs text-gray-500 block mb-1">{t('photoOptional')}</label>
-              <ImagePicker
-                bucket="pet-photos"
+              <WalkPhotoComposer
+                distanceM={distRef.current}
+                durationS={elapsed}
+                dateLabel={finishedDateLabel}
                 value={photoUrl}
-                onUploaded={url => { setPhotoUrl(url); setPhotoError(null) }}
+                onChange={url => { setPhotoUrl(url); setPhotoError(null) }}
                 onError={setPhotoError}
               />
               {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}

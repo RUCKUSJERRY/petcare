@@ -540,7 +540,9 @@
     "composeFailed": "이미지를 만들지 못했어요. 다른 사진으로 시도해주세요.",
     "shareTitle": "오늘의 산책",
     "composing": "만드는 중…",
-    "makeCard": "📸 사진에 기록 입혀 공유 카드 만들기",
+    "makeCard": "📸 사진 촬영 · 기록 입힌 이미지 만들기",
+    "retake": "📸 사진 다시 선택",
+    "remove": "사진 제거",
     "cardAlt": "산책 기록 카드",
     "share": "공유"
   },

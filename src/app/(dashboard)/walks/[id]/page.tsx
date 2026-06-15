@@ -182,12 +182,7 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
         <div className="card space-y-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={walk.photo_url} alt={t('photoAlt')} className="w-full rounded-xl border border-gray-100" />
-          <WalkPhotoCard
-            imageUrl={walk.photo_url}
-            distanceM={walk.distance_m}
-            durationS={walk.duration_s}
-            dateLabel={new Date(walk.started_at).toLocaleDateString('ko-KR')}
-          />
+          <WalkPhotoCard imageUrl={walk.photo_url} />
         </div>
       )}
 
