@@ -52,7 +52,7 @@ export default async function PetsPage() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-0.5">
-                      {(pet as any).breed?.name_ko} · {age.displayText} · {pet.gender}
+                      {pet.breed?.name_ko} · {age.displayText} · {pet.gender}
                     </p>
                     {pet.weight_kg && (
                       <p className="text-xs text-gray-400 mt-0.5">{pet.weight_kg}kg</p>

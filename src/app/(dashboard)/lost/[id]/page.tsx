@@ -15,7 +15,6 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const qc = useQueryClient()
   const t = useTranslations('lost')
-  const tc = useTranslations('common')
   const [me, setMe] = useState<string | null>(null)
   const [showContact, setShowContact] = useState(false)
   const [text, setText] = useState('')

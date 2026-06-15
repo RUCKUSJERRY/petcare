@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
   const t = await getTranslations('dashboard')
   const tCommon = await getTranslations('common')
-  const { data: { user } } = await supabase.auth.getUser()
+  await supabase.auth.getUser()
 
   // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 (공동 관리 아이 포함)
   const { data: pets } = await supabase

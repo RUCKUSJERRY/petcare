@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { fetchWalkGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
-import type { Pet, WalkGuide } from '@/types'
+import type { Pet } from '@/types'
 
 // activity_type 표시 메타
 const ACTIVITY_META: Record<string, { icon: string; label: string; desc: string }> = {
