@@ -2,17 +2,19 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { addDays, careRecommendedCycleDays, cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
 import { ScheduleAddForm } from './_components/ScheduleAddForm'
+import { ScheduleMedicalAddForm } from './_components/ScheduleMedicalAddForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { useTranslations } from 'next-intl'
 
 type View = 'list' | 'calendar'
+type AddKind = 'care' | 'medical' | null
 
 type ScheduleItem = {
   id: string
@@ -33,7 +35,19 @@ export default function SchedulePage() {
   const tc = useTranslations('common')
   const { selectedPetId } = useSelectedPet()
   const [view, setView] = useState<View>('list')
-  const [adding, setAdding] = useState(false)
+  const [addKind, setAddKind] = useState<AddKind>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // 드롭다운 바깥 클릭 시 닫기
+  useEffect(() => {
+    if (!menuOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [menuOpen])
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['care-schedule'],
@@ -168,16 +182,44 @@ export default function SchedulePage() {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setAdding(a => !a)}
-          className={cn('text-sm py-1.5 px-3 shrink-0', adding ? 'btn-secondary' : 'btn-primary')}
-        >
-          {adding ? tc('close') : t('addSchedule')}
-        </button>
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            onClick={() => {
+              if (addKind) { setAddKind(null); setMenuOpen(false) }
+              else setMenuOpen(o => !o)
+            }}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className={cn('text-sm py-1.5 px-3', addKind ? 'btn-secondary' : 'btn-primary')}
+          >
+            {addKind ? tc('close') : t('addRecord')}
+          </button>
+          {menuOpen && !addKind && (
+            <div role="menu" className="absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
+              <button
+                role="menuitem"
+                onClick={() => { setAddKind('medical'); setMenuOpen(false) }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                🏥 {t('addMedical')}
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => { setAddKind('care'); setMenuOpen(false) }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                🩹 {t('addCare')}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {adding && (
-        <ScheduleAddForm defaultPetId={selectedPetId} onClose={() => setAdding(false)} />
+      {addKind === 'care' && (
+        <ScheduleAddForm defaultPetId={selectedPetId} onClose={() => setAddKind(null)} />
+      )}
+      {addKind === 'medical' && (
+        <ScheduleMedicalAddForm defaultPetId={selectedPetId} onClose={() => setAddKind(null)} />
       )}
 
       {isLoading ? (
