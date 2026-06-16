@@ -9,6 +9,25 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 
 type OcrRecord = Record<string, unknown>
 
+/**
+ * imageUrl이 우리 Supabase 스토리지의 public 객체 URL인지 검증한다.
+ * 클라이언트가 보낸 임의 URL을 그대로 fetch하면 SSRF(내부망/메타데이터 접근)
+ * 위험이 있으므로, origin이 프로젝트 Supabase URL과 같고 public 객체 경로일 때만 허용.
+ */
+function isAllowedImageUrl(raw: string): boolean {
+  const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supaUrl) return false
+  try {
+    const u = new URL(raw)
+    const base = new URL(supaUrl)
+    if (u.protocol !== 'https:') return false
+    if (u.host !== base.host) return false
+    return u.pathname.startsWith('/storage/v1/object/public/')
+  } catch {
+    return false
+  }
+}
+
 // 한 이미지에서 여러 건(이력서·접종증명서 등)을 추출하기 위한 배열 스키마.
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -90,6 +109,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
   }
   if (!imageUrl) return NextResponse.json({ error: 'imageUrl required' }, { status: 400 })
+
+  // SSRF 방지: 우리 스토리지의 public 객체 URL만 허용
+  if (!isAllowedImageUrl(imageUrl)) {
+    return NextResponse.json({ error: 'invalid imageUrl' }, { status: 400 })
+  }
 
   // Gemini 미설정이면 클라이언트가 무료 OCR(Tesseract)로 폴백하도록 신호만 보낸다.
   if (!process.env.GEMINI_API_KEY) {

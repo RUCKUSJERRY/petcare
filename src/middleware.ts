@@ -29,6 +29,18 @@ function isBackendUnavailable(error: { name?: string; status?: number } | null):
   )
 }
 
+/**
+ * 로그인 후 복귀 경로 검증. 같은 사이트 내부 경로만 허용한다.
+ * startsWith('/') 검사만으로는 백슬래시('/\evil.com')가 WHATWG URL 파싱에서
+ * '//evil.com'(외부 host)으로 해석돼 open redirect가 되므로, 첫 글자가 '/'이고
+ * 두 번째 글자가 '/' 또는 '\'가 아닐 때만 안전한 내부 경로로 본다.
+ */
+function safeRedirect(redirect: string | null): string {
+  if (!redirect) return '/dashboard'
+  if (redirect[0] !== '/' || redirect[1] === '/' || redirect[1] === '\\') return '/dashboard'
+  return redirect
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -90,8 +102,7 @@ export async function middleware(request: NextRequest) {
   // 이미 로그인한 사용자가 /login 접근 시 → 보존된 목적지(없으면 /dashboard)로
   if (pathname === '/login' && user) {
     const redirect = request.nextUrl.searchParams.get('redirect')
-    const dest = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard'
-    return NextResponse.redirect(new URL(dest, request.url))
+    return NextResponse.redirect(new URL(safeRedirect(redirect), request.url))
   }
 
   return supabaseResponse
