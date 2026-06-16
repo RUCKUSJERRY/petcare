@@ -249,49 +249,40 @@ export interface WeightLog {
   created_at: string
 }
 
-export type CareCategory =
-  | '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진'
-  | '미용' | '양치' | '발톱' | '목욕' | '귀청소'
+/** 통합 기록 카테고리 (구글 캘린더형 단일 모델) */
+export type RecordCategory =
+  | '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진' | '진료'
+  | '미용' | '양치' | '발톱' | '목욕' | '귀청소' | '식사' | '간식'
   | '기타'
 
-/** 건강 관리 기록 (접종·심장사상충약·구충 등 주기적 관리 항목) */
-export interface CareRecord {
+/** 통합 기록 (records 테이블) — 캘린더/목록은 이 공통 컬럼만 사용 */
+export interface PetRecord {
   id: string
   pet_id: string
-  category: CareCategory
-  vaccine_name: string    // 항목명 (예: 종합백신 DHPPL, 하트가드)
-  vaccinated_on: string   // 시행일 YYYY-MM-DD
+  category: RecordCategory
+  title: string
+  event_on: string             // 시행/진료/발생일 YYYY-MM-DD
+  place_name: string | null
+  place_lat: number | null
+  place_lng: number | null
+  cost: number | null
+  memo: string | null
+  photo_url: string | null
+  recur_interval_days: number | null   // null = 1회성
   next_due_on: string | null
-  clinic: string | null
-  note: string | null
   created_at: string
 }
 
-/** @deprecated CareRecord 사용 */
-export type VaccinationRecord = CareRecord
-
-/** 진료 기록 (병원 방문 이력 — 증상·진단·처치·처방·비용) */
-export interface MedicalRecord {
-  id: string
-  pet_id: string
-  visited_on: string      // 진료일 YYYY-MM-DD
-  clinic: string | null
-  reason: string | null       // 내원 사유 / 증상
-  diagnosis: string | null    // 진단명
-  treatment: string | null    // 처치 / 치료
-  medication: string | null   // 처방약
-  cost: number | null         // 비용(원)
-  next_visit_on: string | null
-  note: string | null
-  photo_url: string | null    // 처방전 / 영수증 사진
-  created_at: string
-}
+/** 카테고리별 상세 (상세 진입 시에만 조회) */
+export interface MedicalDetail { record_id: string; reason: string | null; treatment: string | null; medication: string | null }
+export interface GroomingDetail { record_id: string; method: string | null; vendor: string | null; groom_type: string | null }
+export interface MealDetail { record_id: string; food_kind: string | null; mix: string | null; amount: string | null }
 
 /** 대시보드 D-day 알림용 경량 타입 */
 export interface CareAlert {
   pet_id: string
-  category: CareCategory
-  vaccine_name: string
+  category: RecordCategory
+  title: string
   next_due_on: string
 }
 

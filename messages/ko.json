@@ -532,7 +532,8 @@
     "searchEmpty": "검색 결과가 없어요",
     "addScan": "사진/스캔",
     "scanNeedPet": "상단에서 아이를 먼저 선택한 뒤 스캔해주세요.",
-    "historyLabel": "지난 기록"
+    "historyLabel": "지난 기록",
+    "addTitleItem": "기록 추가"
   },
   "walkSocial": {
     "anonymousOwner": "익명의 보호자",
@@ -674,5 +675,36 @@
     "deletePet": "반려동물 삭제",
     "deleteModalTitle": "{name} 삭제",
     "deleteModalDesc": "삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?"
+  },
+  "records": {
+    "sectionTitle": "기록",
+    "sectionSubtitle": "진료·접종·미용·식사 등 모든 기록을 한 곳에서",
+    "addRecord": "+ 기록",
+    "addTitle": "기록 추가",
+    "editTitle": "기록 수정",
+    "category": "카테고리",
+    "selectPet": "아이 선택",
+    "date": "날짜",
+    "cost": "비용 (원)",
+    "costPlaceholder": "예: 45000",
+    "memo": "메모",
+    "memoPlaceholder": "메모 (선택)",
+    "photo": "사진 (영수증·처방전 등, 선택)",
+    "nextDue": "다음 예정일 (선택)",
+    "recurToggle": "반복 일정으로 설정",
+    "recurEvery": "반복 주기(일)",
+    "recurHint": "끄면 1회성 일정이에요. 켜면 주기마다 다음 예정일이 잡혀요.",
+    "placePlaceholder": "장소 (병원·미용실 등, 선택)",
+    "filterAll": "전체",
+    "empty": "아직 기록이 없어요",
+    "errNoPet": "아이를 선택해주세요",
+    "errNoTitle": "항목명을 입력해주세요",
+    "errDueAfter": "다음 예정일은 시행일 이후여야 해요",
+    "errSaveFailed": "저장에 실패했어요",
+    "deleteConfirm": "삭제할까요?",
+    "deleteAria": "기록 삭제",
+    "performedAt": "시행 {date}",
+    "nextScheduled": "다음 예정 {date}",
+    "recurBadge": "{n}일 주기"
   }
 }

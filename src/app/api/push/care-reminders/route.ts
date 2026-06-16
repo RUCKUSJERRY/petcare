@@ -34,8 +34,8 @@ export async function GET(req: Request) {
 
   // 오늘~내일 예정 (+ force가 아니면 오늘 아직 리마인드 안 한 것만)
   let query = admin
-    .from('vaccination_records')
-    .select('id, category, vaccine_name, next_due_on, last_reminded_on, pet:pets(user_id, name)')
+    .from('records')
+    .select('id, category, title, next_due_on, last_reminded_on, pet:pets(user_id, name)')
     .gte('next_due_on', today)
     .lte('next_due_on', tomorrow)
   if (!force) query = query.or(`last_reminded_on.is.null,last_reminded_on.lt.${today}`)
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
   type Row = {
     id: string
     category: string
-    vaccine_name: string
+    title: string
     next_due_on: string
     pet: { user_id: string; name: string } | null
   }
@@ -61,11 +61,11 @@ export async function GET(req: Request) {
     const badge = ddayBadge(r.next_due_on)
     await sendPushToUser(r.pet.user_id, {
       title: `${careCategoryIcon(r.category)} 건강 일정 ${badge.text}`,
-      body: `${r.pet.name} · ${r.category} (${r.vaccine_name}) 예정일이 다가와요`,
+      body: `${r.pet.name} · ${r.category} (${r.title}) 예정일이 다가와요`,
       url: '/schedule',
       tag: `care-${r.id}`,
     })
-    await admin.from('vaccination_records').update({ last_reminded_on: today }).eq('id', r.id)
+    await admin.from('records').update({ last_reminded_on: today }).eq('id', r.id)
     sent++
   }
 

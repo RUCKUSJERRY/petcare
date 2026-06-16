@@ -12,8 +12,7 @@ import { ImagePicker } from '@/components/ui/ImagePicker'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
-import { CareSection } from '../_components/CareSection'
-import { MedicalSection } from '../_components/MedicalSection'
+import { RecordsSection } from '../_components/RecordsSection'
 import { PetMembers } from '../_components/PetMembers'
 import { RecordsScanModal } from '../_components/RecordsScanModal'
 
@@ -25,8 +24,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   // 홈 빠른 기록 버튼에서 ?add=weight|care 로 진입하면 해당 폼을 펼친 채로 시작
   const addTarget = searchParams.get('add')
   const weightRef = useRef<HTMLDivElement>(null)
-  const careRef = useRef<HTMLDivElement>(null)
-  const medicalRef = useRef<HTMLDivElement>(null)
+  const recordsRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
@@ -85,8 +83,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!pet || !addTarget) return
     const el = addTarget === 'weight' ? weightRef.current
-      : addTarget === 'care' ? careRef.current
-        : addTarget === 'medical' ? medicalRef.current : null
+      : (addTarget === 'care' || addTarget === 'medical' || addTarget === 'record') ? recordsRef.current : null
     if (el) {
       const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
       return () => clearTimeout(t)
@@ -265,11 +262,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           <div ref={weightRef}>
             <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
           </div>
-          <div ref={careRef}>
-            <CareSection petId={params.id} defaultOpen={addTarget === 'care'} />
-          </div>
-          <div ref={medicalRef}>
-            <MedicalSection petId={params.id} defaultOpen={addTarget === 'medical'} />
+          <div ref={recordsRef}>
+            <RecordsSection petId={params.id} defaultOpen={addTarget === 'care' || addTarget === 'medical' || addTarget === 'record'} />
           </div>
           <PetMembers petId={params.id} petName={pet.name} />
         </>
