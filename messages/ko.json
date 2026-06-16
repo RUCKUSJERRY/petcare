@@ -724,6 +724,8 @@
     "freq_year": "년",
     "monthDom": "매월 {day}일",
     "monthDow": "매월 N째주 요일",
-    "scanRecord": "📷 영수증·이력서 스캔으로 추가"
+    "scanRecord": "📷 영수증·이력서 스캔으로 추가",
+    "detailTitle": "기록 상세",
+    "placeLabel": "장소"
   }
 }

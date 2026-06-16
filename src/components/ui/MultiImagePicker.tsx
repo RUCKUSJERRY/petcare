@@ -25,7 +25,8 @@ export function MultiImagePicker({
   max?: number
 }) {
   const t = useTranslations('ui')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [uploading, setUploading] = useState(false)
   // 이 컴포넌트에서 업로드(미저장)한 URL들. 제거 시 즉시 정리.
@@ -78,15 +79,23 @@ export function MultiImagePicker({
               aria-label={t('imgRemove')}>✕</button>
           </div>
         ))}
-        {value.length < max && (
-          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-            className="w-20 h-20 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400 flex flex-col items-center justify-center text-xs">
-            {uploading ? t('imgUploading') : <><span className="text-xl leading-none">＋</span>{t('imgAdd')}</>}
-          </button>
-        )}
       </div>
-      <p className="text-xs text-gray-400">{t('imgCount', { n: value.length, max })}</p>
-      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleSelect} />
+      {value.length < max && (
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => cameraRef.current?.click()} disabled={uploading}
+            className="btn-secondary text-sm py-1.5 px-3">
+            {uploading ? t('imgUploading') : t('imgCamera')}
+          </button>
+          <button type="button" onClick={() => galleryRef.current?.click()} disabled={uploading}
+            className="btn-secondary text-sm py-1.5 px-3">
+            {t('imgGallery')}
+          </button>
+          <span className="text-xs text-gray-400">{t('imgCount', { n: value.length, max })}</span>
+        </div>
+      )}
+      {/* 촬영(카메라, 1장) / 갤러리(여러 장) 분리 */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSelect} />
+      <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={handleSelect} />
     </div>
   )
 }

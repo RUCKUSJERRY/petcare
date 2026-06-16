@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
@@ -13,6 +12,7 @@ import { activeNextDue } from '@/lib/recurrence'
 import { RecordForm } from '../pets/_components/RecordForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { RecordsScanModal } from '../pets/_components/RecordsScanModal'
+import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
 import { useTranslations } from 'next-intl'
 import type { RecordCategory } from '@/types'
 
@@ -54,6 +54,7 @@ export default function SchedulePage() {
   const [focusDate, setFocusDate] = useState<string | undefined>(undefined)
   const [showScan, setShowScan] = useState(false)
   const [scanNotice, setScanNotice] = useState(false)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // ?focus=YYYY-MM-DD&pet=ID 로 진입하면 캘린더의 해당 날짜로 포커싱
@@ -160,17 +161,11 @@ export default function SchedulePage() {
     setShowScan(true)
   }
 
-  const goToRecord = (date: string) => {
-    setSearch('')
-    setView('calendar')
-    setFocusDate(date)
-  }
-
   const Row = ({ i }: { i: ScheduleItem }) => {
     const badge = ddayBadge(i.next_due_on)
     const daysSince = i.last_on ? Math.max(0, -daysUntil(i.last_on)) : null
     return (
-      <Link href={`/pets/${i.pet_id}`}>
+      <button onClick={() => setDetailId(i.id)} className="w-full text-left">
         <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
           <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
           <div className="flex-1 min-w-0">
@@ -191,7 +186,7 @@ export default function SchedulePage() {
             {badge.text}
           </span>
         </div>
-      </Link>
+      </button>
     )
   }
 
@@ -269,7 +264,7 @@ export default function SchedulePage() {
             <div className="card text-center py-10 text-sm text-gray-400">{t('searchEmpty')}</div>
           ) : (
             searchResults.map(i => (
-              <button key={i.id} onClick={() => goToRecord(i.event_on)} className="w-full text-left">
+              <button key={i.id} onClick={() => setDetailId(i.id)} className="w-full text-left">
                 <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
                   <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
                   <div className="flex-1 min-w-0">
@@ -290,7 +285,7 @@ export default function SchedulePage() {
       ) : isLoading ? (
         <CardSkeletonList count={4} />
       ) : view === 'calendar' ? (
-        <ScheduleCalendar items={visible} history={visibleHistory} focusDate={focusDate} />
+        <ScheduleCalendar items={visible} history={visibleHistory} focusDate={focusDate} onSelect={setDetailId} />
       ) : visible.length === 0 ? (
         <div className="card text-center py-12 text-gray-400">
           <div className="text-4xl mb-3">🗓️</div>
@@ -323,6 +318,10 @@ export default function SchedulePage() {
       {showScan && selectedPetId && (
         <RecordsScanModal petId={selectedPetId}
           onClose={() => { setShowScan(false); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }} />
+      )}
+
+      {detailId && (
+        <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} />
       )}
     </div>
   )

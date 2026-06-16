@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
@@ -44,10 +43,12 @@ export function ScheduleCalendar({
   items,
   history = [],
   focusDate,
+  onSelect,
 }: {
   items: ScheduleItem[]
   history?: HistoryItem[]
   focusDate?: string
+  onSelect?: (recordId: string) => void
 }) {
   const t = useTranslations('schedule')
   const WEEKDAYS = t.raw('weekdays') as string[]
@@ -124,8 +125,22 @@ export function ScheduleCalendar({
     setPickerOpen(false)
   }
 
-  const selectedItems = selected ? byDate.get(selected) ?? [] : []
-  const selectedHistory = selected ? byDateHistory.get(selected) ?? [] : []
+  // 선택한 날짜의 항목: 예정(next_due) + 지난 기록(event_on)을 id 기준 1건으로 병합
+  type DayEntry = {
+    id: string; pet_name: string; pet_species: string; category: string; title: string
+    isDue: boolean; due?: string
+  }
+  const dayList: DayEntry[] = (() => {
+    if (!selected) return []
+    const map = new Map<string, DayEntry>()
+    for (const i of byDate.get(selected) ?? []) {
+      map.set(i.id, { id: i.id, pet_name: i.pet_name, pet_species: i.pet_species, category: i.category, title: i.title, isDue: true, due: i.next_due_on })
+    }
+    for (const i of byDateHistory.get(selected) ?? []) {
+      if (!map.has(i.id)) map.set(i.id, { id: i.id, pet_name: i.pet_name, pet_species: i.pet_species, category: i.category, title: i.title, isDue: false })
+    }
+    return Array.from(map.values())
+  })()
 
   return (
     <div className="space-y-4">
@@ -219,60 +234,40 @@ export function ScheduleCalendar({
         )}
       </div>
 
-      {/* 선택한 날짜의 일정·기록 */}
+      {/* 선택한 날짜의 일정 (구글 캘린더처럼 그 날짜 건만, 중복 없이) */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-500">
           {selected ? selected.replace(/-/g, '.') : t('pickDate')}
-          {(selectedItems.length + selectedHistory.length) > 0 && (
-            <span className="text-gray-400 font-normal"> {t('countSuffix', { count: selectedItems.length + selectedHistory.length })}</span>
+          {dayList.length > 0 && (
+            <span className="text-gray-400 font-normal"> {t('countSuffix', { count: dayList.length })}</span>
           )}
         </h2>
-        {selectedItems.length === 0 && selectedHistory.length === 0 ? (
+        {dayList.length === 0 ? (
           <div className="card text-center py-6 text-sm text-gray-400">{t('noScheduleThisDay')}</div>
         ) : (
-          <>
-            {selectedItems.map(i => {
-              const badge = ddayBadge(i.next_due_on)
-              return (
-                <Link key={`u-${i.id}`} href={`/pets/${i.pet_id}`}>
-                  <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
-                    <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-gray-400">{i.pet_species === 'cat' ? '🐱' : '🐶'} {i.pet_name}</span>
-                        <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">{i.category}</span>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
+          dayList.map(i => {
+            const badge = i.isDue ? ddayBadge(i.due!) : null
+            return (
+              <button key={i.id} onClick={() => onSelect?.(i.id)} className="w-full text-left">
+                <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+                  <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-400">{i.pet_species === 'cat' ? '🐱' : '🐶'} {i.pet_name}</span>
+                      <span className="text-xs text-gray-300">·</span>
+                      <span className="text-xs text-gray-400">{i.category}</span>
                     </div>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
+                  </div>
+                  {badge && (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
                       {badge.text}
                     </span>
-                  </div>
-                </Link>
-              )
-            })}
-            {selectedHistory.length > 0 && (
-              <>
-                <p className="text-xs font-semibold text-gray-400 pt-1">{t('historyLabel')}</p>
-                {selectedHistory.map(i => (
-                  <Link key={`h-${i.id}`} href={`/pets/${i.pet_id}`}>
-                    <div className="card flex items-center gap-3 hover:shadow-md transition-shadow opacity-90">
-                      <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-gray-400">{i.pet_species === 'cat' ? '🐱' : '🐶'} {i.pet_name}</span>
-                          <span className="text-xs text-gray-300">·</span>
-                          <span className="text-xs text-gray-400">{i.category}</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </>
-            )}
-          </>
+                  )}
+                </div>
+              </button>
+            )
+          })
         )}
       </div>
     </div>
