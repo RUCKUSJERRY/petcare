@@ -35,7 +35,7 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
           <div key={i} className="flex items-center gap-2 text-sm">
             <span aria-hidden>{careCategoryIcon(v.category)}</span>
             <span className="text-gray-700 truncate flex-1">
-              {pet?.name} · {v.vaccine_name}
+              {pet?.name} · {v.title}
             </span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
               {badge.text}

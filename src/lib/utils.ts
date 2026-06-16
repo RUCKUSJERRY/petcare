@@ -220,6 +220,8 @@ export function careCategoryIcon(category: string): string {
     목욕:       '🛁',
     귀청소:     '👂',
     진료:       '🏥',
+    식사:       '🍚',
+    간식:       '🦴',
     기타:       '📋',
   }[category] ?? '📋'
 }

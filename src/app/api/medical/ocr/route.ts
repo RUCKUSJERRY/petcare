@@ -107,6 +107,13 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
       console.error('[ocr] gemini error', res.status, detail.slice(0, 300))
+      // 429: 무료 등급 사용량 한도 초과 — 코드 문제가 아님을 명확히 안내
+      if (res.status === 429) {
+        return NextResponse.json(
+          { error: 'rate_limited', message: 'AI 사용량 한도를 초과했어요. 잠시 후 다시 시도하거나 아래에 직접 입력해주세요.' },
+          { status: 429 }
+        )
+      }
       return NextResponse.json(
         { error: 'ocr_failed', message: '진료 내용을 인식하지 못했어요. 직접 입력해주세요.' },
         { status: 502 }

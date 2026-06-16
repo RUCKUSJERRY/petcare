@@ -5,9 +5,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { uploadImage, validateImage } from '@/lib/upload'
-import type { CareCategory } from '@/types'
+import type { RecordCategory } from '@/types'
 
-const CARE_CATEGORIES: CareCategory[] = [
+const CARE_CATEGORIES: RecordCategory[] = [
   '접종', '심장사상충', '구충', '외부기생충', '건강검진',
   '미용', '양치', '발톱', '목욕', '귀청소', '기타',
 ]
@@ -19,7 +19,7 @@ type Row = {
   type: 'medical' | 'care'
   date: string
   clinic: string
-  category: CareCategory
+  category: RecordCategory
   name: string
   next_due: string
   reason: string
@@ -31,10 +31,18 @@ type Row = {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+// 인식 실패 시 직접 입력용 빈 행
+function emptyRow(): Row {
+  return {
+    include: true, type: 'medical', date: today(), clinic: '', category: '기타',
+    name: '', next_due: '', reason: '', diagnosis: '', treatment: '', medication: '', cost: '',
+  }
+}
+
 function toRow(r: Record<string, unknown>): Row {
   const type = r.type === 'care' ? 'care' : 'medical'
   const rawCat = String(r.category ?? '')
-  const category = (CARE_CATEGORIES as string[]).includes(rawCat) ? (rawCat as CareCategory) : '기타'
+  const category = (CARE_CATEGORIES as string[]).includes(rawCat) ? (rawCat as RecordCategory) : '기타'
   return {
     include: true,
     type,
@@ -79,6 +87,12 @@ export function RecordsScanModal({
     const invalid = validateImage(file)
     if (invalid) { setError(invalid); return }
     setPhase('scanning'); setError(null)
+    // 인식 실패해도 막히지 않도록: 업로드한 사진을 붙인 빈 입력 행으로 넘어가 직접 입력
+    const fallbackToManual = (msg: string) => {
+      setError(msg)
+      setRows([emptyRow()])
+      setPhase('review')
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('로그인이 필요해요')
@@ -90,14 +104,13 @@ export function RecordsScanModal({
         body: JSON.stringify({ imageUrl: url }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(json?.message || t('errRecognizeFailed')); setPhase('pick'); return }
+      if (!res.ok) { fallbackToManual(json?.message || t('fallbackManual')); return }
       const parsed = (json.records ?? []) as Record<string, unknown>[]
-      if (parsed.length === 0) { setError(t('errNoRecords')); setPhase('pick'); return }
+      if (parsed.length === 0) { fallbackToManual(t('errNoRecords')); return }
       setRows(parsed.map(toRow))
       setPhase('review')
     } catch {
-      setError(t('errScanFailed'))
-      setPhase('pick')
+      fallbackToManual(t('fallbackManual'))
     }
   }
 
@@ -109,42 +122,36 @@ export function RecordsScanModal({
     if (picked.length === 0) { setError(t('errSelectRecords')); return }
     setSaving(true); setError(null)
 
-    const careRows = picked.filter(r => r.type === 'care').map(r => ({
-      pet_id: petId,
-      category: r.category,
-      vaccine_name: r.name.trim() || r.category,
-      vaccinated_on: r.date || today(),
-      next_due_on: r.next_due || null,
-      clinic: r.clinic.trim() || null,
-    }))
-    const medRows = picked.filter(r => r.type === 'medical').map(r => ({
-      pet_id: petId,
-      visited_on: r.date || today(),
-      clinic: r.clinic.trim() || null,
-      reason: r.reason.trim() || null,
-      diagnosis: r.diagnosis.trim() || null,
-      treatment: r.treatment.trim() || null,
-      medication: r.medication.trim() || null,
-      cost: r.cost ? parseInt(r.cost, 10) : null,
-      next_visit_on: r.next_due || null,
-      // 원본 영수증/이력서 사진을 진료 기록에 함께 보관
-      photo_url: photoUrl,
-    }))
-
+    // 통합 records 테이블에 저장 (진료면 record_medical 상세도 함께)
     let failed = false
-    if (careRows.length) {
-      const { error: e } = await supabase.from('vaccination_records').insert(careRows)
-      if (e) failed = true
-    }
-    if (medRows.length) {
-      const { error: e } = await supabase.from('medical_records').insert(medRows)
-      if (e) failed = true
+    for (const r of picked) {
+      const isMed = r.type === 'medical'
+      const title = (isMed ? (r.diagnosis || r.name || r.reason) : (r.name || r.category)).trim()
+      const common = {
+        pet_id: petId,
+        category: isMed ? '진료' : r.category,
+        title: title || (isMed ? '진료' : r.category),
+        event_on: r.date || today(),
+        place_name: r.clinic.trim() || null,
+        cost: r.cost ? parseInt(r.cost, 10) : null,
+        next_due_on: r.next_due || null,
+        photo_url: photoUrl, // 원본 영수증/이력서 사진을 함께 보관
+      }
+      const { data, error: e } = await supabase.from('records').insert(common).select('id').single()
+      if (e || !data) { failed = true; continue }
+      if (isMed) {
+        await supabase.from('record_medical').insert({
+          record_id: data.id,
+          reason: r.reason.trim() || null,
+          treatment: r.treatment.trim() || null,
+          medication: r.medication.trim() || null,
+        })
+      }
     }
     setSaving(false)
     if (failed) { setError(t('errSavePartial')); return }
 
-    qc.invalidateQueries({ queryKey: ['care', petId] })
-    qc.invalidateQueries({ queryKey: ['medical', petId] })
+    qc.invalidateQueries({ queryKey: ['records', petId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     onClose()
   }
@@ -198,7 +205,7 @@ export function RecordsScanModal({
 
                   {r.type === 'care' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <select value={r.category} onChange={e => update(i, { category: e.target.value as CareCategory })}
+                      <select value={r.category} onChange={e => update(i, { category: e.target.value as RecordCategory })}
                         className="input text-sm py-1.5">
                         {CARE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -219,6 +226,13 @@ export function RecordsScanModal({
                   )}
                 </div>
               ))}
+              <button
+                type="button"
+                onClick={() => setRows(rs => [...rs, emptyRow()])}
+                className="w-full text-sm text-primary-600 font-medium py-2 border border-dashed border-gray-200 rounded-xl hover:bg-gray-50"
+              >
+                {t('addRow')}
+              </button>
             </>
           )}
         </div>

@@ -65,15 +65,19 @@ export function SelectedPetSummary({
         </Link>
       </div>
 
-      {/* 다음 건강 일정 알림 */}
+      {/* 다음 건강 일정 알림 — 누르면 일정 화면(해당 날짜)으로 진입 */}
       {nextVacc && (
-        <div className="mt-3 flex items-center gap-2 bg-white/15 rounded-lg px-3 py-2 text-sm">
+        <Link
+          href={`/schedule?focus=${nextVacc.next_due_on}&pet=${pet.id}`}
+          className="mt-3 flex items-center gap-2 bg-white/15 hover:bg-white/25 rounded-lg px-3 py-2 text-sm transition-colors"
+        >
           <span aria-hidden>{careCategoryIcon(nextVacc.category)}</span>
-          <span className="flex-1 truncate">{nextVacc.vaccine_name}</span>
+          <span className="flex-1 truncate">{nextVacc.title}</span>
           <span className="text-xs font-semibold text-white/90 shrink-0">
             {ddayBadge(nextVacc.next_due_on).text}
           </span>
-        </div>
+          <span aria-hidden className="text-white/60">›</span>
+        </Link>
       )}
 
       {/* 빠른 '기록' 입력 (아이 상세의 해당 폼을 바로 열어줌) */}

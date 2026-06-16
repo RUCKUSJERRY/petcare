@@ -1,0 +1,280 @@
+'use client'
+
+import { createClient } from '@/lib/supabase/client'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { useMyPets } from '@/hooks/useMyPets'
+import { addDays, careCategoryIcon, careRecommendedCycleDays } from '@/lib/utils'
+import { ImagePicker } from '@/components/ui/ImagePicker'
+import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
+import { deleteImageByUrl } from '@/lib/upload'
+import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE } from '@/lib/records'
+import type { PetRecord, RecordCategory } from '@/types'
+
+const today = () => new Date().toISOString().slice(0, 10)
+const DETAIL_TABLES = ['record_medical', 'record_grooming', 'record_meal'] as const
+
+/**
+ * 통합 기록 입력/수정 폼 (구글 캘린더형).
+ * 카테고리에 따라 상세 입력 필드가 바뀌고, 반복주기는 선택사항이다.
+ * 아이 상세(petId 고정)와 일정 화면(allowPetSelect) 모두에서 재사용.
+ */
+export function RecordForm({
+  petId: fixedPetId,
+  allowPetSelect = false,
+  record,
+  defaultCategory = '진료',
+  onDone,
+  onCancel,
+}: {
+  petId?: string | null
+  allowPetSelect?: boolean
+  record?: PetRecord
+  defaultCategory?: RecordCategory
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const t = useTranslations('records')
+  const tc = useTranslations('common')
+  const supabase = createClient()
+  const qc = useQueryClient()
+  const { data: pets = [] } = useMyPets()
+  const editing = !!record
+
+  const [petId, setPetId] = useState<string>(record?.pet_id || fixedPetId || '')
+  const [category, setCategory] = useState<RecordCategory>(record?.category || defaultCategory)
+  const [title, setTitle] = useState(record?.title || '')
+  const [eventOn, setEventOn] = useState(record?.event_on || today())
+  const [place, setPlace] = useState<PlaceValue>({
+    name: record?.place_name || '', lat: record?.place_lat ?? null, lng: record?.place_lng ?? null,
+  })
+  const [cost, setCost] = useState(record?.cost != null ? String(record.cost) : '')
+  const [memo, setMemo] = useState(record?.memo || '')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(record?.photo_url ?? null)
+  const [existingPhoto] = useState<string | null>(record?.photo_url ?? null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [recurOn, setRecurOn] = useState<boolean>(!!record?.recur_interval_days)
+  const [intervalDays, setIntervalDays] = useState<string>(record?.recur_interval_days ? String(record.recur_interval_days) : '')
+  const [nextDue, setNextDue] = useState<string>(record?.next_due_on || '')
+  const [dueTouched, setDueTouched] = useState<boolean>(!!record?.next_due_on)
+  const [detail, setDetail] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const effectivePetId = petId || fixedPetId || pets[0]?.id || ''
+  const config = CATEGORY_CONFIG[category]
+  const recommend = careRecommendedCycleDays(category)
+
+  // 편집 시 상세 테이블 값 로드
+  useEffect(() => {
+    if (!record) return
+    const table = DETAIL_TABLE[record.category]
+    if (!table) return
+    let cancelled = false
+    supabase.from(table).select('*').eq('record_id', record.id).maybeSingle().then(({ data }) => {
+      if (cancelled || !data) return
+      const d: Record<string, string> = {}
+      Object.entries(data).forEach(([k, v]) => { if (k !== 'record_id') d[k] = (v as string) ?? '' })
+      setDetail(d)
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const applyRecur = (on: boolean) => {
+    setRecurOn(on)
+    if (on) {
+      const days = intervalDays || (recommend ? String(recommend) : '')
+      setIntervalDays(days)
+      if (!dueTouched && days) setNextDue(addDays(eventOn, parseInt(days, 10)))
+    }
+  }
+  const changeInterval = (v: string) => {
+    setIntervalDays(v)
+    if (!dueTouched && v) setNextDue(addDays(eventOn, parseInt(v, 10)))
+  }
+  const changeEventOn = (v: string) => {
+    setEventOn(v)
+    if (recurOn && !dueTouched && intervalDays) setNextDue(addDays(v, parseInt(intervalDays, 10)))
+  }
+
+  const submit = async () => {
+    if (!effectivePetId) { setError(t('errNoPet')); return }
+    if (!title.trim()) { setError(t('errNoTitle')); return }
+    if (nextDue && nextDue < eventOn) { setError(t('errDueAfter')); return }
+    setSaving(true); setError(null)
+    const common = {
+      pet_id: effectivePetId,
+      category,
+      title: title.trim(),
+      event_on: eventOn,
+      place_name: place.name.trim() || null,
+      place_lat: place.lat,
+      place_lng: place.lng,
+      cost: cost ? parseInt(cost, 10) : null,
+      memo: memo.trim() || null,
+      photo_url: photoUrl,
+      recur_interval_days: recurOn && intervalDays ? parseInt(intervalDays, 10) : null,
+      next_due_on: nextDue || null,
+    }
+
+    let recordId = record?.id
+    if (editing && recordId) {
+      const { error: e } = await supabase.from('records').update(common).eq('id', recordId)
+      if (e) { setSaving(false); setError(t('errSaveFailed')); return }
+    } else {
+      const { data, error: e } = await supabase.from('records').insert(common).select('id').single()
+      if (e || !data) { setSaving(false); setError(t('errSaveFailed')); return }
+      recordId = data.id as string
+    }
+
+    // 상세 테이블 동기화 (편집 시 카테고리 변경 대비 3종 정리 후 재기록)
+    const table = DETAIL_TABLE[category]
+    if (editing && recordId) {
+      await Promise.all(DETAIL_TABLES.map(tb => supabase.from(tb).delete().eq('record_id', recordId!)))
+    }
+    if (table && recordId) {
+      const row: Record<string, unknown> = { record_id: recordId }
+      for (const f of config.fields) row[f.key] = detail[f.key]?.trim() || null
+      await supabase.from(table).insert(row)
+    }
+
+    if (editing && existingPhoto && existingPhoto !== photoUrl) deleteImageByUrl(existingPhoto)
+
+    setSaving(false)
+    qc.invalidateQueries({ queryKey: ['records', effectivePetId] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    onDone()
+  }
+
+  const cancel = () => {
+    if (photoUrl && photoUrl !== existingPhoto) deleteImageByUrl(photoUrl)
+    onCancel()
+  }
+
+  return (
+    <div className="card space-y-2.5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-gray-900">{editing ? t('editTitle') : t('addTitle')}</h2>
+        <button onClick={cancel} className="text-sm text-gray-400">{tc('cancel')}</button>
+      </div>
+
+      {/* 아이 선택 (일정 화면) */}
+      {allowPetSelect && pets.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {pets.map(p => (
+            <button key={p.id} type="button" onClick={() => setPetId(p.id)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                effectivePetId === p.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+              }`}>
+              {p.species === 'cat' ? '🐱' : '🐶'} {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 카테고리 */}
+      <div className="flex gap-1.5 flex-wrap">
+        {RECORD_CATEGORIES.map(c => (
+          <button key={c} type="button" onClick={() => { setCategory(c); setDetail({}) }}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+              category === c ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+            }`}>
+            {careCategoryIcon(c)} {c}
+          </button>
+        ))}
+      </div>
+
+      {/* 제목 */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-0.5">{config.titleLabel}</label>
+        <input className="input" placeholder={config.titlePlaceholder}
+          value={title} onChange={e => setTitle(e.target.value)} />
+      </div>
+
+      {/* 날짜 + 비용 */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-gray-500 block mb-0.5">{t('date')}</label>
+          <input className="input" type="date" value={eventOn} onChange={e => changeEventOn(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
+          <input className="input" type="number" inputMode="numeric" min={0} placeholder={t('costPlaceholder')}
+            value={cost} onChange={e => setCost(e.target.value)} />
+        </div>
+      </div>
+
+      {/* 장소 (카카오 검색) */}
+      <PlacePicker value={place} onChange={setPlace} placeholder={t('placePlaceholder')} />
+
+      {/* 카테고리별 상세 필드 */}
+      {config.fields.map(f => (
+        <div key={f.key}>
+          <label className="text-xs text-gray-500 block mb-0.5">{f.label}</label>
+          {f.type === 'select' ? (
+            <div className="flex gap-1.5">
+              {(f.options ?? []).map(opt => (
+                <button key={opt} type="button" onClick={() => setDetail(d => ({ ...d, [f.key]: opt }))}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    detail[f.key] === opt ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : f.type === 'textarea' ? (
+            <textarea className="input min-h-[60px]" placeholder={f.placeholder}
+              value={detail[f.key] ?? ''} onChange={e => setDetail(d => ({ ...d, [f.key]: e.target.value }))} />
+          ) : (
+            <input className="input" type={f.type === 'number' ? 'number' : 'text'} placeholder={f.placeholder}
+              value={detail[f.key] ?? ''} onChange={e => setDetail(d => ({ ...d, [f.key]: e.target.value }))} />
+          )}
+        </div>
+      ))}
+
+      {/* 반복 설정 */}
+      <div className="rounded-lg bg-gray-50 p-2.5 space-y-2">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={recurOn} onChange={e => applyRecur(e.target.checked)}
+            className="w-4 h-4 accent-primary-500" />
+          {t('recurToggle')}
+        </label>
+        {recurOn && (
+          <div>
+            <label className="text-xs text-gray-500 block mb-0.5">{t('recurEvery')}</label>
+            <input className="input" type="number" inputMode="numeric" min={1}
+              value={intervalDays} onChange={e => changeInterval(e.target.value)} />
+          </div>
+        )}
+        <div>
+          <label className="text-xs text-gray-500 block mb-0.5">{t('nextDue')}</label>
+          <input className="input" type="date" value={nextDue}
+            onChange={e => { setDueTouched(true); setNextDue(e.target.value) }} />
+        </div>
+        <p className="text-xs text-gray-400">{t('recurHint')}</p>
+      </div>
+
+      {/* 메모 */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-0.5">{t('memo')}</label>
+        <textarea className="input min-h-[48px]" placeholder={t('memoPlaceholder')}
+          value={memo} onChange={e => setMemo(e.target.value)} />
+      </div>
+
+      {/* 사진 */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">{t('photo')}</label>
+        <ImagePicker bucket="pet-photos" value={photoUrl}
+          onUploaded={url => { setPhotoUrl(url); setPhotoError(null) }} onError={setPhotoError} />
+        {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
+      </div>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+      <button onClick={submit} disabled={saving} className="btn-primary w-full py-2 text-sm">
+        {saving ? tc('saving') : editing ? tc('edit') : tc('save')}
+      </button>
+    </div>
+  )
+}

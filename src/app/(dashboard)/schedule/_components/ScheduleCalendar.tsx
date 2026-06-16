@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 
@@ -15,6 +15,17 @@ type ScheduleItem = {
   next_due_on: string
 }
 
+// 지난(또는 전체) 기록 — 실제 시행/진료일에 캘린더에 표시
+type HistoryItem = {
+  id: string
+  pet_id: string
+  pet_name: string
+  pet_species: string
+  category: string
+  title: string
+  event_on: string
+}
+
 /** 로컬 기준 YYYY-MM-DD (시간대 영향 없이) */
 function toYMD(d: Date) {
   const y = d.getFullYear()
@@ -25,9 +36,19 @@ function toYMD(d: Date) {
 
 /**
  * 건강 일정 월간 캘린더.
- * 일정이 있는 날에 점·건수를 표시하고, 날짜를 누르면 그 날의 일정을 아래에 보여준다.
+ * 예정 일정(items)과 지난 기록(history)을 함께 표시하고,
+ * 날짜를 누르면 그 날의 일정·기록을 아래에 보여준다.
+ * focusDate가 들어오면 해당 월/날짜로 자동 이동·선택한다(딥링크·검색 결과 진입용).
  */
-export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
+export function ScheduleCalendar({
+  items,
+  history = [],
+  focusDate,
+}: {
+  items: ScheduleItem[]
+  history?: HistoryItem[]
+  focusDate?: string
+}) {
   const t = useTranslations('schedule')
   const WEEKDAYS = t.raw('weekdays') as string[]
   const todayYMD = toYMD(new Date())
@@ -40,7 +61,17 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
   // 연/월 선택 패널에서 현재 보고 있는 연도(월 선택 전 단계)
   const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
 
-  // 날짜별 일정 그룹
+  // focusDate(딥링크/검색 결과)로 진입하면 해당 월·날짜로 이동
+  useEffect(() => {
+    if (!focusDate) return
+    const [y, m, d] = focusDate.split('-').map(Number)
+    if (!y || !m || !d) return
+    setCursor(new Date(y, m - 1, 1))
+    setSelected(focusDate)
+    setPickerOpen(false)
+  }, [focusDate])
+
+  // 날짜별 예정 일정 그룹
   const byDate = useMemo(() => {
     const map = new Map<string, ScheduleItem[]>()
     items.forEach(it => {
@@ -50,6 +81,17 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
     })
     return map
   }, [items])
+
+  // 날짜별 지난 기록 그룹 (실제 시행/진료일 기준)
+  const byDateHistory = useMemo(() => {
+    const map = new Map<string, HistoryItem[]>()
+    history.forEach(it => {
+      const arr = map.get(it.event_on) ?? []
+      arr.push(it)
+      map.set(it.event_on, arr)
+    })
+    return map
+  }, [history])
 
   // 표시할 6주(42칸) 그리드 계산
   const cells = useMemo(() => {
@@ -83,6 +125,7 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
   }
 
   const selectedItems = selected ? byDate.get(selected) ?? [] : []
+  const selectedHistory = selected ? byDateHistory.get(selected) ?? [] : []
 
   return (
     <div className="space-y-4">
@@ -143,9 +186,13 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
             const ymd = toYMD(d)
             const inMonth = d.getMonth() === cursor.getMonth()
             const dayItems = byDate.get(ymd) ?? []
+            const dayHistory = byDateHistory.get(ymd) ?? []
             const isToday = ymd === todayYMD
             const isSelected = ymd === selected
-            const hasOverdue = dayItems.some(() => ymd < todayYMD)
+            const hasOverdue = dayItems.length > 0 && ymd < todayYMD
+            // 마커 색: 예정(지남=빨강, 예정=주황/프라이머리), 예정 없이 지난 기록만이면 회색
+            const dot = dayItems.length > 0 ? (hasOverdue ? 'bg-red-400' : 'bg-primary-500') : 'bg-gray-300'
+            const hasDot = dayItems.length > 0 || dayHistory.length > 0
             return (
               <button
                 key={ymd}
@@ -161,13 +208,8 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
                 >
                   {d.getDate()}
                 </span>
-                {dayItems.length > 0 && (
-                  <span
-                    className={[
-                      'mt-0.5 w-1.5 h-1.5 rounded-full',
-                      hasOverdue ? 'bg-red-400' : 'bg-primary-500',
-                    ].join(' ')}
-                  />
+                {hasDot && (
+                  <span className={['mt-0.5 w-1.5 h-1.5 rounded-full', dot].join(' ')} />
                 )}
               </button>
             )
@@ -177,36 +219,60 @@ export function ScheduleCalendar({ items }: { items: ScheduleItem[] }) {
         )}
       </div>
 
-      {/* 선택한 날짜의 일정 */}
+      {/* 선택한 날짜의 일정·기록 */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-500">
           {selected ? selected.replace(/-/g, '.') : t('pickDate')}
-          {selectedItems.length > 0 && <span className="text-gray-400 font-normal"> {t('countSuffix', { count: selectedItems.length })}</span>}
+          {(selectedItems.length + selectedHistory.length) > 0 && (
+            <span className="text-gray-400 font-normal"> {t('countSuffix', { count: selectedItems.length + selectedHistory.length })}</span>
+          )}
         </h2>
-        {selectedItems.length === 0 ? (
+        {selectedItems.length === 0 && selectedHistory.length === 0 ? (
           <div className="card text-center py-6 text-sm text-gray-400">{t('noScheduleThisDay')}</div>
         ) : (
-          selectedItems.map(i => {
-            const badge = ddayBadge(i.next_due_on)
-            return (
-              <Link key={i.id} href={`/pets/${i.pet_id}`}>
-                <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
-                  <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-gray-400">{i.pet_species === 'cat' ? '🐱' : '🐶'} {i.pet_name}</span>
-                      <span className="text-xs text-gray-300">·</span>
-                      <span className="text-xs text-gray-400">{i.category}</span>
+          <>
+            {selectedItems.map(i => {
+              const badge = ddayBadge(i.next_due_on)
+              return (
+                <Link key={`u-${i.id}`} href={`/pets/${i.pet_id}`}>
+                  <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+                    <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-gray-400">{i.pet_species === 'cat' ? '🐱' : '🐶'} {i.pet_name}</span>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs text-gray-400">{i.category}</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
+                      {badge.text}
+                    </span>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
-                    {badge.text}
-                  </span>
-                </div>
-              </Link>
-            )
-          })
+                </Link>
+              )
+            })}
+            {selectedHistory.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-gray-400 pt-1">{t('historyLabel')}</p>
+                {selectedHistory.map(i => (
+                  <Link key={`h-${i.id}`} href={`/pets/${i.pet_id}`}>
+                    <div className="card flex items-center gap-3 hover:shadow-md transition-shadow opacity-90">
+                      <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-gray-400">{i.pet_species === 'cat' ? '🐱' : '🐶'} {i.pet_name}</span>
+                          <span className="text-xs text-gray-300">·</span>
+                          <span className="text-xs text-gray-400">{i.category}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>

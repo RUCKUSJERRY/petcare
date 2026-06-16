@@ -1,8 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { timeAgo, categoryColor } from '@/lib/utils'
+import { timeAgo, categoryColor, addDays } from '@/lib/utils'
+import { PRODUCT_CATEGORIES } from '@/lib/records'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
-import type { CareAlert, Pet, PostListItem } from '@/types'
+import type { CareAlert, Pet, PostListItem, RecordCategory } from '@/types'
 import { PetSection } from './_components/PetSection'
 
 export default async function DashboardPage() {
@@ -23,25 +24,28 @@ export default async function DashboardPage() {
 
   let vaccAlerts: CareAlert[] = []
   if (petIds.length > 0) {
-    // 같은 관리 항목(아이·카테고리·항목명)은 "가장 최근 시행 기록"만 유효한 일정으로 본다.
-    // 더 최근에 다시 시행한 기록이 있으면, 이전 기록의 다음 예정일은 이미 갱신된 과거 일정이므로
-    // 대시보드 알림에서 제외한다. (예: 6/13에 건강검진을 다시 했는데 6/10이 예정일이던
-    // 이전 기록이 "지남"으로 표시되던 문제 해결)
+    // 같은 항목 라인(아이·카테고리[·제품명])은 "가장 최근 기록"만 유효한 일정으로 본다.
+    // 제품성 카테고리(접종·구충 등)만 제목까지 구분하고, 그 외는 카테고리 단위로 최신 1건.
     const { data } = await supabase
-      .from('vaccination_records')
-      .select('pet_id, category, vaccine_name, vaccinated_on, next_due_on')
+      .from('records')
+      .select('pet_id, category, title, event_on, next_due_on, recur_interval_days')
       .in('pet_id', petIds)
-      .order('vaccinated_on', { ascending: false })
+      .order('event_on', { ascending: false })
 
-    type CareRow = CareAlert & { vaccinated_on: string; next_due_on: string | null }
-    const latestByLine = new Map<string, CareRow>()
-    for (const r of (data ?? []) as CareRow[]) {
-      const key = `${r.pet_id}|${r.category}|${r.vaccine_name}`
-      // 시행일 내림차순 정렬이므로 각 항목의 첫 등장이 최신 기록
+    type Row = { pet_id: string; category: RecordCategory; title: string; event_on: string; next_due_on: string | null; recur_interval_days: number | null }
+    const latestByLine = new Map<string, Row>()
+    for (const r of (data ?? []) as Row[]) {
+      const key = PRODUCT_CATEGORIES.has(r.category)
+        ? `${r.pet_id}|${r.category}|${r.title}`
+        : `${r.pet_id}|${r.category}`
       if (!latestByLine.has(key)) latestByLine.set(key, r)
     }
     vaccAlerts = Array.from(latestByLine.values())
-      .filter((a): a is CareAlert & { vaccinated_on: string } => a.next_due_on != null && a.next_due_on <= soon)
+      .map(r => {
+        const due = r.next_due_on ?? (r.recur_interval_days ? addDays(r.event_on, r.recur_interval_days) : null)
+        return due ? { pet_id: r.pet_id, category: r.category, title: r.title, next_due_on: due } : null
+      })
+      .filter((a): a is CareAlert => a != null && a.next_due_on <= soon)
       .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))
   }
 
