@@ -656,7 +656,9 @@
     "addRow": "+ 직접 추가",
     "rawTextLabel": "인식된 원문 보기",
     "tesseractRunning": "🔍 무료 OCR로 인식 중… (잠시 걸릴 수 있어요)",
-    "tesseractNotice": "AI 인식이 어려워 무료 OCR로 날짜·금액만 채웠어요. 항목을 확인·보정해주세요."
+    "tesseractNotice": "AI 인식이 어려워 무료 OCR로 날짜·금액만 채웠어요. 항목을 확인·보정해주세요.",
+    "pickCamera": "📷 촬영",
+    "pickGallery": "🖼️ 갤러리"
   },
   "petDetail": {
     "errSaveFailed": "저장에 실패했어요. 다시 시도해주세요.",
