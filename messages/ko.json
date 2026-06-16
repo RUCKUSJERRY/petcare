@@ -652,8 +652,9 @@
     "saveCount": "{count}건 저장",
     "fallbackManual": "자동 인식이 어려웠어요. 아래에 직접 입력해주세요.",
     "addRow": "+ 직접 추가",
-    "clovaNotice": "AI 인식이 어려워 기본 OCR(네이버 CLOVA)로 인식했어요. 날짜·금액 위주로 채워졌으니 항목을 확인·보정해주세요.",
-    "rawTextLabel": "인식된 원문 보기"
+    "rawTextLabel": "인식된 원문 보기",
+    "tesseractRunning": "🔍 무료 OCR로 인식 중… (잠시 걸릴 수 있어요)",
+    "tesseractNotice": "AI 인식이 어려워 무료 OCR로 날짜·금액만 채웠어요. 항목을 확인·보정해주세요."
   },
   "petDetail": {
     "errSaveFailed": "저장에 실패했어요. 다시 시도해주세요.",

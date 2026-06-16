@@ -78,71 +78,10 @@ async function tryGemini(base64: string, mimeType: string): Promise<{ records: O
   }
 }
 
-const won = /(\d{1,3}(?:,\d{3})+|\d{4,})/g
-const dateRe = /(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/
-
-/** 인식 텍스트에서 날짜·금액을 휴리스틱으로 추출 */
-function heuristics(text: string): { date: string; cost: number } {
-  let date = ''
-  const dm = text.match(dateRe)
-  if (dm) date = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`
-  let cost = 0
-  const nums = Array.from(text.matchAll(won), m => parseInt(m[1].replace(/,/g, ''), 10)).filter(n => n >= 100)
-  if (nums.length) cost = Math.max(...nums) // 합계가 보통 가장 큰 값
-  return { date, cost }
-}
-
-/** 2차: 네이버 CLOVA OCR(General)로 텍스트 추출 → 휴리스틱으로 날짜/금액 채움 */
-async function tryClova(base64: string, mimeType: string): Promise<{ records: OcrRecord[]; rawText: string } | null> {
-  const url = process.env.CLOVA_OCR_INVOKE_URL
-  const secret = process.env.CLOVA_OCR_SECRET
-  if (!url || !secret) return null
-  try {
-    const format = mimeType.includes('png') ? 'png' : 'jpg'
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-OCR-SECRET': secret },
-      body: JSON.stringify({
-        version: 'V2',
-        requestId: crypto.randomUUID(),
-        timestamp: Date.now(),
-        images: [{ format, name: 'record', data: base64 }],
-      }),
-    })
-    if (!res.ok) {
-      console.error('[ocr] clova error', res.status, (await res.text().catch(() => '')).slice(0, 200))
-      return null
-    }
-    const data = await res.json()
-    const fields: { inferText?: string }[] = data?.images?.[0]?.fields ?? []
-    const rawText = fields.map(f => f.inferText ?? '').join(' ').trim()
-    if (!rawText) return null
-    const { date, cost } = heuristics(rawText)
-    // CLOVA는 구조화 분류가 약하므로 1건만 만들어 사용자가 보정하도록 한다.
-    const record: OcrRecord = {
-      type: 'medical', date, clinic: '', category: '', name: '',
-      next_due: '', reason: '', diagnosis: '', treatment: '', medication: '', cost,
-    }
-    return { records: [record], rawText: rawText.slice(0, 2000) }
-  } catch (err) {
-    console.error('[ocr] clova exception', err)
-    return null
-  }
-}
-
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-
-  const hasGemini = !!process.env.GEMINI_API_KEY
-  const hasClova = !!(process.env.CLOVA_OCR_INVOKE_URL && process.env.CLOVA_OCR_SECRET)
-  if (!hasGemini && !hasClova) {
-    return NextResponse.json(
-      { error: 'not_configured', message: 'OCR 기능이 설정되지 않았어요. (GEMINI_API_KEY 또는 CLOVA OCR 필요)' },
-      { status: 503 }
-    )
-  }
 
   let imageUrl: string | undefined
   try {
@@ -151,6 +90,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
   }
   if (!imageUrl) return NextResponse.json({ error: 'imageUrl required' }, { status: 400 })
+
+  // Gemini 미설정이면 클라이언트가 무료 OCR(Tesseract)로 폴백하도록 신호만 보낸다.
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json(
+      { error: 'not_configured', message: 'AI 인식이 설정되지 않았어요.' },
+      { status: 503 }
+    )
+  }
 
   // 이미지 내려받아 base64 인코딩
   let base64: string
@@ -168,21 +115,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'image_fetch_failed', message: '이미지를 불러오지 못했어요.' }, { status: 502 })
   }
 
-  // 1차: Gemini(LLM)
   const gemini = await tryGemini(base64, mimeType)
   if ('records' in gemini) {
     return NextResponse.json({ ok: true, records: gemini.records, source: 'gemini' })
   }
 
-  // 2차: CLOVA OCR 폴백 (설정돼 있을 때)
-  const clova = await tryClova(base64, mimeType)
-  if (clova) {
-    return NextResponse.json({ ok: true, records: clova.records, rawText: clova.rawText, source: 'clova' })
-  }
-
-  // 둘 다 실패 → 직접 입력 유도 (429면 한도 초과 안내)
+  // Gemini 실패/한도초과 → 클라이언트 무료 OCR 폴백 유도
   const message = gemini.error === 'rate_limited'
-    ? 'AI 사용량 한도를 초과했어요. 잠시 후 다시 시도하거나 아래에 직접 입력해주세요.'
-    : '진료 내용을 인식하지 못했어요. 직접 입력해주세요.'
+    ? 'AI 사용량 한도를 초과했어요. 무료 인식으로 대체할게요.'
+    : '진료 내용을 인식하지 못했어요.'
   return NextResponse.json({ error: 'ocr_failed', message }, { status: 502 })
 }
