@@ -78,6 +78,9 @@ export function RecordsScanModal({
   const [rows, setRows] = useState<Row[]>([])
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [rawText, setRawText] = useState<string | null>(null)
+  const [rawOpen, setRawOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const scan = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,7 +89,7 @@ export function RecordsScanModal({
     if (!file) return
     const invalid = validateImage(file)
     if (invalid) { setError(invalid); return }
-    setPhase('scanning'); setError(null)
+    setPhase('scanning'); setError(null); setNotice(null); setRawText(null)
     // 인식 실패해도 막히지 않도록: 업로드한 사진을 붙인 빈 입력 행으로 넘어가 직접 입력
     const fallbackToManual = (msg: string) => {
       setError(msg)
@@ -108,6 +111,11 @@ export function RecordsScanModal({
       const parsed = (json.records ?? []) as Record<string, unknown>[]
       if (parsed.length === 0) { fallbackToManual(t('errNoRecords')); return }
       setRows(parsed.map(toRow))
+      // CLOVA 폴백이면 안내 + 인식 원문 제공(LLM보다 분류가 약하므로 보정 유도)
+      if (json.source === 'clova') {
+        setNotice(t('clovaNotice'))
+        setRawText(typeof json.rawText === 'string' ? json.rawText : null)
+      }
       setPhase('review')
     } catch {
       fallbackToManual(t('fallbackManual'))
@@ -189,6 +197,18 @@ export function RecordsScanModal({
 
           {phase === 'review' && (
             <>
+              {notice && <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">{notice}</p>}
+              {rawText && (
+                <div className="rounded-lg border border-gray-200">
+                  <button type="button" onClick={() => setRawOpen(o => !o)}
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-gray-600">
+                    {rawOpen ? '▾ ' : '▸ '}{t('rawTextLabel')}
+                  </button>
+                  {rawOpen && (
+                    <pre className="px-3 pb-2 text-xs text-gray-500 whitespace-pre-wrap break-words max-h-40 overflow-y-auto">{rawText}</pre>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-gray-500">{t.rich('reviewSummary', { count: rows.length, b: (chunks) => <b>{chunks}</b> })}</p>
               {rows.map((r, i) => (
                 <div key={i} className={`rounded-xl border p-3 space-y-2 ${r.include ? 'border-gray-200' : 'border-gray-100 opacity-50'}`}>
