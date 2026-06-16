@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Pet, PostCategory, Post } from '@/types'
-import { ImagePicker } from '@/components/ui/ImagePicker'
+import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
@@ -16,7 +16,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [loaded, setLoaded] = useState(false)
   const [form, setForm] = useState({
     category: '' as PostCategory | '',
@@ -52,7 +52,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         content: post.content,
         breed_id: post.breed_id ?? '',
       })
-      setImageUrl(post.image_url)
+      setImageUrls(post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : []))
       setLoaded(true)
     }
   }, [post, loaded])
@@ -89,7 +89,8 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         title: form.title.trim(),
         content: form.content.trim(),
         breed_id: form.breed_id || null,
-        image_url: imageUrl,
+        image_url: imageUrls[0] ?? null,
+        image_urls: imageUrls.length ? imageUrls : null,
       })
       .eq('id', params.id)
     setSaving(false)
@@ -171,10 +172,10 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
           <label className="text-sm font-medium text-gray-700 block mb-1">
             사진 <span className="text-gray-400 font-normal">(선택)</span>
           </label>
-          <ImagePicker
+          <MultiImagePicker
             bucket="post-images"
-            value={imageUrl}
-            onUploaded={setImageUrl}
+            value={imageUrls}
+            onChange={setImageUrls}
             onError={setError}
           />
         </div>

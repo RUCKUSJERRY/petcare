@@ -140,6 +140,7 @@ export interface Post {
   content: string
   breed_id: string | null
   image_url: string | null
+  image_urls: string[] | null
   like_count: number
   created_at: string
   updated_at: string
@@ -197,6 +198,7 @@ export interface LostPet {
   breed_id: string | null
   gender: Gender | null
   photo_url: string | null
+  photo_urls: string[] | null
   lost_at: string        // YYYY-MM-DD
   lat: number
   lng: number
@@ -267,7 +269,8 @@ export interface PetRecord {
   place_lng: number | null
   cost: number | null
   memo: string | null
-  photo_url: string | null
+  photo_url: string | null             // 대표(첫) 사진 — 목록 썸네일 호환
+  photo_urls: string[] | null          // 사진 여러 장
   recur_rule: string | null            // 반복 규칙(JSON 직렬화). null = 1회성
   next_due_on: string | null
   created_at: string

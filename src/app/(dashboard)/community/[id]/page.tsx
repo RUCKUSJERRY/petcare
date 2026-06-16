@@ -83,7 +83,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               >
                 {t('edit')}
               </Link>
-              <DeletePostButton postId={post.id} imageUrl={post.image_url} />
+              <DeletePostButton postId={post.id} imageUrls={post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : [])} />
             </>
           )}
         </div>
@@ -115,12 +115,13 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           {post.content}
         </p>
 
-        {post.image_url && (
+        {(post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : [])).map((src: string, i: number) => (
           <ImageLightbox
-            src={post.image_url}
+            key={i}
+            src={src}
             className="w-full rounded-xl object-cover mt-2"
           />
-        )}
+        ))}
       </article>
 
       {/* 좋아요 */}

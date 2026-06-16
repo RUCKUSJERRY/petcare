@@ -74,8 +74,7 @@ export function RecordsScanModal({
   const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
-  const cameraRef = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [rows, setRows] = useState<Row[]>([])
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -160,6 +159,7 @@ export function RecordsScanModal({
         cost: r.cost ? parseInt(r.cost, 10) : null,
         next_due_on: r.next_due || null,
         photo_url: photoUrl, // 원본 영수증/이력서 사진을 함께 보관
+        photo_urls: photoUrl ? [photoUrl] : null,
       }
       const { data, error: e } = await supabase.from('records').insert(common).select('id').single()
       if (e || !data) { failed = true; continue }
@@ -200,14 +200,9 @@ export function RecordsScanModal({
             <div className="text-center py-8 space-y-3">
               <div className="text-4xl">🧾</div>
               <p className="text-sm text-gray-600">{t.rich('pickDesc', { br: () => <br /> })}</p>
-              <div className="flex items-center justify-center gap-2">
-                <button onClick={() => cameraRef.current?.click()} className="btn-primary px-5 py-2.5 text-sm">
-                  {t('pickCamera')}
-                </button>
-                <button onClick={() => galleryRef.current?.click()} className="btn-secondary px-5 py-2.5 text-sm">
-                  {t('pickGallery')}
-                </button>
-              </div>
+              <button onClick={() => inputRef.current?.click()} className="btn-primary px-5 py-2.5 text-sm">
+                {t('pickButton')}
+              </button>
               <p className="text-xs text-gray-400">{t('aiNotice')}</p>
             </div>
           )}
@@ -286,9 +281,8 @@ export function RecordsScanModal({
           </div>
         )}
 
-        {/* 촬영(카메라 강제) / 갤러리(선택) 분리 */}
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={scan} />
-        <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={scan} />
+        {/* capture 미지정: OS가 카메라/보관함/파일 선택지를 함께 띄움(표준) */}
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={scan} />
       </div>
     </div>
   )

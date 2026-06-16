@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 
-export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUrl?: string | null }) {
+export function DeletePostButton({ postId, imageUrls = [] }: { postId: string; imageUrls?: string[] }) {
   const t = useTranslations('community')
   const tc = useTranslations('common')
   const supabase = createClient()
@@ -27,7 +27,7 @@ export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUr
       return
     }
     // 첨부 이미지 정리(고아 방지)
-    if (imageUrl) deleteImageByUrl(imageUrl)
+    imageUrls.forEach(deleteImageByUrl)
     router.push('/community')
     router.refresh()
   }

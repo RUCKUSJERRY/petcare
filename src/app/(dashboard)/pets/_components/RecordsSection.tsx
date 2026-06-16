@@ -86,9 +86,13 @@ function RecordRow({
         </div>
       )}
 
-      {r.photo_url && (
-        <ImageLightbox src={r.photo_url} alt={r.title}
-          className="w-16 h-16 rounded-lg object-cover border border-gray-100" />
+      {(r.photo_urls?.length ? r.photo_urls : (r.photo_url ? [r.photo_url] : [])).length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {(r.photo_urls?.length ? r.photo_urls : [r.photo_url!]).map((u, i) => (
+            <ImageLightbox key={i} src={u} alt={r.title}
+              className="w-16 h-16 rounded-lg object-cover border border-gray-100" />
+          ))}
+        </div>
       )}
 
       {/* 상세 (있을 때만, 진입 시 조회) */}

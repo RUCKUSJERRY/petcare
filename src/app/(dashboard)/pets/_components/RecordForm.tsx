@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
 import { careCategoryIcon } from '@/lib/utils'
-import { ImagePicker } from '@/components/ui/ImagePicker'
+import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
 import { deleteImageByUrl } from '@/lib/upload'
 import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE } from '@/lib/records'
@@ -56,8 +56,9 @@ export function RecordForm({
   })
   const [cost, setCost] = useState(record?.cost != null ? String(record.cost) : '')
   const [memo, setMemo] = useState(record?.memo || '')
-  const [photoUrl, setPhotoUrl] = useState<string | null>(record?.photo_url ?? null)
-  const [existingPhoto] = useState<string | null>(record?.photo_url ?? null)
+  const initialPhotos = record?.photo_urls?.length ? record.photo_urls : (record?.photo_url ? [record.photo_url] : [])
+  const [photoUrls, setPhotoUrls] = useState<string[]>(initialPhotos)
+  const [existingPhotos] = useState<string[]>(initialPhotos)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [detail, setDetail] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -138,7 +139,8 @@ export function RecordForm({
       place_lng: place.lng,
       cost: cost ? parseInt(cost, 10) : null,
       memo: memo.trim() || null,
-      photo_url: photoUrl,
+      photo_url: photoUrls[0] ?? null,
+      photo_urls: photoUrls.length ? photoUrls : null,
       recur_rule: rule ? serializeRule(rule) : null,
       next_due_on: computedNext,
     }
@@ -164,7 +166,8 @@ export function RecordForm({
       await supabase.from(table).insert(row)
     }
 
-    if (editing && existingPhoto && existingPhoto !== photoUrl) deleteImageByUrl(existingPhoto)
+    // 편집 중 제거된 기존 사진 정리(고아 방지)
+    if (editing) existingPhotos.filter(u => !photoUrls.includes(u)).forEach(deleteImageByUrl)
 
     setSaving(false)
     qc.invalidateQueries({ queryKey: ['records', effectivePetId] })
@@ -173,7 +176,8 @@ export function RecordForm({
   }
 
   const cancel = () => {
-    if (photoUrl && photoUrl !== existingPhoto) deleteImageByUrl(photoUrl)
+    // 새로 올린(미저장) 사진 정리
+    photoUrls.filter(u => !existingPhotos.includes(u)).forEach(deleteImageByUrl)
     onCancel()
   }
 
@@ -345,8 +349,8 @@ export function RecordForm({
       {/* 사진 */}
       <div>
         <label className="text-xs text-gray-500 block mb-1">{t('photo')}</label>
-        <ImagePicker bucket="pet-photos" value={photoUrl}
-          onUploaded={url => { setPhotoUrl(url); setPhotoError(null) }} onError={setPhotoError} />
+        <MultiImagePicker bucket="pet-photos" value={photoUrls}
+          onChange={urls => { setPhotoUrls(urls); setPhotoError(null) }} onError={setPhotoError} />
         {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
       </div>
 

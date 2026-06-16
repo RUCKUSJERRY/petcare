@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { deleteImageByUrl, uploadImage, validateImage } from '@/lib/upload'
 
 /** 업로드 실패 원인을 사용자 친화적 메시지로 변환 */
-function uploadErrorMessage(err: unknown, t: (key: string) => string): string {
+export function uploadErrorMessage(err: unknown, t: (key: string) => string): string {
   const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase()
   if (msg.includes('로그인')) return t('imgErrLoginRequired')
   if (msg.includes('exceeded') || msg.includes('too large') || msg.includes('413')) {
@@ -36,8 +36,7 @@ export function ImagePicker({
   shape?: 'square' | 'circle'
 }) {
   const t = useTranslations('ui')
-  const cameraRef = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [uploading, setUploading] = useState(false)
   // 이 컴포넌트에서 업로드(아직 미저장)한 URL들. 교체/제거 시 즉시 정리한다.
@@ -103,24 +102,14 @@ export function ImagePicker({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => cameraRef.current?.click()}
-            disabled={uploading}
-            className="btn-secondary text-sm py-1.5 px-3"
-          >
-            {t('imgCamera')}
-          </button>
-          <button
-            type="button"
-            onClick={() => galleryRef.current?.click()}
-            disabled={uploading}
-            className="btn-secondary text-sm py-1.5 px-3"
-          >
-            {t('imgGallery')}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="btn-secondary text-sm py-1.5 px-3"
+        >
+          {value ? t('imgChange') : t('imgAdd')}
+        </button>
         {value && (
           <button
             type="button"
@@ -132,9 +121,8 @@ export function ImagePicker({
         )}
       </div>
 
-      {/* 촬영(카메라 강제) / 갤러리(선택) 분리 */}
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSelect} />
-      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleSelect} />
+      {/* capture 미지정: 모바일 OS가 카메라/보관함/파일 선택지를 함께 띄움(표준) */}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleSelect} />
     </div>
   )
 }

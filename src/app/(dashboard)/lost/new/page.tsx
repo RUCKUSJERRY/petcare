@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { ImagePicker } from '@/components/ui/ImagePicker'
+import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import type { Species } from '@/types'
 
@@ -23,7 +23,7 @@ export default function NewLostPage() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null)
   const [areaText, setAreaText] = useState('')
   const [query, setQuery] = useState('')
@@ -96,7 +96,8 @@ export default function NewLostPage() {
       name: form.name.trim() || null,
       species: form.species,
       gender: form.gender || null,
-      photo_url: photoUrl,
+      photo_url: photoUrls[0] ?? null,
+      photo_urls: photoUrls.length ? photoUrls : null,
       lost_at: form.lost_at,
       lat: pos.lat, lng: pos.lng,
       area_text: areaText || null,
@@ -117,7 +118,7 @@ export default function NewLostPage() {
       <form onSubmit={submit} className="space-y-4">
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1.5">{t('photoLabel')}</label>
-          <ImagePicker bucket="pet-photos" value={photoUrl} onUploaded={setPhotoUrl} onError={setError} shape="square" />
+          <MultiImagePicker bucket="pet-photos" value={photoUrls} onChange={setPhotoUrls} onError={setError} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
