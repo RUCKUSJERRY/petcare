@@ -80,7 +80,7 @@ export function SelectedPetSummary({
         </Link>
       )}
 
-      {/* 빠른 '기록' 입력 (아이 상세의 해당 폼을 바로 열어줌) */}
+      {/* 빠른 '기록' 입력 (아이 상세의 해당 폼/스캔을 바로 열어줌) */}
       <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">{t('recordSection')}</p>
       <div className="grid grid-cols-3 gap-2">
         <Link
@@ -90,16 +90,16 @@ export function SelectedPetSummary({
           <span aria-hidden>⚖️</span> {t('weight')}
         </Link>
         <Link
-          href={`/pets/${pet.id}?add=care`}
+          href={`/pets/${pet.id}?add=record`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>💉</span> {t('care')}
+          <span aria-hidden>📝</span> {t('record')}
         </Link>
         <Link
-          href={`/pets/${pet.id}?add=medical`}
+          href={`/pets/${pet.id}?scan=1`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
-          <span aria-hidden>🏥</span> {t('medical')}
+          <span aria-hidden>📷</span> {t('scan')}
         </Link>
       </div>
 

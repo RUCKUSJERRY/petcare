@@ -79,7 +79,9 @@
     "guideFood": "음식",
     "guideHealth": "건강",
     "guideActivity": "활동",
-    "guideLife": "생활"
+    "guideLife": "생활",
+    "record": "기록",
+    "scan": "스캔"
   },
   "pets": {
     "title": "내 아이",
@@ -715,6 +717,7 @@
     "freq_month": "개월",
     "freq_year": "년",
     "monthDom": "매월 {day}일",
-    "monthDow": "매월 N째주 요일"
+    "monthDow": "매월 N째주 요일",
+    "scanRecord": "📷 영수증·이력서 스캔으로 추가"
   }
 }

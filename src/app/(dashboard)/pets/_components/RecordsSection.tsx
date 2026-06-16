@@ -118,7 +118,7 @@ function RecordRow({
  * 통합 기록 섹션 (아이 상세). 진료·접종·미용·식사 등 모든 기록을 한 곳에서.
  * 목록은 공통 컬럼만 조회하고, 상세는 행을 펼칠 때 lazy 조회한다.
  */
-export function RecordsSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
+export function RecordsSection({ petId, defaultOpen = false, onScan }: { petId: string; defaultOpen?: boolean; onScan?: () => void }) {
   const t = useTranslations('records')
   const tc = useTranslations('common')
   const supabase = createClient()
@@ -158,6 +158,16 @@ export function RecordsSection({ petId, defaultOpen = false }: { petId: string; 
 
       {adding && !editingId && (
         <RecordForm petId={petId} onDone={() => { setAdding(false); invalidate() }} onCancel={() => setAdding(false)} />
+      )}
+
+      {/* 영수증·이력서 사진으로 한 번에 등록 (기록과 같은 맥락에 배치) */}
+      {onScan && !adding && !editingId && (
+        <button
+          onClick={onScan}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-primary-300 bg-primary-50 text-primary-700 text-sm font-medium"
+        >
+          {t('scanRecord')}
+        </button>
       )}
 
       {/* 카테고리 필터 */}

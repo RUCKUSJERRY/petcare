@@ -21,8 +21,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const tc = useTranslations('common')
   const router = useRouter()
   const searchParams = useSearchParams()
-  // 홈 빠른 기록 버튼에서 ?add=weight|care 로 진입하면 해당 폼을 펼친 채로 시작
+  // 홈 빠른 기록 버튼에서 ?add=weight|record 또는 ?scan=1 로 진입하면 해당 동작으로 시작
   const addTarget = searchParams.get('add')
+  const scanParam = searchParams.get('scan')
   const weightRef = useRef<HTMLDivElement>(null)
   const recordsRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -79,7 +80,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     }
   }, [pet])
 
-  // ?add=weight|care 진입 시 해당 기록 섹션으로 부드럽게 스크롤
+  // ?add=weight|record 진입 시 해당 기록 섹션으로 부드럽게 스크롤
   useEffect(() => {
     if (!pet || !addTarget) return
     const el = addTarget === 'weight' ? weightRef.current
@@ -89,6 +90,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       return () => clearTimeout(t)
     }
   }, [pet, addTarget])
+
+  // ?scan=1 진입 시 스캔 모달 열기
+  useEffect(() => {
+    if (pet && scanParam === '1') setShowScan(true)
+  }, [pet, scanParam])
 
   const handleSave = async () => {
     setSaving(true)
@@ -252,18 +258,15 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 내 아이 기록 (조회 모드에서만) */}
       {!editing && (
         <>
-          {/* 영수증·이력서 사진으로 여러 건 한 번에 등록 */}
-          <button
-            onClick={() => setShowScan(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-primary-300 bg-primary-50 text-primary-700 text-sm font-medium"
-          >
-            {t('scanButton')}
-          </button>
           <div ref={weightRef}>
             <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
           </div>
           <div ref={recordsRef}>
-            <RecordsSection petId={params.id} defaultOpen={addTarget === 'care' || addTarget === 'medical' || addTarget === 'record'} />
+            <RecordsSection
+              petId={params.id}
+              defaultOpen={addTarget === 'care' || addTarget === 'medical' || addTarget === 'record'}
+              onScan={() => setShowScan(true)}
+            />
           </div>
           <PetMembers petId={params.id} petName={pet.name} />
         </>
