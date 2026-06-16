@@ -5,11 +5,16 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
-import { addDays, careCategoryIcon, careRecommendedCycleDays } from '@/lib/utils'
+import { careCategoryIcon } from '@/lib/utils'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
 import { deleteImageByUrl } from '@/lib/upload'
 import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE } from '@/lib/records'
+import {
+  type RecurRule, type Weekday, type WeekOrdinal,
+  WEEKDAY_LABELS, WEEK_ORDINAL_LABELS,
+  parseRule, serializeRule, parseYMD, ymd, nextOccurrence, describeRule,
+} from '@/lib/recurrence'
 import type { PetRecord, RecordCategory } from '@/types'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -54,17 +59,50 @@ export function RecordForm({
   const [photoUrl, setPhotoUrl] = useState<string | null>(record?.photo_url ?? null)
   const [existingPhoto] = useState<string | null>(record?.photo_url ?? null)
   const [photoError, setPhotoError] = useState<string | null>(null)
-  const [recurOn, setRecurOn] = useState<boolean>(!!record?.recur_interval_days)
-  const [intervalDays, setIntervalDays] = useState<string>(record?.recur_interval_days ? String(record.recur_interval_days) : '')
-  const [nextDue, setNextDue] = useState<string>(record?.next_due_on || '')
-  const [dueTouched, setDueTouched] = useState<boolean>(!!record?.next_due_on)
   const [detail, setDetail] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 반복 규칙 상태
+  const initRule = parseRule(record?.recur_rule)
+  const eventWeekday = parseYMD(record?.event_on || today()).getDay() as Weekday
+  const [recurOn, setRecurOn] = useState<boolean>(!!initRule)
+  const [freq, setFreq] = useState<RecurRule['freq']>(initRule?.freq ?? 'month')
+  const [interval, setIntervalN] = useState<string>(initRule ? String(initRule.interval) : '1')
+  const [byweekday, setByweekday] = useState<Weekday[]>(
+    initRule?.freq === 'week' ? initRule.byweekday : [eventWeekday]
+  )
+  const [monthMode, setMonthMode] = useState<'dom' | 'dow'>(
+    initRule?.freq === 'month' ? initRule.mode : 'dom'
+  )
+  const [monthWeek, setMonthWeek] = useState<WeekOrdinal>(
+    initRule?.freq === 'month' && initRule.mode === 'dow' ? initRule.week : (Math.floor((parseYMD(record?.event_on || today()).getDate() - 1) / 7) + 1) as WeekOrdinal
+  )
+  // 반복이 아닐 때만 쓰는 수동 다음 예정일
+  const [manualDue, setManualDue] = useState<string>(!initRule ? (record?.next_due_on || '') : '')
+
   const effectivePetId = petId || fixedPetId || pets[0]?.id || ''
   const config = CATEGORY_CONFIG[category]
-  const recommend = careRecommendedCycleDays(category)
+
+  // 현재 입력으로부터 반복 규칙 객체 구성
+  const buildRule = (): RecurRule | null => {
+    if (!recurOn) return null
+    const iv = Math.max(1, parseInt(interval || '1', 10) || 1)
+    const wd = parseYMD(eventOn).getDay() as Weekday
+    switch (freq) {
+      case 'day': return { freq: 'day', interval: iv }
+      case 'week': return { freq: 'week', interval: iv, byweekday: byweekday.length ? byweekday : [wd] }
+      case 'month': return monthMode === 'dow'
+        ? { freq: 'month', interval: iv, mode: 'dow', week: monthWeek, weekday: wd }
+        : { freq: 'month', interval: iv, mode: 'dom' }
+      case 'year': return { freq: 'year', interval: iv }
+    }
+  }
+  const rule = buildRule()
+  // 반복이면 시작일 다음 발생일을, 아니면 수동 입력값을 다음 예정일로 사용
+  const computedNext = rule
+    ? (() => { const n = nextOccurrence(rule, parseYMD(eventOn), parseYMD(eventOn)); return n ? ymd(n) : '' })()
+    : (manualDue || null)
 
   // 편집 시 상세 테이블 값 로드
   useEffect(() => {
@@ -82,27 +120,13 @@ export function RecordForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const applyRecur = (on: boolean) => {
-    setRecurOn(on)
-    if (on) {
-      const days = intervalDays || (recommend ? String(recommend) : '')
-      setIntervalDays(days)
-      if (!dueTouched && days) setNextDue(addDays(eventOn, parseInt(days, 10)))
-    }
-  }
-  const changeInterval = (v: string) => {
-    setIntervalDays(v)
-    if (!dueTouched && v) setNextDue(addDays(eventOn, parseInt(v, 10)))
-  }
-  const changeEventOn = (v: string) => {
-    setEventOn(v)
-    if (recurOn && !dueTouched && intervalDays) setNextDue(addDays(v, parseInt(intervalDays, 10)))
-  }
+  const toggleWeekday = (w: Weekday) =>
+    setByweekday(ws => ws.includes(w) ? ws.filter(x => x !== w) : [...ws, w])
 
   const submit = async () => {
     if (!effectivePetId) { setError(t('errNoPet')); return }
     if (!title.trim()) { setError(t('errNoTitle')); return }
-    if (nextDue && nextDue < eventOn) { setError(t('errDueAfter')); return }
+    if (!recurOn && manualDue && manualDue < eventOn) { setError(t('errDueAfter')); return }
     setSaving(true); setError(null)
     const common = {
       pet_id: effectivePetId,
@@ -115,8 +139,8 @@ export function RecordForm({
       cost: cost ? parseInt(cost, 10) : null,
       memo: memo.trim() || null,
       photo_url: photoUrl,
-      recur_interval_days: recurOn && intervalDays ? parseInt(intervalDays, 10) : null,
-      next_due_on: nextDue || null,
+      recur_rule: rule ? serializeRule(rule) : null,
+      next_due_on: computedNext,
     }
 
     let recordId = record?.id
@@ -197,7 +221,7 @@ export function RecordForm({
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-xs text-gray-500 block mb-0.5">{t('date')}</label>
-          <input className="input" type="date" value={eventOn} onChange={e => changeEventOn(e.target.value)} />
+          <input className="input" type="date" value={eventOn} onChange={e => setEventOn(e.target.value)} />
         </div>
         <div>
           <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
@@ -234,26 +258,81 @@ export function RecordForm({
         </div>
       ))}
 
-      {/* 반복 설정 */}
+      {/* 반복 설정 (구글 캘린더형) */}
       <div className="rounded-lg bg-gray-50 p-2.5 space-y-2">
         <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={recurOn} onChange={e => applyRecur(e.target.checked)}
+          <input type="checkbox" checked={recurOn} onChange={e => setRecurOn(e.target.checked)}
             className="w-4 h-4 accent-primary-500" />
           {t('recurToggle')}
         </label>
-        {recurOn && (
+
+        {recurOn ? (
+          <div className="space-y-2">
+            {/* 빈도 + 간격 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 shrink-0">{t('recurEveryN')}</span>
+              <input className="input w-16 text-center" type="number" inputMode="numeric" min={1}
+                value={interval} onChange={e => setIntervalN(e.target.value)} />
+              <div className="flex bg-white rounded-lg border border-gray-200 p-0.5">
+                {(['day', 'week', 'month', 'year'] as const).map(f => (
+                  <button key={f} type="button" onClick={() => setFreq(f)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium ${freq === f ? 'bg-primary-500 text-white' : 'text-gray-500'}`}>
+                    {t(`freq_${f}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 주: 요일 선택 */}
+            {freq === 'week' && (
+              <div className="flex gap-1">
+                {WEEKDAY_LABELS.map((lab, w) => (
+                  <button key={w} type="button" onClick={() => toggleWeekday(w as Weekday)}
+                    className={`w-8 h-8 rounded-full text-xs font-medium ${byweekday.includes(w as Weekday) ? 'bg-primary-500 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                    {lab}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* 월: N일 vs N째주 요일 */}
+            {freq === 'month' && (
+              <div className="space-y-2">
+                <div className="flex gap-1.5">
+                  {(['dom', 'dow'] as const).map(m => (
+                    <button key={m} type="button" onClick={() => setMonthMode(m)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${monthMode === m ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'}`}>
+                      {m === 'dom' ? t('monthDom', { day: parseYMD(eventOn).getDate() }) : t('monthDow')}
+                    </button>
+                  ))}
+                </div>
+                {monthMode === 'dow' && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {([1, 2, 3, 4, 5, -1] as WeekOrdinal[]).map(wk => (
+                      <button key={wk} type="button" onClick={() => setMonthWeek(wk)}
+                        className={`px-2 py-1 rounded-lg text-xs font-medium border ${monthWeek === wk ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'}`}>
+                        {WEEK_ORDINAL_LABELS[String(wk)]}
+                      </button>
+                    ))}
+                    <span className="text-xs text-gray-500">{WEEKDAY_LABELS[parseYMD(eventOn).getDay()]}요일</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 규칙 요약 + 다음 예정 */}
+            <p className="text-xs text-primary-600">
+              🔁 {describeRule(rule, eventOn)}
+              {computedNext && <span className="text-gray-400"> · {t('nextScheduled', { date: computedNext })}</span>}
+            </p>
+          </div>
+        ) : (
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">{t('recurEvery')}</label>
-            <input className="input" type="number" inputMode="numeric" min={1}
-              value={intervalDays} onChange={e => changeInterval(e.target.value)} />
+            <label className="text-xs text-gray-500 block mb-0.5">{t('nextDue')}</label>
+            <input className="input" type="date" value={manualDue} onChange={e => setManualDue(e.target.value)} />
+            <p className="text-xs text-gray-400 mt-1">{t('recurHint')}</p>
           </div>
         )}
-        <div>
-          <label className="text-xs text-gray-500 block mb-0.5">{t('nextDue')}</label>
-          <input className="input" type="date" value={nextDue}
-            onChange={e => { setDueTouched(true); setNextDue(e.target.value) }} />
-        </div>
-        <p className="text-xs text-gray-400">{t('recurHint')}</p>
       </div>
 
       {/* 메모 */}

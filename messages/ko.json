@@ -708,6 +708,13 @@
     "deleteAria": "기록 삭제",
     "performedAt": "시행 {date}",
     "nextScheduled": "다음 예정 {date}",
-    "recurBadge": "{n}일 주기"
+    "recurBadge": "{n}일 주기",
+    "recurEveryN": "반복 간격",
+    "freq_day": "일",
+    "freq_week": "주",
+    "freq_month": "개월",
+    "freq_year": "년",
+    "monthDom": "매월 {day}일",
+    "monthDow": "매월 N째주 요일"
   }
 }

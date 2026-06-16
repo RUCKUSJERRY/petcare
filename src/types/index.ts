@@ -268,7 +268,7 @@ export interface PetRecord {
   cost: number | null
   memo: string | null
   photo_url: string | null
-  recur_interval_days: number | null   // null = 1회성
+  recur_rule: string | null            // 반복 규칙(JSON 직렬화). null = 1회성
   next_due_on: string | null
   created_at: string
 }
