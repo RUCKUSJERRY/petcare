@@ -31,6 +31,14 @@ type Row = {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+// 인식 실패 시 직접 입력용 빈 행
+function emptyRow(): Row {
+  return {
+    include: true, type: 'medical', date: today(), clinic: '', category: '기타',
+    name: '', next_due: '', reason: '', diagnosis: '', treatment: '', medication: '', cost: '',
+  }
+}
+
 function toRow(r: Record<string, unknown>): Row {
   const type = r.type === 'care' ? 'care' : 'medical'
   const rawCat = String(r.category ?? '')
@@ -79,6 +87,12 @@ export function RecordsScanModal({
     const invalid = validateImage(file)
     if (invalid) { setError(invalid); return }
     setPhase('scanning'); setError(null)
+    // 인식 실패해도 막히지 않도록: 업로드한 사진을 붙인 빈 입력 행으로 넘어가 직접 입력
+    const fallbackToManual = (msg: string) => {
+      setError(msg)
+      setRows([emptyRow()])
+      setPhase('review')
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('로그인이 필요해요')
@@ -90,14 +104,13 @@ export function RecordsScanModal({
         body: JSON.stringify({ imageUrl: url }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(json?.message || t('errRecognizeFailed')); setPhase('pick'); return }
+      if (!res.ok) { fallbackToManual(json?.message || t('fallbackManual')); return }
       const parsed = (json.records ?? []) as Record<string, unknown>[]
-      if (parsed.length === 0) { setError(t('errNoRecords')); setPhase('pick'); return }
+      if (parsed.length === 0) { fallbackToManual(t('errNoRecords')); return }
       setRows(parsed.map(toRow))
       setPhase('review')
     } catch {
-      setError(t('errScanFailed'))
-      setPhase('pick')
+      fallbackToManual(t('fallbackManual'))
     }
   }
 
@@ -219,6 +232,13 @@ export function RecordsScanModal({
                   )}
                 </div>
               ))}
+              <button
+                type="button"
+                onClick={() => setRows(rs => [...rs, emptyRow()])}
+                className="w-full text-sm text-primary-600 font-medium py-2 border border-dashed border-gray-200 rounded-xl hover:bg-gray-50"
+              >
+                {t('addRow')}
+              </button>
             </>
           )}
         </div>

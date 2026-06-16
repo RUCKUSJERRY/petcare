@@ -31,10 +31,13 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
   const qc = useQueryClient()
   const today = new Date().toISOString().slice(0, 10)
   const [adding, setAdding] = useState(defaultOpen)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  // 편집 중인 기록에 이미 저장돼 있던 사진(취소 시 삭제 금지 대상)
+  const [existingPhoto, setExistingPhoto] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [form, setForm] = useState({ ...EMPTY, visited_on: today })
 
@@ -55,10 +58,34 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
   const resetForm = () => {
     setForm({ ...EMPTY, visited_on: today })
     setPhotoUrl(null)
+    setExistingPhoto(null)
+    setEditingId(null)
     setPhotoError(null)
+    setError(null)
   }
 
-  const add = async () => {
+  // 기존 기록을 편집 모드로 열기
+  const startEdit = (r: MedicalRecord) => {
+    setEditingId(r.id)
+    setForm({
+      visited_on: r.visited_on,
+      clinic: r.clinic ?? '',
+      reason: r.reason ?? '',
+      diagnosis: r.diagnosis ?? '',
+      treatment: r.treatment ?? '',
+      medication: r.medication ?? '',
+      cost: r.cost != null ? String(r.cost) : '',
+      next_visit_on: r.next_visit_on ?? '',
+      note: r.note ?? '',
+    })
+    setPhotoUrl(r.photo_url)
+    setExistingPhoto(r.photo_url)
+    setError(null)
+    setPhotoError(null)
+    setAdding(true)
+  }
+
+  const submit = async () => {
     if (!form.reason.trim() && !form.diagnosis.trim()) {
       setError(t('errReasonOrDiagnosis'))
       return
@@ -68,7 +95,7 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
       return
     }
     setSaving(true); setError(null)
-    const { error: insErr } = await supabase.from('medical_records').insert({
+    const payload = {
       pet_id: petId,
       visited_on: form.visited_on,
       clinic: form.clinic.trim() || null,
@@ -80,32 +107,40 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
       next_visit_on: form.next_visit_on || null,
       note: form.note.trim() || null,
       photo_url: photoUrl,
-    })
+    }
+    const { error: saveErr } = editingId
+      ? await supabase.from('medical_records').update(payload).eq('id', editingId)
+      : await supabase.from('medical_records').insert(payload)
     setSaving(false)
-    if (insErr) {
+    if (saveErr) {
       setError(t('errSaveFailed'))
-      // 저장 실패 시 방금 올린 사진은 고아가 되므로 정리
-      if (photoUrl) deleteImageByUrl(photoUrl)
+      // 신규 저장 실패 시 방금 올린 사진은 고아가 되므로 정리 (편집 중 기존 사진은 보존)
+      if (photoUrl && photoUrl !== existingPhoto) deleteImageByUrl(photoUrl)
       return
     }
+    // 편집 중 사진을 교체/제거했다면 기존 사진 정리
+    if (editingId && existingPhoto && existingPhoto !== photoUrl) deleteImageByUrl(existingPhoto)
     resetForm()
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['medical', petId] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
   }
 
   const remove = async (r: MedicalRecord) => {
     await supabase.from('medical_records').delete().eq('id', r.id)
     if (r.photo_url) deleteImageByUrl(r.photo_url)
     setConfirmDeleteId(null)
+    if (editingId === r.id) { resetForm(); setAdding(false) }
     qc.invalidateQueries({ queryKey: ['medical', petId] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
   }
 
   const toggleAdding = () => {
     setAdding(a => {
       const next = !a
-      // 닫을 때 미저장 사진 정리
-      if (!next && photoUrl) { deleteImageByUrl(photoUrl); setPhotoUrl(null) }
-      if (!next) { setError(null) }
+      // 닫을 때 미저장으로 새로 올린 사진만 정리 (편집 중 기존 사진은 보존)
+      if (!next && photoUrl && photoUrl !== existingPhoto) deleteImageByUrl(photoUrl)
+      if (!next) resetForm()
       return next
     })
   }
@@ -179,8 +214,8 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
             {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
-          <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-            {saving ? tc('saving') : tc('save')}
+          <button onClick={submit} disabled={saving} className="btn-primary w-full py-2 text-sm">
+            {saving ? tc('saving') : editingId ? tc('edit') : tc('save')}
           </button>
         </div>
       )}
@@ -205,10 +240,16 @@ export function MedicalSection({ petId, defaultOpen = false }: { petId: string; 
                       <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">{tc('cancel')}</button>
                     </div>
                   ) : (
-                    <button onClick={() => setConfirmDeleteId(r.id)}
-                      className="ml-auto text-xs text-gray-300 hover:text-red-500 shrink-0" aria-label={t('deleteAria')}>
-                      {tc('delete')}
-                    </button>
+                    <div className="ml-auto flex items-center gap-2 shrink-0">
+                      <button onClick={() => startEdit(r)}
+                        className="text-xs text-gray-300 hover:text-primary-600">
+                        {tc('edit')}
+                      </button>
+                      <button onClick={() => setConfirmDeleteId(r.id)}
+                        className="text-xs text-gray-300 hover:text-red-500" aria-label={t('deleteAria')}>
+                        {tc('delete')}
+                      </button>
+                    </div>
                   )}
                 </div>
 

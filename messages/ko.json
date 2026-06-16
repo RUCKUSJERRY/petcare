@@ -13,7 +13,8 @@
     "saving": "저장 중...",
     "delete": "삭제",
     "close": "닫기",
-    "more": "더보기"
+    "more": "더보기",
+    "edit": "수정"
   },
   "header": {
     "myPetsAria": "내 아이 관리",
@@ -525,7 +526,13 @@
     "goToday": "오늘로",
     "pickDate": "날짜를 선택하세요",
     "countSuffix": "· {count}건",
-    "noScheduleThisDay": "이 날에는 예정된 일정이 없어요"
+    "noScheduleThisDay": "이 날에는 예정된 일정이 없어요",
+    "searchPlaceholder": "기록 검색 (항목·병원·진단 등)",
+    "searchResults": "검색 결과 {count}건",
+    "searchEmpty": "검색 결과가 없어요",
+    "addScan": "사진/스캔",
+    "scanNeedPet": "상단에서 아이를 먼저 선택한 뒤 스캔해주세요.",
+    "historyLabel": "지난 기록"
   },
   "walkSocial": {
     "anonymousOwner": "익명의 보호자",
@@ -641,7 +648,9 @@
     "diagnosisPlaceholder": "진단/사유",
     "treatmentPlaceholder": "처치/처방",
     "costPlaceholder": "비용(원)",
-    "saveCount": "{count}건 저장"
+    "saveCount": "{count}건 저장",
+    "fallbackManual": "자동 인식이 어려웠어요. 아래에 직접 입력해주세요.",
+    "addRow": "+ 직접 추가"
   },
   "petDetail": {
     "errSaveFailed": "저장에 실패했어요. 다시 시도해주세요.",

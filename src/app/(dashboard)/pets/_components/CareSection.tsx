@@ -33,6 +33,7 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
   const supabase = createClient()
   const qc = useQueryClient()
   const [adding, setAdding] = useState(defaultOpen)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -70,33 +71,68 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
     },
   })
 
-  const add = async () => {
+  const resetForm = () => {
+    const now = new Date().toISOString().slice(0, 10)
+    setForm({ category: '접종', vaccine_name: '', vaccinated_on: now, next_due_on: suggestDue('접종', now), clinic: '' })
+    setDueTouched(false)
+    setEditingId(null)
+    setError(null)
+  }
+
+  // 추가 폼 토글 (닫을 때 편집 상태·입력값 초기화)
+  const toggleAdding = () => {
+    setAdding(a => {
+      if (a) resetForm()
+      return !a
+    })
+  }
+
+  // 기존 기록을 편집 모드로 열기 (폼에 값 채움)
+  const startEdit = (r: CareRecord) => {
+    setEditingId(r.id)
+    setDueTouched(true) // 기존 값 보존 (카테고리/날짜 바꿔도 자동 덮어쓰지 않음)
+    setForm({
+      category: r.category,
+      vaccine_name: r.vaccine_name,
+      vaccinated_on: r.vaccinated_on,
+      next_due_on: r.next_due_on ?? '',
+      clinic: r.clinic ?? '',
+    })
+    setError(null)
+    setAdding(true)
+  }
+
+  const submit = async () => {
     if (!form.vaccine_name.trim()) { setError(t('errNameRequired')); return }
     if (form.next_due_on && form.next_due_on < form.vaccinated_on) {
       setError(t('errDueAfter')); return
     }
     setSaving(true); setError(null)
-    const { error: insErr } = await supabase.from('vaccination_records').insert({
+    const payload = {
       pet_id: petId,
       category: form.category,
       vaccine_name: form.vaccine_name.trim(),
       vaccinated_on: form.vaccinated_on,
       next_due_on: form.next_due_on || null,
       clinic: form.clinic.trim() || null,
-    })
+    }
+    const { error: saveErr } = editingId
+      ? await supabase.from('vaccination_records').update(payload).eq('id', editingId)
+      : await supabase.from('vaccination_records').insert(payload)
     setSaving(false)
-    if (insErr) { setError(t('errSaveFailed')); return }
-    const now = new Date().toISOString().slice(0, 10)
-    setForm({ category: '접종', vaccine_name: '', vaccinated_on: now, next_due_on: suggestDue('접종', now), clinic: '' })
-    setDueTouched(false)
+    if (saveErr) { setError(t('errSaveFailed')); return }
+    resetForm()
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['care', petId] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
   }
 
   const remove = async (id: string) => {
     await supabase.from('vaccination_records').delete().eq('id', id)
     setConfirmDeleteId(null)
+    if (editingId === id) { resetForm(); setAdding(false) }
     qc.invalidateQueries({ queryKey: ['care', petId] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
   }
 
   return (
@@ -107,7 +143,7 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
           <p className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</p>
         </div>
         <button
-          onClick={() => setAdding(a => !a)}
+          onClick={toggleAdding}
           className="text-sm text-primary-600 font-semibold"
         >
           {adding ? tc('cancel') : t('addRecord')}
@@ -165,8 +201,8 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
             onChange={e => setForm(f => ({ ...f, clinic: e.target.value }))}
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
-          <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-            {saving ? tc('saving') : tc('save')}
+          <button onClick={submit} disabled={saving} className="btn-primary w-full py-2 text-sm">
+            {saving ? tc('saving') : editingId ? tc('edit') : tc('save')}
           </button>
         </div>
       )}
@@ -210,13 +246,21 @@ export function CareSection({ petId, defaultOpen = false }: { petId: string; def
                       <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400">{tc('cancel')}</button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setConfirmDeleteId(r.id)}
-                      className="ml-auto text-xs text-gray-300 hover:text-red-500 shrink-0"
-                      aria-label={t('deleteAria')}
-                    >
-                      {tc('delete')}
-                    </button>
+                    <div className="ml-auto flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => startEdit(r)}
+                        className="text-xs text-gray-300 hover:text-primary-600"
+                      >
+                        {tc('edit')}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(r.id)}
+                        className="text-xs text-gray-300 hover:text-red-500"
+                        aria-label={t('deleteAria')}
+                      >
+                        {tc('delete')}
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
