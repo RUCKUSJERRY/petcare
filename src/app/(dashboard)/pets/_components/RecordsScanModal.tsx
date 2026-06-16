@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { uploadImage, validateImage } from '@/lib/upload'
+import { parseOcrText, recognizeImageText } from '@/lib/ocr'
 import type { RecordCategory } from '@/types'
 
 const CARE_CATEGORIES: RecordCategory[] = [
@@ -78,6 +79,9 @@ export function RecordsScanModal({
   const [rows, setRows] = useState<Row[]>([])
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [rawText, setRawText] = useState<string | null>(null)
+  const [rawOpen, setRawOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const scan = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,12 +90,28 @@ export function RecordsScanModal({
     if (!file) return
     const invalid = validateImage(file)
     if (invalid) { setError(invalid); return }
-    setPhase('scanning'); setError(null)
-    // 인식 실패해도 막히지 않도록: 업로드한 사진을 붙인 빈 입력 행으로 넘어가 직접 입력
+    setPhase('scanning'); setError(null); setNotice(null); setRawText(null)
+    // 인식 실패해도 막히지 않도록: 빈 입력 행으로 넘어가 직접 입력
     const fallbackToManual = (msg: string) => {
       setError(msg)
       setRows([emptyRow()])
       setPhase('review')
+    }
+    // 2차: 브라우저 무료 OCR(Tesseract) — 날짜·금액만 채우고 원문 제공
+    const localFallback = async () => {
+      setNotice(t('tesseractRunning'))
+      try {
+        const text = await recognizeImageText(file)
+        if (!text) { fallbackToManual(t('fallbackManual')); setNotice(null); return }
+        const { date, cost } = parseOcrText(text)
+        setRows([{ ...emptyRow(), date: date || today(), cost: cost ? String(cost) : '' }])
+        setRawText(text.slice(0, 2000))
+        setNotice(t('tesseractNotice'))
+        setPhase('review')
+      } catch {
+        setNotice(null)
+        fallbackToManual(t('fallbackManual'))
+      }
     }
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -104,13 +124,16 @@ export function RecordsScanModal({
         body: JSON.stringify({ imageUrl: url }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { fallbackToManual(json?.message || t('fallbackManual')); return }
-      const parsed = (json.records ?? []) as Record<string, unknown>[]
-      if (parsed.length === 0) { fallbackToManual(t('errNoRecords')); return }
-      setRows(parsed.map(toRow))
-      setPhase('review')
+      const parsed = (res.ok ? (json.records ?? []) : []) as Record<string, unknown>[]
+      // LLM 성공 → 그대로 사용. 실패/빈결과 → 무료 OCR 폴백
+      if (parsed.length > 0) {
+        setRows(parsed.map(toRow))
+        setPhase('review')
+      } else {
+        await localFallback()
+      }
     } catch {
-      fallbackToManual(t('fallbackManual'))
+      await localFallback()
     }
   }
 
@@ -189,6 +212,18 @@ export function RecordsScanModal({
 
           {phase === 'review' && (
             <>
+              {notice && <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">{notice}</p>}
+              {rawText && (
+                <div className="rounded-lg border border-gray-200">
+                  <button type="button" onClick={() => setRawOpen(o => !o)}
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-gray-600">
+                    {rawOpen ? '▾ ' : '▸ '}{t('rawTextLabel')}
+                  </button>
+                  {rawOpen && (
+                    <pre className="px-3 pb-2 text-xs text-gray-500 whitespace-pre-wrap break-words max-h-40 overflow-y-auto">{rawText}</pre>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-gray-500">{t.rich('reviewSummary', { count: rows.length, b: (chunks) => <b>{chunks}</b> })}</p>
               {rows.map((r, i) => (
                 <div key={i} className={`rounded-xl border p-3 space-y-2 ${r.include ? 'border-gray-200' : 'border-gray-100 opacity-50'}`}>

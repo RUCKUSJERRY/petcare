@@ -7,6 +7,8 @@ export const maxDuration = 30
 // Gemini 모델 (무료 등급 가능). 필요 시 GEMINI_MODEL로 교체.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 
+type OcrRecord = Record<string, unknown>
+
 // 한 이미지에서 여러 건(이력서·접종증명서 등)을 추출하기 위한 배열 스키마.
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -44,18 +46,42 @@ const PROMPT = `너는 동물병원 영수증·세부내역서·진료이력서�
 - cost는 콤마·'원' 제거한 숫자. 합계만 있으면 합계를 첫 건에 넣어도 돼.
 - 확실하지 않은 값은 비워 둬(빈 문자열 또는 0). 없는 정보를 지어내지 마.`
 
+/** 1차: Gemini(LLM)로 구조화 추출. 실패/미설정/쿼터초과면 null + 사유 반환 */
+async function tryGemini(base64: string, mimeType: string): Promise<{ records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return { error: 'not_configured' }
+  try {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
+        generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA },
+      }),
+    })
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      console.error('[ocr] gemini error', res.status, detail.slice(0, 200))
+      return { error: res.status === 429 ? 'rate_limited' : 'failed' }
+    }
+    const data = await res.json()
+    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) return { error: 'failed' }
+    const parsed = JSON.parse(text)
+    const records = Array.isArray(parsed?.records) ? parsed.records : []
+    if (records.length === 0) return { error: 'failed' }
+    return { records }
+  } catch (err) {
+    console.error('[ocr] gemini exception', err)
+    return { error: 'failed' }
+  }
+}
+
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'not_configured', message: 'OCR 기능이 설정되지 않았어요. (GEMINI_API_KEY 필요)' },
-      { status: 503 }
-    )
-  }
 
   let imageUrl: string | undefined
   try {
@@ -65,7 +91,15 @@ export async function POST(req: Request) {
   }
   if (!imageUrl) return NextResponse.json({ error: 'imageUrl required' }, { status: 400 })
 
-  // 1) 이미지 내려받아 base64 인코딩
+  // Gemini 미설정이면 클라이언트가 무료 OCR(Tesseract)로 폴백하도록 신호만 보낸다.
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json(
+      { error: 'not_configured', message: 'AI 인식이 설정되지 않았어요.' },
+      { status: 503 }
+    )
+  }
+
+  // 이미지 내려받아 base64 인코딩
   let base64: string
   let mimeType: string
   try {
@@ -81,58 +115,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'image_fetch_failed', message: '이미지를 불러오지 못했어요.' }, { status: 502 })
   }
 
-  // 2) Gemini 호출
-  try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: PROMPT },
-              { inline_data: { mime_type: mimeType, data: base64 } },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0,
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-        },
-      }),
-    })
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      console.error('[ocr] gemini error', res.status, detail.slice(0, 300))
-      // 429: 무료 등급 사용량 한도 초과 — 코드 문제가 아님을 명확히 안내
-      if (res.status === 429) {
-        return NextResponse.json(
-          { error: 'rate_limited', message: 'AI 사용량 한도를 초과했어요. 잠시 후 다시 시도하거나 아래에 직접 입력해주세요.' },
-          { status: 429 }
-        )
-      }
-      return NextResponse.json(
-        { error: 'ocr_failed', message: '진료 내용을 인식하지 못했어요. 직접 입력해주세요.' },
-        { status: 502 }
-      )
-    }
-
-    const data = await res.json()
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) {
-      return NextResponse.json({ error: 'empty_result', message: '인식 결과가 비어 있어요.' }, { status: 502 })
-    }
-    const parsed = JSON.parse(text)
-    const records = Array.isArray(parsed?.records) ? parsed.records : []
-    return NextResponse.json({ ok: true, records })
-  } catch (err) {
-    console.error('[ocr] error', err)
-    return NextResponse.json(
-      { error: 'ocr_failed', message: '진료 내용을 인식하지 못했어요. 직접 입력해주세요.' },
-      { status: 502 }
-    )
+  const gemini = await tryGemini(base64, mimeType)
+  if ('records' in gemini) {
+    return NextResponse.json({ ok: true, records: gemini.records, source: 'gemini' })
   }
+
+  // Gemini 실패/한도초과 → 클라이언트 무료 OCR 폴백 유도
+  const message = gemini.error === 'rate_limited'
+    ? 'AI 사용량 한도를 초과했어요. 무료 인식으로 대체할게요.'
+    : '진료 내용을 인식하지 못했어요.'
+  return NextResponse.json({ error: 'ocr_failed', message }, { status: 502 })
 }
