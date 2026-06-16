@@ -12,20 +12,16 @@ import { ImagePicker } from '@/components/ui/ImagePicker'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
-import { RecordsSection } from '../_components/RecordsSection'
 import { PetMembers } from '../_components/PetMembers'
-import { RecordsScanModal } from '../_components/RecordsScanModal'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const t = useTranslations('petDetail')
   const tc = useTranslations('common')
   const router = useRouter()
   const searchParams = useSearchParams()
-  // 홈 빠른 기록 버튼에서 ?add=weight|record 또는 ?scan=1 로 진입하면 해당 동작으로 시작
+  // 홈 빠른 기록 버튼에서 ?add=weight 로 진입하면 체중 폼을 펼친 채로 시작
   const addTarget = searchParams.get('add')
-  const scanParam = searchParams.get('scan')
   const weightRef = useRef<HTMLDivElement>(null)
-  const recordsRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
@@ -34,7 +30,6 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showScan, setShowScan] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [uid, setUid] = useState<string | null>(null)
@@ -80,21 +75,15 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     }
   }, [pet])
 
-  // ?add=weight|record 진입 시 해당 기록 섹션으로 부드럽게 스크롤
+  // ?add=weight 진입 시 체중 섹션으로 부드럽게 스크롤
   useEffect(() => {
-    if (!pet || !addTarget) return
-    const el = addTarget === 'weight' ? weightRef.current
-      : (addTarget === 'care' || addTarget === 'medical' || addTarget === 'record') ? recordsRef.current : null
+    if (!pet || addTarget !== 'weight') return
+    const el = weightRef.current
     if (el) {
       const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
       return () => clearTimeout(t)
     }
   }, [pet, addTarget])
-
-  // ?scan=1 진입 시 스캔 모달 열기
-  useEffect(() => {
-    if (pet && scanParam === '1') setShowScan(true)
-  }, [pet, scanParam])
 
   const handleSave = async () => {
     setSaving(true)
@@ -261,13 +250,6 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           <div ref={weightRef}>
             <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
           </div>
-          <div ref={recordsRef}>
-            <RecordsSection
-              petId={params.id}
-              defaultOpen={addTarget === 'care' || addTarget === 'medical' || addTarget === 'record'}
-              onScan={() => setShowScan(true)}
-            />
-          </div>
           <PetMembers petId={params.id} petName={pet.name} />
         </>
       )}
@@ -285,11 +267,6 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         >
           {t('deletePet')}
         </button>
-      )}
-
-      {/* 사진 스캔으로 기록 추가 모달 */}
-      {showScan && (
-        <RecordsScanModal petId={params.id} onClose={() => setShowScan(false)} />
       )}
 
       {/* 삭제 확인 모달 */}

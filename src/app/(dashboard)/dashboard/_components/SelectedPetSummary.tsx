@@ -90,13 +90,13 @@ export function SelectedPetSummary({
           <span aria-hidden>⚖️</span> {t('weight')}
         </Link>
         <Link
-          href={`/pets/${pet.id}?add=record`}
+          href={`/schedule?pet=${pet.id}&add=1`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
           <span aria-hidden>📝</span> {t('record')}
         </Link>
         <Link
-          href={`/pets/${pet.id}?scan=1`}
+          href={`/schedule?pet=${pet.id}&scan=1`}
           className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
           <span aria-hidden>📷</span> {t('scan')}

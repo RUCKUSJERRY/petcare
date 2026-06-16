@@ -57,13 +57,15 @@ export default function SchedulePage() {
   const [detailId, setDetailId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // ?focus=YYYY-MM-DD&pet=ID 로 진입하면 캘린더의 해당 날짜로 포커싱
+  // ?focus / ?pet / ?add / ?scan 로 진입하면 해당 동작 수행 (대시보드 바로가기 등)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const focus = params.get('focus')
     const pet = params.get('pet')
     if (pet) setSelectedPetId(pet)
     if (focus) { setView('calendar'); setFocusDate(focus) }
+    if (params.get('add') === '1') setShowAdd(true)
+    if (params.get('scan') === '1') setShowScan(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
