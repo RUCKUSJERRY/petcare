@@ -36,7 +36,8 @@ export function ImagePicker({
   shape?: 'square' | 'circle'
 }) {
   const t = useTranslations('ui')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [uploading, setUploading] = useState(false)
   // 이 컴포넌트에서 업로드(아직 미저장)한 URL들. 교체/제거 시 즉시 정리한다.
@@ -68,7 +69,7 @@ export function ImagePicker({
       onError?.(uploadErrorMessage(err, t))
     } finally {
       setUploading(false)
-      if (inputRef.current) inputRef.current.value = ''
+      e.target.value = '' // 같은 파일 재선택 허용
     }
   }
 
@@ -102,14 +103,24 @@ export function ImagePicker({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="btn-secondary text-sm py-1.5 px-3"
-        >
-          {value ? t('imgChange') : t('imgAdd')}
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => cameraRef.current?.click()}
+            disabled={uploading}
+            className="btn-secondary text-sm py-1.5 px-3"
+          >
+            {t('imgCamera')}
+          </button>
+          <button
+            type="button"
+            onClick={() => galleryRef.current?.click()}
+            disabled={uploading}
+            className="btn-secondary text-sm py-1.5 px-3"
+          >
+            {t('imgGallery')}
+          </button>
+        </div>
         {value && (
           <button
             type="button"
@@ -121,13 +132,9 @@ export function ImagePicker({
         )}
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleSelect}
-      />
+      {/* 촬영(카메라 강제) / 갤러리(선택) 분리 */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSelect} />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleSelect} />
     </div>
   )
 }

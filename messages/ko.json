@@ -612,7 +612,9 @@
     "imgErrNetwork": "연결이 불안정해요. 네트워크를 확인하고 다시 시도해주세요.",
     "imgErrGeneric": "업로드에 실패했어요. 다시 시도해주세요.",
     "filterPrev": "이전 필터 보기",
-    "filterNext": "다음 필터 보기"
+    "filterNext": "다음 필터 보기",
+    "imgCamera": "📷 촬영",
+    "imgGallery": "🖼️ 갤러리"
   },
   "petMembers": {
     "title": "공동 관리",
