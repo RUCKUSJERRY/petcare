@@ -430,7 +430,40 @@
     "empty": "아직 기록이 없어요",
     "deleteConfirm": "삭제할까요?",
     "collapse": "접기",
-    "showMore": "이전 기록 {count}건 더 보기"
+    "showMore": "이전 기록 {count}건 더 보기",
+    "goalLabel": "목표 체중",
+    "goalPlaceholder": "kg",
+    "goalSet": "+ 목표 설정",
+    "goalReached": "목표 달성 🎉",
+    "goalRemain": "{dir} {kg}kg",
+    "goalLose": "감량",
+    "goalGain": "증량"
+  },
+  "feed": {
+    "title": "급여량 계산기",
+    "subtitle": "체중·활동량으로 하루 권장 칼로리·사료량 계산",
+    "expand": "열기",
+    "collapse": "접기",
+    "weightLabel": "현재 체중 (kg)",
+    "weightPlaceholder": "예: 5.2",
+    "factorLabel": "활동·생애 단계",
+    "factor": {
+      "neutered": "중성화 성견·성묘",
+      "intact": "미중성화",
+      "active": "활동량 많음",
+      "growth": "성장기 (퍼피·키튼)",
+      "senior": "시니어·저활동",
+      "weightLoss": "비만·감량"
+    },
+    "densityLabel": "사료 100g당 kcal",
+    "mealsLabel": "하루 끼니",
+    "mealsN": "{n}끼",
+    "mealsUnit": "끼",
+    "resultMer": "하루 권장 칼로리",
+    "resultGrams": "하루 권장 사료량",
+    "resultPerMeal": "한 끼 분량",
+    "enterWeight": "체중을 입력하면 계산돼요",
+    "disclaimer": "일반적인 RER/MER 공식 기반 참고값입니다. 사료 포장의 권장 급여량과 수의사 상담을 우선하세요. 사료 100g당 kcal는 제품 영양성분표에서 확인할 수 있어요."
   },
   "care": {
     "title": "관리 기록",
@@ -535,7 +568,12 @@
     "addScan": "사진/스캔",
     "scanNeedPet": "상단에서 아이를 먼저 선택한 뒤 스캔해주세요.",
     "historyLabel": "지난 기록",
-    "addTitleItem": "기록 추가"
+    "addTitleItem": "기록 추가",
+    "exportRecords": "기록 내보내기",
+    "exporting": "준비 중…",
+    "exportHeadingPet": "{name} 건강·관리 기록",
+    "exportHeadingAll": "전체 반려동물 기록",
+    "exportPopupBlocked": "팝업이 차단됐어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해주세요."
   },
   "walkSocial": {
     "anonymousOwner": "익명의 보호자",

@@ -13,6 +13,7 @@ import { RecordForm } from '../pets/_components/RecordForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { RecordsScanModal } from '../pets/_components/RecordsScanModal'
 import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
+import { buildRecordsHtml, openPrintWindow, type ExportRecord } from '@/lib/exportRecords'
 import { useTranslations } from 'next-intl'
 import type { RecordCategory } from '@/types'
 
@@ -163,6 +164,37 @@ export default function SchedulePage() {
     setShowScan(true)
   }
 
+  const [exporting, setExporting] = useState(false)
+  const exportRecords = async () => {
+    setMenuOpen(false)
+    setExporting(true)
+    try {
+      const petIds = selectedPetId ? [selectedPetId] : Array.from(new Set(history.map(h => h.pet_id)))
+      let rows: ExportRecord[] = []
+      if (petIds.length > 0) {
+        const { data } = await supabase
+          .from('records')
+          .select('category, title, event_on, place_name, cost, memo, pet:pets(name)')
+          .in('pet_id', petIds)
+          .order('event_on', { ascending: false })
+        rows = ((data ?? []) as unknown as Array<{
+          category: string; title: string; event_on: string
+          place_name: string | null; cost: number | null; memo: string | null
+          pet: { name: string } | null
+        }>).map(r => ({
+          pet_name: r.pet?.name ?? '',
+          category: r.category, title: r.title, event_on: r.event_on,
+          place_name: r.place_name, cost: r.cost, memo: r.memo,
+        }))
+      }
+      const heading = selectedName ? t('exportHeadingPet', { name: selectedName }) : t('exportHeadingAll')
+      const ok = openPrintWindow(buildRecordsHtml(heading, rows))
+      if (!ok) alert(t('exportPopupBlocked'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const Row = ({ i }: { i: ScheduleItem }) => {
     const badge = ddayBadge(i.next_due_on)
     const daysSince = i.last_on ? Math.max(0, -daysUntil(i.last_on)) : null
@@ -241,6 +273,11 @@ export default function SchedulePage() {
                 <button role="menuitem" onClick={openScan}
                   className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                   📷 {t('addScan')}
+                </button>
+                <div className="my-1 border-t border-gray-100" />
+                <button role="menuitem" onClick={exportRecords} disabled={exporting}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  📄 {exporting ? t('exporting') : t('exportRecords')}
                 </button>
               </div>
             )}

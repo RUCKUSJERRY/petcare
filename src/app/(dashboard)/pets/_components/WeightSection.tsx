@@ -21,6 +21,10 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
     measured_on: new Date().toISOString().slice(0, 10),
   })
 
+  const [editingGoal, setEditingGoal] = useState(false)
+  const [goalInput, setGoalInput] = useState('')
+  const [goalSaving, setGoalSaving] = useState(false)
+
   const { data: logs = [] } = useQuery({
     queryKey: ['weight_logs', petId],
     queryFn: async () => {
@@ -32,6 +36,28 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
       return (data ?? []) as WeightLog[]
     },
   })
+
+  // 목표 체중 (pets.target_weight_kg)
+  const { data: targetWeight = null } = useQuery({
+    queryKey: ['pet_target', petId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pets')
+        .select('target_weight_kg')
+        .eq('id', petId)
+        .single()
+      return (data?.target_weight_kg ?? null) as number | null
+    },
+  })
+
+  const saveGoal = async (value: number | null) => {
+    setGoalSaving(true)
+    await supabase.from('pets').update({ target_weight_kg: value }).eq('id', petId)
+    setGoalSaving(false)
+    setEditingGoal(false)
+    qc.invalidateQueries({ queryKey: ['pet_target', petId] })
+    qc.invalidateQueries({ queryKey: ['my-pets'] })
+  }
 
   const add = async () => {
     const w = parseFloat(form.weight_kg)
@@ -58,6 +84,8 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   const latest = logs.length ? logs[logs.length - 1] : null
   const prev = logs.length > 1 ? logs[logs.length - 2] : null
   const diff = latest && prev ? +(latest.weight_kg - prev.weight_kg).toFixed(2) : null
+  // 목표까지 남은 양 (+면 감량, -면 증량 필요)
+  const toGoal = latest && targetWeight ? +(latest.weight_kg - targetWeight).toFixed(2) : null
 
   const reversedLogs = [...logs].reverse()
   const visibleLogs = showAll ? reversedLogs : reversedLogs.slice(0, 5)
@@ -87,8 +115,43 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
         </div>
       )}
 
+      {/* 목표 체중 */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-gray-400">{t('goalLabel')}</span>
+        {editingGoal ? (
+          <div className="flex items-center gap-1.5 ml-auto">
+            <input
+              className="input py-1 w-24 text-sm"
+              type="number" step="0.1" min="0"
+              placeholder={t('goalPlaceholder')}
+              value={goalInput}
+              onChange={e => setGoalInput(e.target.value)}
+              autoFocus
+            />
+            <button
+              onClick={() => { const v = parseFloat(goalInput); saveGoal(v > 0 ? v : null) }}
+              disabled={goalSaving}
+              className="text-xs text-primary-600 font-semibold"
+            >{tc('save')}</button>
+            <button onClick={() => setEditingGoal(false)} className="text-xs text-gray-400">{tc('cancel')}</button>
+          </div>
+        ) : targetWeight ? (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="font-semibold text-gray-700">{targetWeight}kg</span>
+            {toGoal !== null && (
+              <span className={`text-xs font-medium ${Math.abs(toGoal) < 0.05 ? 'text-green-600' : toGoal > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                {Math.abs(toGoal) < 0.05 ? t('goalReached') : t('goalRemain', { kg: Math.abs(toGoal), dir: toGoal > 0 ? t('goalLose') : t('goalGain') })}
+              </span>
+            )}
+            <button onClick={() => { setGoalInput(String(targetWeight)); setEditingGoal(true) }} className="text-xs text-gray-400">{tc('edit')}</button>
+          </div>
+        ) : (
+          <button onClick={() => { setGoalInput(''); setEditingGoal(true) }} className="ml-auto text-xs text-primary-600 font-medium">{t('goalSet')}</button>
+        )}
+      </div>
+
       {/* 추이 그래프 */}
-      {logs.length >= 2 && <WeightChart logs={logs} />}
+      {logs.length >= 2 && <WeightChart logs={logs} goal={targetWeight} />}
 
       {/* 추가 폼 */}
       {adding && (
@@ -167,8 +230,8 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   )
 }
 
-/** 의존성 없는 SVG 체중 추이 차트 (y축 라벨·영역·기준선·최근값 강조) */
-function WeightChart({ logs }: { logs: WeightLog[] }) {
+/** 의존성 없는 SVG 체중 추이 차트 (y축 라벨·영역·기준선·목표선·최근값 강조) */
+function WeightChart({ logs, goal = null }: { logs: WeightLog[]; goal?: number | null }) {
   const W = 300, H = 120
   const padL = 34, padR = 10, padT = 12, padB = 20 // 좌측 y라벨/하단 날짜 여백
   const innerW = W - padL - padR
@@ -177,10 +240,13 @@ function WeightChart({ logs }: { logs: WeightLog[] }) {
   const weights = logs.map(l => l.weight_kg)
   const rawMin = Math.min(...weights)
   const rawMax = Math.max(...weights)
+  // 목표선이 데이터 범위 밖이면 보이도록 범위에 포함
+  const lo = goal != null ? Math.min(rawMin, goal) : rawMin
+  const hi = goal != null ? Math.max(rawMax, goal) : rawMax
   // 위아래 약간의 여백을 둬 선이 가장자리에 붙지 않게
-  const span = rawMax - rawMin || 1
-  const min = rawMin - span * 0.15
-  const max = rawMax + span * 0.15
+  const span = hi - lo || 1
+  const min = lo - span * 0.15
+  const max = hi + span * 0.15
   const range = max - min || 1
 
   const x = (i: number) => padL + (logs.length === 1 ? innerW / 2 : (i / (logs.length - 1)) * innerW)
@@ -212,6 +278,14 @@ function WeightChart({ logs }: { logs: WeightLog[] }) {
           </g>
         )
       })}
+
+      {/* 목표 체중선 (점선) */}
+      {goal != null && (
+        <g>
+          <line x1={padL} y1={y(goal)} x2={W - padR} y2={y(goal)} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" />
+          <text x={W - padR} y={Math.max(y(goal) - 3, padT + 8)} textAnchor="end" fontSize="9" fontWeight="600" fill="#d97706">목표 {goal}kg</text>
+        </g>
+      )}
 
       {/* 영역 + 선 */}
       <path d={area} fill="url(#wfill)" />

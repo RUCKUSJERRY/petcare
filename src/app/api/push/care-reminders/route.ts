@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   // 오늘~내일 예정 (+ force가 아니면 오늘 아직 리마인드 안 한 것만)
   let query = admin
     .from('records')
-    .select('id, category, title, next_due_on, last_reminded_on, pet:pets(user_id, name)')
+    .select('id, pet_id, category, title, next_due_on, last_reminded_on, pet:pets(user_id, name)')
     .gte('next_due_on', today)
     .lte('next_due_on', tomorrow)
   if (!force) query = query.or(`last_reminded_on.is.null,last_reminded_on.lt.${today}`)
@@ -48,6 +48,7 @@ export async function GET(req: Request) {
 
   type Row = {
     id: string
+    pet_id: string
     category: string
     title: string
     next_due_on: string
@@ -55,18 +56,39 @@ export async function GET(req: Request) {
   }
   const rows = (data ?? []) as unknown as Row[]
 
+  // 공동 관리자(pet_members)에게도 발송하기 위해 반려동물별 구성원 user_id를 조회한다.
+  // (소유자뿐 아니라 함께 돌보는 가족 전원이 D-day 알림을 받도록)
+  const petIds = Array.from(new Set(rows.map(r => r.pet_id)))
+  const membersByPet = new Map<string, string[]>()
+  if (petIds.length > 0) {
+    const { data: members } = await admin
+      .from('pet_members')
+      .select('pet_id, user_id')
+      .in('pet_id', petIds)
+    for (const m of (members ?? []) as { pet_id: string; user_id: string }[]) {
+      const list = membersByPet.get(m.pet_id) ?? []
+      list.push(m.user_id)
+      membersByPet.set(m.pet_id, list)
+    }
+  }
+
   let sent = 0
   for (const r of rows) {
-    if (!r.pet?.user_id) continue
+    // 구성원 목록이 없으면(예외) 소유자에게 폴백
+    const recipients = membersByPet.get(r.pet_id) ?? (r.pet?.user_id ? [r.pet.user_id] : [])
+    if (recipients.length === 0) continue
+    const petName = r.pet?.name ?? ''
     const badge = ddayBadge(r.next_due_on)
-    await sendPushToUser(r.pet.user_id, {
-      title: `${careCategoryIcon(r.category)} 건강 일정 ${badge.text}`,
-      body: `${r.pet.name} · ${r.category} (${r.title}) 예정일이 다가와요`,
-      url: '/schedule',
-      tag: `care-${r.id}`,
-    })
+    for (const uid of recipients) {
+      await sendPushToUser(uid, {
+        title: `${careCategoryIcon(r.category)} 건강 일정 ${badge.text}`,
+        body: `${petName} · ${r.category} (${r.title}) 예정일이 다가와요`,
+        url: '/schedule',
+        tag: `care-${r.id}`,
+      })
+      sent++
+    }
     await admin.from('records').update({ last_reminded_on: today }).eq('id', r.id)
-    sent++
   }
 
   const result = { processed: rows.length, sent, force }

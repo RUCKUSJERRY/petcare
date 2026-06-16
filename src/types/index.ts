@@ -26,6 +26,7 @@ export interface Pet {
   birth_month: number
   gender: Gender
   weight_kg: number | null
+  target_weight_kg: number | null
   photo_url: string | null
   created_at: string
   // join
