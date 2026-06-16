@@ -7,8 +7,9 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { addDays, cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
 import { PRODUCT_CATEGORIES } from '@/lib/records'
+import { activeNextDue } from '@/lib/recurrence'
 import { RecordForm } from '../pets/_components/RecordForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { RecordsScanModal } from '../pets/_components/RecordsScanModal'
@@ -93,16 +94,17 @@ export default function SchedulePage() {
 
       const { data: rows } = await supabase
         .from('records')
-        .select('id, pet_id, category, title, event_on, next_due_on, recur_interval_days, place_name, memo')
+        .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, place_name, memo')
         .in('pet_id', petIds)
         .order('event_on', { ascending: false })
 
       type Row = {
         id: string; pet_id: string; category: RecordCategory; title: string
-        event_on: string; next_due_on: string | null; recur_interval_days: number | null
+        event_on: string; next_due_on: string | null; recur_rule: string | null
         place_name: string | null; memo: string | null
       }
       const all = (rows ?? []) as Row[]
+      const today = new Date().toISOString().slice(0, 10)
 
       // 예정: 항목 라인별 "최신 기록"만 (제품성 카테고리만 title까지 키에 포함)
       const latest = new Map<string, Row>()
@@ -114,7 +116,7 @@ export default function SchedulePage() {
       }
       const upcoming: ScheduleItem[] = []
       for (const r of Array.from(latest.values())) {
-        const due = r.next_due_on ?? (r.recur_interval_days ? addDays(r.event_on, r.recur_interval_days) : null)
+        const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on, today)
         if (!due) continue
         upcoming.push({
           id: r.id, pet_id: r.pet_id, ...meta(r.pet_id),

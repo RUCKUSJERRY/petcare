@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { timeAgo, categoryColor, addDays } from '@/lib/utils'
+import { timeAgo, categoryColor } from '@/lib/utils'
 import { PRODUCT_CATEGORIES } from '@/lib/records'
+import { activeNextDue } from '@/lib/recurrence'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, RecordCategory } from '@/types'
@@ -28,11 +29,12 @@ export default async function DashboardPage() {
     // 제품성 카테고리(접종·구충 등)만 제목까지 구분하고, 그 외는 카테고리 단위로 최신 1건.
     const { data } = await supabase
       .from('records')
-      .select('pet_id, category, title, event_on, next_due_on, recur_interval_days')
+      .select('pet_id, category, title, event_on, next_due_on, recur_rule')
       .in('pet_id', petIds)
       .order('event_on', { ascending: false })
 
-    type Row = { pet_id: string; category: RecordCategory; title: string; event_on: string; next_due_on: string | null; recur_interval_days: number | null }
+    type Row = { pet_id: string; category: RecordCategory; title: string; event_on: string; next_due_on: string | null; recur_rule: string | null }
+    const todayStr = new Date().toISOString().slice(0, 10)
     const latestByLine = new Map<string, Row>()
     for (const r of (data ?? []) as Row[]) {
       const key = PRODUCT_CATEGORIES.has(r.category)
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
     }
     vaccAlerts = Array.from(latestByLine.values())
       .map(r => {
-        const due = r.next_due_on ?? (r.recur_interval_days ? addDays(r.event_on, r.recur_interval_days) : null)
+        const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on, todayStr)
         return due ? { pet_id: r.pet_id, category: r.category, title: r.title, next_due_on: due } : null
       })
       .filter((a): a is CareAlert => a != null && a.next_due_on <= soon)

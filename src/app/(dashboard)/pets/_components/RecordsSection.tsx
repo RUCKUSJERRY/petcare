@@ -8,6 +8,7 @@ import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { CATEGORY_CONFIG, DETAIL_TABLE, RECORD_CATEGORIES } from '@/lib/records'
+import { describeRule, parseRule } from '@/lib/recurrence'
 import { RecordForm } from './RecordForm'
 import type { PetRecord, RecordCategory } from '@/types'
 
@@ -80,7 +81,7 @@ function RecordRow({
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ddayToneClass(badge.tone)}`}>{badge.text}</span>
           <span className="text-xs text-gray-400">
             {t('nextScheduled', { date: r.next_due_on! })}
-            {r.recur_interval_days ? ` · ${t('recurBadge', { n: r.recur_interval_days })}` : ''}
+            {r.recur_rule ? ` · 🔁 ${describeRule(parseRule(r.recur_rule), r.event_on)}` : ''}
           </span>
         </div>
       )}
