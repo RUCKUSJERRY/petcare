@@ -211,7 +211,11 @@ export function ScheduleCalendar({
             return (
               <button
                 key={ymd}
-                onClick={() => setSelected(ymd)}
+                onClick={() => {
+                  setSelected(ymd)
+                  // 앞뒤 달의 날짜를 누르면 그 달로 이동(구글 캘린더식)
+                  if (!inMonth) setCursor(new Date(d.getFullYear(), d.getMonth(), 1))
+                }}
                 className="flex flex-col items-center justify-start py-1 min-h-[44px]"
               >
                 <span

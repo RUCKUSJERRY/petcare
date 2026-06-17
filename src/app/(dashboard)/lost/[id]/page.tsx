@@ -19,6 +19,7 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
   const [showContact, setShowContact] = useState(false)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [sightErr, setSightErr] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null))
@@ -77,11 +78,13 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
     const content = text.trim()
     if (!content || sending) return
     setSending(true)
+    setSightErr(null)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSending(false); return }
-    await supabase.from('lost_pet_sightings').insert({ lost_pet_id: params.id, user_id: user.id, content })
-    setText('')
+    if (!user) { setSending(false); setSightErr('제보하려면 로그인이 필요해요.'); return }
+    const { error } = await supabase.from('lost_pet_sightings').insert({ lost_pet_id: params.id, user_id: user.id, content })
     setSending(false)
+    if (error) { setSightErr('제보 등록에 실패했어요. 잠시 후 다시 시도해주세요.'); return }
+    setText('')
     qc.invalidateQueries({ queryKey: ['lost-sightings', params.id] })
   }
 
@@ -159,6 +162,7 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
             value={text} onChange={e => setText(e.target.value)} />
           <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">등록</button>
         </form>
+        {sightErr && <p className="text-xs text-red-500 -mt-1">{sightErr}</p>}
         <div className="space-y-3">
           {sightings.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-3">아직 목격 제보가 없어요</p>
