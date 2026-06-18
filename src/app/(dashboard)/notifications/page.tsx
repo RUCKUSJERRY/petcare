@@ -84,7 +84,7 @@ export default function NotificationsPage() {
               <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                 {n.actor_avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={n.actor_avatar} alt="" className="w-full h-full object-cover" />
+                  <img src={n.actor_avatar} alt={n.actor_name ?? t('anonymous')} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-base">{typeIcon[n.type]}</span>
                 )}

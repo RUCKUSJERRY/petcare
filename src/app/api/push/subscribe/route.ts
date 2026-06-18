@@ -26,6 +26,7 @@ export async function POST(req: Request) {
         p256dh: sub.keys.p256dh,
         auth: sub.keys.auth,
         user_agent: req.headers.get('user-agent') ?? null,
+        updated_at: new Date().toISOString(),
       },
       { onConflict: 'endpoint' }
     )

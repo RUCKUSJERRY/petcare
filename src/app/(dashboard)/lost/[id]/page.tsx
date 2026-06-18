@@ -80,10 +80,10 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
     setSending(true)
     setSightErr(null)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSending(false); setSightErr('제보하려면 로그인이 필요해요.'); return }
+    if (!user) { setSending(false); setSightErr(t('sightingErrLogin')); return }
     const { error } = await supabase.from('lost_pet_sightings').insert({ lost_pet_id: params.id, user_id: user.id, content })
     setSending(false)
-    if (error) { setSightErr('제보 등록에 실패했어요. 잠시 후 다시 시도해주세요.'); return }
+    if (error) { setSightErr(t('sightingErrFail')); return }
     setText('')
     qc.invalidateQueries({ queryKey: ['lost-sightings', params.id] })
   }
@@ -156,22 +156,22 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
 
       {/* 목격 제보 */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-900">목격 제보 <span className="text-primary-500">{sightings.length}</span></h3>
+        <h3 className="font-semibold text-gray-900">{t('sightingTitle')} <span className="text-primary-500">{sightings.length}</span></h3>
         <form onSubmit={addSighting} className="flex gap-2">
-          <input className="input flex-1" placeholder="목격하신 정보를 남겨주세요" maxLength={1000}
+          <input className="input flex-1" placeholder={t('sightingPlaceholder')} maxLength={1000}
             value={text} onChange={e => setText(e.target.value)} />
-          <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">등록</button>
+          <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">{t('sightingSubmit')}</button>
         </form>
         {sightErr && <p className="text-xs text-red-500 -mt-1">{sightErr}</p>}
         <div className="space-y-3">
           {sightings.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-3">아직 목격 제보가 없어요</p>
+            <p className="text-sm text-gray-400 text-center py-3">{t('sightingEmpty')}</p>
           ) : sightings.map(s => (
             <div key={s.id} className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm shrink-0 overflow-hidden">
                 {s.author?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                  <img src={s.author.avatar_url} alt={s.author.display_name ?? t('anonymousGuardian')} className="w-full h-full object-cover" />
                 ) : '🐾'}
               </div>
               <div className="flex-1 min-w-0">
