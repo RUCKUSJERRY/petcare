@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import type { CareAlert, Pet } from '@/types'
 import { SelectedPetSummary } from './SelectedPetSummary'
 import { VaccAlerts } from './VaccAlerts'
+import { WeightInsightCard } from './WeightInsightCard'
 
 /**
  * 홈의 펫 영역.
@@ -69,6 +70,9 @@ export function PetSection({
     <div className="space-y-3">
       {/* 선택된 아이 요약 카드 */}
       <SelectedPetSummary pets={pets} vaccAlerts={vaccAlerts} />
+
+      {/* 선택된 아이의 체중 추세 인사이트 (로그 2건 이상일 때만) */}
+      {hasSelection && selectedPetId && <WeightInsightCard petId={selectedPetId} />}
 
       {hasSelection ? (
         // 선택된 아이가 있으면: 다른 아이들 목록 + 다른 아이 건강 일정을 함께 접기/펼치기

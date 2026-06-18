@@ -288,6 +288,9 @@ export interface CareAlert {
   category: RecordCategory
   title: string
   next_due_on: string
+  /** 빠른 완료 처리용 — 가장 최근 기록의 id와 반복 규칙 */
+  record_id?: string
+  recur_rule?: string | null
 }
 
 // ─── 산책 기록 ───────────────────────────────────────────────

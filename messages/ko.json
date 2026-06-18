@@ -67,7 +67,9 @@
     "otherTitle": "다른 아이 일정",
     "allTitle": "일정 알림",
     "moreCount": "외 {count}건 더",
-    "viewAll": "일정 전체 보기 →"
+    "viewAll": "일정 전체 보기 →",
+    "complete": "완료",
+    "completing": "처리…"
   },
   "summary": {
     "detail": "상세",
@@ -217,7 +219,13 @@
     "mapUnknownName": "실종",
     "emptyTitle": "등록된 실종 신고가 없어요.",
     "emptyHint": "주변에서 잃어버린 아이를 보셨거나, 직접 신고하려면 “+ 제보”를 눌러주세요.",
-    "lostAtPrefix": "실종 {date}"
+    "lostAtPrefix": "실종 {date}",
+    "sightingTitle": "목격 제보",
+    "sightingPlaceholder": "목격하신 정보를 남겨주세요",
+    "sightingSubmit": "등록",
+    "sightingEmpty": "아직 목격 제보가 없어요",
+    "sightingErrLogin": "제보하려면 로그인이 필요해요.",
+    "sightingErrFail": "제보 등록에 실패했어요. 잠시 후 다시 시도해주세요."
   },
   "walks": {
     "title": "산책",
@@ -765,5 +773,17 @@
     "scanRecord": "📷 영수증·이력서 스캔으로 추가",
     "detailTitle": "기록 상세",
     "placeLabel": "장소"
+  },
+  "weightInsight": {
+    "title": "체중 추세",
+    "trendUp": "증가 추세",
+    "trendDown": "감소 추세",
+    "trendFlat": "체중 유지 중",
+    "perWeek": "주당 {kg}kg",
+    "projected": "이 추세면 {date}쯤 목표 도달 예상",
+    "suddenUp": "직전 대비 {pct}% 급증 — 식이·건강 상태 확인을 권장해요",
+    "suddenDown": "직전 대비 {pct}% 급감 — 식이·건강 상태 확인을 권장해요",
+    "reached": "목표 체중에 도달했어요 🎉",
+    "viewDetail": "체중 상세 보기 →"
   }
 }
