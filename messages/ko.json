@@ -45,7 +45,7 @@
   "dashboard": {
     "mapTitle": "지도",
     "mapDesc": "실종 신고·동물병원·애견카페/동반식당을 한눈에",
-    "walksTitle": "산책 기록",
+    "walksTitle": "산책하기",
     "walksDesc": "경로·거리·시간을 기록하고 좋은 산책로를 공유해요",
     "scheduleTitle": "일정",
     "scheduleDesc": "진료·접종·구충·미용·양치 등 다음 예정·경과 모아보기",
@@ -228,7 +228,7 @@
     "sightingErrFail": "제보 등록에 실패했어요. 잠시 후 다시 시도해주세요."
   },
   "walks": {
-    "title": "산책",
+    "title": "산책하기",
     "startWalk": "산책 시작하기",
     "tabMine": "내 산책",
     "tabShared": "공유 경로",
@@ -359,7 +359,7 @@
     "report": "+ 제보",
     "researchHere": "이 지역에서 재검색",
     "currentLocation": "현재 위치로",
-    "walkRecord": "산책 기록",
+    "walkRecord": "산책하기",
     "nameUnknown": "이름 미상",
     "cat": "고양이",
     "dog": "강아지",

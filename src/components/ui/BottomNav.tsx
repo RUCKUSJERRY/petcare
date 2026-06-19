@@ -13,10 +13,15 @@ const navItems = [
   { href: '/community', key: 'community', icon: '💬' },
 ] as const
 
+// 경로 세그먼트 단위 매칭: '/walk'가 '/walks'를 잘못 포함하지 않도록 한다.
+// (예: matchPath('/walks', '/walk') === false, matchPath('/walk/123', '/walk') === true)
+const matchPath = (pathname: string, prefix: string) =>
+  pathname === prefix || pathname.startsWith(prefix + '/')
+
 // 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화)
 const INFO_SUBPATHS = ['/foods', '/health', '/walk']
-// 지도 탭에 묶이는 하위 페이지 (실종 신고/제보는 지도 탭에서 진입)
-const MAP_SUBPATHS = ['/lost']
+// 지도 탭에 묶이는 하위 페이지 (실종 신고/제보·산책하기는 지도 탭에서 진입)
+const MAP_SUBPATHS = ['/lost', '/walks']
 
 export function BottomNav() {
   const pathname = usePathname()
@@ -28,10 +33,10 @@ export function BottomNav() {
         {navItems.map(item => {
           const isActive =
             item.href === '/info'
-              ? pathname.startsWith('/info') || INFO_SUBPATHS.some(p => pathname.startsWith(p))
+              ? matchPath(pathname, '/info') || INFO_SUBPATHS.some(p => matchPath(pathname, p))
               : item.href === '/map'
-                ? pathname.startsWith('/map') || MAP_SUBPATHS.some(p => pathname.startsWith(p))
-                : pathname.startsWith(item.href)
+                ? matchPath(pathname, '/map') || MAP_SUBPATHS.some(p => matchPath(pathname, p))
+                : matchPath(pathname, item.href)
           return (
             <Link
               key={item.href}

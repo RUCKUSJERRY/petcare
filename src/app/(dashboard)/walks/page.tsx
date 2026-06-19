@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -18,10 +19,15 @@ type WalkRow = Walk & {
   comment_count?: number
 }
 
-export default function WalksPage() {
+function WalksContent() {
   const supabase = createClient()
   const t = useTranslations('walks')
-  const [tab, setTab] = useState<Tab>('mine')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  // 탭 상태를 URL 쿼리에 보관 → 상세에서 뒤로가기 시 선택했던 탭이 복원된다.
+  const tab: Tab = searchParams.get('tab') === 'shared' ? 'shared' : 'mine'
+  const setTab = (v: Tab) =>
+    router.replace(v === 'shared' ? '/walks?tab=shared' : '/walks', { scroll: false })
 
   const { data: mine = [], isLoading: mineLoading } = useQuery({
     queryKey: ['walks', 'mine'],
@@ -147,5 +153,13 @@ export default function WalksPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function WalksPage() {
+  return (
+    <Suspense fallback={null}>
+      <WalksContent />
+    </Suspense>
   )
 }
