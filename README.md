@@ -20,9 +20,10 @@ cp .env.local.example .env.local
   - `플랫폼 > Web`에 서비스 도메인(예: http://localhost:3000)을 등록하고, `Kakao Map`·`Local`(장소 검색) API를 활성화해야 지도 기능이 동작합니다.
 
 ### 3. Supabase DB 초기화
-Supabase 대시보드 → SQL Editor에서 `supabase/init.sql` 전체를 복사해 실행하세요.
-이후 `supabase/migrations/` 안의 SQL을 번호 순서대로 실행해 최신 스키마를 맞춥니다.
-(예: 지도 즐겨찾기는 `018_map_favorites.sql`, 진료 기록은 `019_medical_records.sql`, 산책 기록은 `020_walks.sql` 실행이 필요합니다. 푸시 재구독 정책은 `028_push_subscription_update.sql`, 목표 체중은 `029_pet_target_weight.sql`, 푸시 구독 갱신 시각은 `030_push_subscription_updated_at.sql` 실행이 필요합니다. 각 파일은 idempotent라 재실행해도 안전합니다.)
+Supabase 대시보드 → SQL Editor에서 `supabase/01_operation/01.1_initial/00_full_setup.sql` 전체를 복사해 실행하세요. 한 번에 전체 스키마·정책·기준 데이터가 세팅됩니다. (idempotent라 재실행해도 안전합니다.)
+
+> SQL 관리 규칙(오브젝트별 파일 구조, 변경 작업 방법)은 `supabase/README.md` 를 참고하세요.
+> 운영 중 발생한 변경은 `supabase/01_operation/01.2_changes/` 에 번호 순으로 누적됩니다.
 
 ### 4. Supabase Google 로그인 설정
 Supabase 대시보드 → Authentication → Providers → Google 활성화
