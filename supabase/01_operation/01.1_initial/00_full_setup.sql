@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-06-19T03:49:31.640Z
+--  생성 시각: 2026-06-20T07:41:21.885Z
 -- =============================================================
 
 
@@ -188,6 +188,8 @@ create table if not exists public.pets (
   breed_id         uuid,
   birth_year       int not null,
   birth_month      int not null check (birth_month between 1 and 12),
+  birth_day        smallint check (birth_day is null or birth_day between 1 and 31),
+  adopted_on       date,
   gender           text check (gender in ('수컷', '암컷')),
   weight_kg        float check (weight_kg is null or weight_kg > 0),
   photo_url        text,
@@ -195,6 +197,16 @@ create table if not exists public.pets (
   target_weight_kg float check (target_weight_kg is null or target_weight_kg > 0),
   created_at       timestamptz default now()
 );
+
+-- 기존 테이블 보강 (재실행 안전) — birth_day(생일 '일'), adopted_on(입양일)
+alter table public.pets add column if not exists birth_day smallint;
+alter table public.pets add column if not exists adopted_on date;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'pets_birth_day_check') then
+    alter table public.pets
+      add constraint pets_birth_day_check check (birth_day is null or birth_day between 1 and 31);
+  end if;
+end $$;
 
 -- ── 02.1_table/post_likes.sql ──
 -- post_likes : 게시글 좋아요 (중복 방지)

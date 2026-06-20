@@ -15,6 +15,9 @@ import {
   formatDistance,
   formatDuration,
   formatPace,
+  formatWon,
+  nextAnniversary,
+  daysTogether,
 } from './utils'
 
 describe('calcPetAge', () => {
@@ -67,6 +70,52 @@ describe('daysUntil / ddayBadge', () => {
     expect(ddayBadge('2026-06-10')).toEqual({ text: 'D-1', tone: 'soon' })
     expect(ddayBadge('2026-06-20')).toEqual({ text: 'D-11', tone: 'upcoming' })
     expect(ddayBadge('2026-06-07')).toEqual({ text: '2일 지남', tone: 'overdue' })
+  })
+})
+
+describe('formatWon', () => {
+  it('천단위 구분 + 원', () => {
+    expect(formatWon(12000)).toBe('12,000원')
+    expect(formatWon(0)).toBe('0원')
+  })
+  it('null/NaN 은 빈 문자열', () => {
+    expect(formatWon(null)).toBe('')
+    expect(formatWon(undefined)).toBe('')
+    expect(formatWon(NaN)).toBe('')
+  })
+})
+
+describe('nextAnniversary / daysTogether', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-09T10:30:00'))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('아직 안 지난 올해 생일', () => {
+    expect(nextAnniversary(6, 20)).toBe('2026-06-20')
+  })
+  it('이미 지난 생일 → 내년', () => {
+    expect(nextAnniversary(1, 5)).toBe('2027-01-05')
+  })
+  it('오늘이 생일이면 오늘(D-day)', () => {
+    expect(nextAnniversary(6, 9)).toBe('2026-06-09')
+  })
+  it('2/29 는 평년이면 2/28 로 보정', () => {
+    expect(nextAnniversary(2, 29)).toBe('2027-02-28') // 2027 평년
+  })
+  it('일(day)이 없으면 null', () => {
+    expect(nextAnniversary(6, null)).toBeNull()
+  })
+
+  it('함께한 일수 — 입양 당일 1일째', () => {
+    expect(daysTogether('2026-06-09')).toBe(1)
+    expect(daysTogether('2026-06-08')).toBe(2)
+    expect(daysTogether('2026-05-30')).toBe(11)
+  })
+  it('미래/없음은 null', () => {
+    expect(daysTogether('2026-06-10')).toBeNull()
+    expect(daysTogether(null)).toBeNull()
   })
 })
 

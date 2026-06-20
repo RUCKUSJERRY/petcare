@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { cn, formatDistance, formatDuration, formatPace, timeAgo } from '@/lib/utils'
+import { summarizeWalks } from '@/lib/walkStats'
 import type { Walk } from '@/types'
 
 type Tab = 'mine' | 'shared'
@@ -17,6 +18,51 @@ type WalkRow = Walk & {
   pet?: { name: string } | null
   author?: { display_name: string } | null
   comment_count?: number
+}
+
+/** 내 산책 통계 — 이번 주/달 합계 + 최근 6주 거리 추이 */
+function WalkStatsCard({ walks }: { walks: WalkRow[] }) {
+  const t = useTranslations('walks')
+  const s = summarizeWalks(walks)
+
+  return (
+    <div className="card space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {([['statsThisWeek', s.thisWeek], ['statsThisMonth', s.thisMonth]] as const).map(([key, v]) => (
+          <div key={key} className="rounded-xl bg-gray-50 p-3">
+            <p className="text-xs text-gray-400 font-medium">{t(key)}</p>
+            <p className="text-lg font-bold text-gray-900 mt-0.5">{formatDistance(v.distance_m)}</p>
+            <p className="text-xs text-gray-500">
+              {formatDuration(v.duration_s)} · {t('statsCount', { n: v.count })}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* 최근 6주 거리 추이 */}
+      <div>
+        <p className="text-xs text-gray-400 font-medium mb-1.5">{t('statsTrend')}</p>
+        {s.maxWeekDistance === 0 ? (
+          <p className="text-xs text-gray-400">{t('statsEmptyTrend')}</p>
+        ) : (
+          <div className="flex items-end justify-between gap-1.5 h-20">
+            {s.weekly.map(b => {
+              const pct = s.maxWeekDistance ? Math.round((b.distance_m / s.maxWeekDistance) * 100) : 0
+              const label = `${Number(b.weekStart.slice(5, 7))}/${Number(b.weekStart.slice(8, 10))}`
+              return (
+                <div key={b.weekStart} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                  <div className="w-full bg-primary-100 rounded-md relative" style={{ height: `${Math.max(pct, b.distance_m > 0 ? 8 : 2)}%` }}>
+                    <div className="absolute inset-0 bg-primary-400 rounded-md" />
+                  </div>
+                  <span className="text-[10px] text-gray-400">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function WalksContent() {
@@ -105,6 +151,9 @@ function WalksContent() {
           </button>
         ))}
       </div>
+
+      {/* 내 산책 통계 (내 산책 탭 + 기록 있을 때) */}
+      {tab === 'mine' && !mineLoading && mine.length > 0 && <WalkStatsCard walks={mine} />}
 
       {loading ? (
         <CardSkeletonList count={3} />

@@ -26,6 +26,43 @@ export function calcPetAge(birthYear: number, birthMonth: number, species: Speci
   return { months, years, displayText, lifeStage }
 }
 
+/** 금액(원) 표기 — "12,000원". null/undefined·NaN 은 빈 문자열. */
+export function formatWon(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return ''
+  return `${Math.round(n).toLocaleString('ko-KR')}원`
+}
+
+/**
+ * (월, 일) 기준 "다음 생일/기념일" 날짜 문자열(YYYY-MM-DD)을 반환.
+ * 오늘이 그 날이면 오늘을 반환(D-day). 이미 지났으면 내년.
+ * 2/29 처럼 올해 없는 날은 그 달의 마지막 날(2/28)로 보정.
+ * day 가 없으면(null) 정확한 날을 알 수 없어 null 반환.
+ */
+export function nextAnniversary(month: number, day: number | null | undefined): string | null {
+  if (!month || !day) return null
+  const now = new Date()
+  const clampDay = (y: number) => {
+    const last = new Date(Date.UTC(y, month, 0)).getUTCDate() // 해당 월의 마지막 날
+    return Math.min(day, last)
+  }
+  for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+    const candStr = new Date(Date.UTC(y, month - 1, clampDay(y))).toISOString().slice(0, 10)
+    if (daysUntil(candStr) >= 0) return candStr
+  }
+  return null
+}
+
+/**
+ * 입양일(YYYY-MM-DD) 기준 "함께한 일수" — 입양 당일을 1일째로 센다.
+ * 미래 날짜거나 형식이 잘못되면 null.
+ */
+export function daysTogether(adoptedOn: string | null | undefined): number | null {
+  if (!adoptedOn) return null
+  const elapsed = -daysUntil(adoptedOn) // 과거일수록 양수
+  if (elapsed < 0) return null
+  return elapsed + 1
+}
+
 /**
  * 나이 단계별 색상 클래스 (Tailwind)
  */

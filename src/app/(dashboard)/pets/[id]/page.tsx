@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, nextAnniversary, daysTogether, ddayBadge } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -34,7 +34,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [uid, setUid] = useState<string | null>(null)
   const [form, setForm] = useState({
-    name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
+    name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
 
   useEffect(() => {
@@ -68,6 +68,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         breed_id: pet.breed_id,
         birth_year: String(pet.birth_year),
         birth_month: String(pet.birth_month),
+        birth_day: pet.birth_day ? String(pet.birth_day) : '',
+        adopted_on: pet.adopted_on ?? '',
         gender: pet.gender,
         weight_kg: pet.weight_kg ? String(pet.weight_kg) : '',
       })
@@ -93,6 +95,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
       birth_month: parseInt(form.birth_month),
+      birth_day: form.birth_day ? parseInt(form.birth_day) : null,
+      adopted_on: form.adopted_on || null,
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
@@ -177,6 +181,25 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             </div>
             <p className="text-sm text-gray-500 mt-0.5">{pet.breed?.name_ko} · {age.displayText} · {pet.gender}</p>
             {pet.weight_kg && <p className="text-sm text-gray-400 mt-0.5">{pet.weight_kg}kg</p>}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {pet.birth_day && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 font-medium">
+                  {t('birthday')} {t('birthdayValue', { month: pet.birth_month, day: pet.birth_day })}
+                  {(() => {
+                    const next = nextAnniversary(pet.birth_month, pet.birth_day)
+                    return next ? ` · ${ddayBadge(next).text}` : ''
+                  })()}
+                </span>
+              )}
+              {(() => {
+                const days = daysTogether(pet.adopted_on)
+                return days != null ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 font-medium">
+                    {t('together', { days })}
+                  </span>
+                ) : null
+              })()}
+            </div>
           </div>
         </div>
       ) : (
@@ -204,7 +227,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
               <input className="input" type="number" value={form.birth_year}
@@ -218,6 +241,20 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+              <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+                <option value="">{t('daySelect')}</option>
+                {Array.from({ length: 31 }, (_, i) => (
+                  <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>
+            <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
+              value={form.adopted_on} onChange={e => set('adopted_on', e.target.value)} />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('gender')}</label>

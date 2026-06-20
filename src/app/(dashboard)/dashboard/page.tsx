@@ -106,6 +106,20 @@ export default async function DashboardPage() {
         </Link>
       )}
 
+      {/* 케어 비용(지출) 통계 — 펫이 있을 때 */}
+      {pets && pets.length > 0 && (
+        <Link href="/costs" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+          <span className="text-xl" aria-hidden>🧾</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">{t('costsTitle')}</p>
+            <p className="text-xs text-gray-400">{t('costsDesc')}</p>
+          </div>
+          <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
+
       {/* 최근 커뮤니티 글 */}
       {recentPosts.length > 0 && (
         <div>
