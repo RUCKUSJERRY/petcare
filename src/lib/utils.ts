@@ -170,19 +170,21 @@ export function pickBestPerActivityType<
  * 오늘 기준 D-day 계산. (날짜 문자열 YYYY-MM-DD)
  * 음수 = 지남, 0 = 오늘, 양수 = 남은 일수
  */
-export function daysUntil(dateStr: string): number {
-  const today = new Date()
+export function daysUntil(dateStr: string, todayStr?: string): number {
+  // todayStr(YYYY-MM-DD)가 주어지면 그 날짜를 "오늘"로 사용한다.
+  // (서버 cron은 실행 환경이 UTC라 KST 기준 오늘을 명시적으로 넘겨 시차 오차를 막는다.)
+  const today = todayStr ? new Date(todayStr + 'T00:00:00') : new Date()
   today.setHours(0, 0, 0, 0)
   const target = new Date(dateStr + 'T00:00:00')
   return Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
 }
 
 /** D-day 배지 텍스트와 톤 */
-export function ddayBadge(dateStr: string): {
+export function ddayBadge(dateStr: string, todayStr?: string): {
   text: string
   tone: 'overdue' | 'today' | 'soon' | 'upcoming'
 } {
-  const d = daysUntil(dateStr)
+  const d = daysUntil(dateStr, todayStr)
   if (d < 0) return { text: `${Math.abs(d)}일 지남`, tone: 'overdue' }
   if (d === 0) return { text: 'D-day', tone: 'today' }
   if (d <= 7) return { text: `D-${d}`, tone: 'soon' }
