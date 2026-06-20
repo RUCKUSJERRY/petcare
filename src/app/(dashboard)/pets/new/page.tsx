@@ -20,7 +20,7 @@ export default function NewPetPage() {
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [species, setSpecies] = useState<Species>('dog')
   const [form, setForm] = useState({
-    name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
+    name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
 
   const { data: allBreeds } = useQuery({
@@ -48,6 +48,8 @@ export default function NewPetPage() {
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
       birth_month: parseInt(form.birth_month),
+      birth_day: form.birth_day ? parseInt(form.birth_day) : null,
+      adopted_on: form.adopted_on || null,
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
@@ -120,7 +122,7 @@ export default function NewPetPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
             <input className="input" type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
@@ -136,6 +138,22 @@ export default function NewPetPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+            <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+              <option value="">{t('daySelect')}</option>
+              {Array.from({ length: 31 }, (_, i) => (
+                <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>
+          <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
+            value={form.adopted_on} onChange={e => set('adopted_on', e.target.value)} />
+          <p className="text-xs text-gray-400 mt-1">{t('adoptedHint')}</p>
         </div>
 
         <div>

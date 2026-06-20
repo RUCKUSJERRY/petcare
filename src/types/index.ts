@@ -24,6 +24,8 @@ export interface Pet {
   species: Species
   birth_year: number
   birth_month: number
+  birth_day: number | null      // 생일 '일' (선택) — 생일 D-day 계산용
+  adopted_on: string | null     // 입양일 YYYY-MM-DD (선택) — 함께한 날·입양 기념일
   gender: Gender
   weight_kg: number | null
   target_weight_kg: number | null

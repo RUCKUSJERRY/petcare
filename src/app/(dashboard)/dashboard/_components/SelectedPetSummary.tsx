@@ -1,7 +1,7 @@
 'use client'
 
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor } from '@/lib/utils'
+import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import type { CareAlert, Pet } from '@/types'
@@ -33,6 +33,10 @@ export function SelectedPetSummary({
   if (!pet) return null
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
+  // 30일 이내 다가오는 생일 배지 + 함께한 날수
+  const nextBirthday = nextAnniversary(pet.birth_month, pet.birth_day)
+  const birthdayUpcoming = nextBirthday && daysUntil(nextBirthday) <= 30
+  const together = daysTogether(pet.adopted_on)
   const nextVacc = vaccAlerts
     .filter(v => v.pet_id === pet.id)
     .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
@@ -56,6 +60,20 @@ export function SelectedPetSummary({
           <p className="text-sm text-white/80 mt-0.5 truncate">
             {pet.breed?.name_ko} · {age.displayText}
           </p>
+          {(birthdayUpcoming || together != null) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              {birthdayUpcoming && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
+                  {t('birthdayBadge', { dday: ddayBadge(nextBirthday!).text })}
+                </span>
+              )}
+              {together != null && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
+                  {t('together', { days: together })}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <Link
           href={`/pets/${pet.id}`}
