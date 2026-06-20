@@ -201,6 +201,15 @@ export function ddayToneClass(tone: 'overdue' | 'today' | 'soon' | 'upcoming'): 
   }[tone]
 }
 
+/** 오늘 날짜를 KST(Asia/Seoul) 기준 YYYY-MM-DD 로 반환.
+ *  기록 날짜(event_on·next_due_on 등)가 모두 KST 달력 기준이라,
+ *  서버(UTC)·클라이언트 어디서 호출해도 "오늘"이 일관되게 계산된다. */
+export function todayKST(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+}
+
 /** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 (시간대 영향 없이 UTC 기준 계산) */
 export function addMonths(dateStr: string, months: number): string {
   const [y, m, d] = dateStr.split('-').map(Number)

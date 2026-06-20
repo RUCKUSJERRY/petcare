@@ -102,7 +102,7 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
 
       {(pet.photo_urls?.length ? pet.photo_urls : (pet.photo_url ? [pet.photo_url] : [])).map((src: string, i: number) => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={i} src={src} alt="" className="w-full rounded-2xl object-cover max-h-72" />
+        <img key={i} src={src} alt={t('photoAltNamed', { name: pet.name ?? t('unknownName') })} className="w-full rounded-2xl object-cover max-h-72" />
       ))}
 
       <div className="space-y-1">

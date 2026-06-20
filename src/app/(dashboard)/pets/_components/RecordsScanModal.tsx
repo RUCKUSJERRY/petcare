@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { uploadImage, validateImage } from '@/lib/upload'
 import { parseOcrText, recognizeImageText } from '@/lib/ocr'
+import { todayKST } from '@/lib/utils'
 import type { RecordCategory } from '@/types'
 
 const CARE_CATEGORIES: RecordCategory[] = [
@@ -30,7 +31,7 @@ type Row = {
   cost: string
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayKST()
 
 // 인식 실패 시 직접 입력용 빈 행
 function emptyRow(): Row {

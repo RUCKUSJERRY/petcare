@@ -48,13 +48,22 @@ export default function NewPostPage() {
       setError(t('categoryRequired'))
       return
     }
+    if (!form.title.trim() || !form.content.trim()) {
+      setError(t('contentRequired'))
+      return
+    }
     setSaving(true)
     setError(null)
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setSaving(false)
+      setError(t('loginRequired'))
+      return
+    }
     const { data, error: insErr } = await supabase
       .from('posts')
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         category: form.category,
         title: form.title.trim(),
         content: form.content.trim(),

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
-import { careCategoryIcon } from '@/lib/utils'
+import { careCategoryIcon, todayKST } from '@/lib/utils'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
 import { deleteImageByUrl } from '@/lib/upload'
@@ -17,7 +17,7 @@ import {
 } from '@/lib/recurrence'
 import type { PetRecord, RecordCategory } from '@/types'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayKST()
 const DETAIL_TABLES = ['record_medical', 'record_grooming', 'record_meal'] as const
 
 /**

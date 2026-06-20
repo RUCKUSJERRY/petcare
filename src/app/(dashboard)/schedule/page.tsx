@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { PRODUCT_CATEGORIES } from '@/lib/records'
 import { activeNextDue } from '@/lib/recurrence'
 import { RecordForm } from '../pets/_components/RecordForm'
@@ -108,7 +108,7 @@ export default function SchedulePage() {
         place_name: string | null; memo: string | null
       }
       const all = (rows ?? []) as Row[]
-      const today = new Date().toISOString().slice(0, 10)
+      const today = todayKST()
 
       // 예정: 항목 라인별 "최신 기록"만 (제품성 카테고리만 title까지 키에 포함)
       const latest = new Map<string, Row>()

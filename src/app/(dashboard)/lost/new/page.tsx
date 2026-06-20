@@ -9,6 +9,7 @@ import { useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
+import { todayKST } from '@/lib/utils'
 import type { Species } from '@/types'
 
 export default function NewLostPage() {
@@ -29,7 +30,7 @@ export default function NewLostPage() {
   const [query, setQuery] = useState('')
   const [searchError, setSearchError] = useState<string | null>(null)
   const [form, setForm] = useState({
-    name: '', species: 'dog' as Species, gender: '', lost_at: new Date().toISOString().slice(0, 10),
+    name: '', species: 'dog' as Species, gender: '', lost_at: todayKST(),
     description: '', contact: '', contact_public: true,
   })
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }))
@@ -128,7 +129,7 @@ export default function NewLostPage() {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('lostDateLabel')}</label>
-            <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
+            <input className="input" type="date" max={todayKST()}
               value={form.lost_at} onChange={e => set('lost_at', e.target.value)} />
           </div>
         </div>

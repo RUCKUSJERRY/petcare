@@ -2,6 +2,8 @@
 // 외부 라이브러리 없이 새 창에 인쇄용 HTML을 그려 브라우저의 '인쇄 → PDF 저장'을 이용한다.
 // (병원·호텔·미용·이사 제출용. 문서는 한국어 고정 — 출력 산출물이라 로케일 불필요)
 
+import { todayKST } from './utils'
+
 export type ExportRecord = {
   pet_name: string
   category: string
@@ -19,7 +21,7 @@ const won = (n: number) => n.toLocaleString('ko-KR') + '원'
 
 /** 기록 배열 → 인쇄용 HTML 문서 문자열 */
 export function buildRecordsHtml(heading: string, rows: ExportRecord[]): string {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayKST()
   const totalCost = rows.reduce((sum, r) => sum + (r.cost ?? 0), 0)
 
   const body = rows.length === 0

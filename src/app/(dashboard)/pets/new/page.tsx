@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { Breed, Species } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { todayKST } from '@/lib/utils'
 
 export default function NewPetPage() {
   const t = useTranslations('petForm')
@@ -151,7 +152,7 @@ export default function NewPetPage() {
 
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>
-          <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
+          <input className="input" type="date" max={todayKST()}
             value={form.adopted_on} onChange={e => set('adopted_on', e.target.value)} />
           <p className="text-xs text-gray-400 mt-1">{t('adoptedHint')}</p>
         </div>

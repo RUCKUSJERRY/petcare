@@ -18,6 +18,7 @@ import {
   formatWon,
   nextAnniversary,
   daysTogether,
+  todayKST,
 } from './utils'
 
 describe('calcPetAge', () => {
@@ -78,6 +79,17 @@ describe('daysUntil / ddayBadge', () => {
     expect(ddayBadge('2026-06-10')).toEqual({ text: 'D-1', tone: 'soon' })
     expect(ddayBadge('2026-06-20')).toEqual({ text: 'D-11', tone: 'upcoming' })
     expect(ddayBadge('2026-06-07')).toEqual({ text: '2일 지남', tone: 'overdue' })
+  })
+})
+
+describe('todayKST', () => {
+  afterEach(() => vi.useRealTimers())
+  it('UTC와 무관하게 KST(+9) 달력 날짜를 반환', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-20T20:00:00Z')) // KST 2026-06-21 05:00
+    expect(todayKST()).toBe('2026-06-21')
+    vi.setSystemTime(new Date('2026-06-20T10:00:00Z')) // KST 2026-06-20 19:00
+    expect(todayKST()).toBe('2026-06-20')
   })
 })
 
