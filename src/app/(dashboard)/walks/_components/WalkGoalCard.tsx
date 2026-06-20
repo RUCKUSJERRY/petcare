@@ -1,48 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import { createClient } from '@/lib/supabase/client'
 import { formatDistance } from '@/lib/utils'
 import { summarizeWalks, weeklyGoalProgress, type WalkGoal, type WalkLike } from '@/lib/walkStats'
 
-const STORAGE_KEY = 'petcare:walk-weekly-goal'
 const EMPTY: WalkGoal = { distanceKm: 0, count: 0 }
 
-function loadGoal(): WalkGoal {
-  if (typeof window === 'undefined') return EMPTY
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return EMPTY
-    const g = JSON.parse(raw)
-    return { distanceKm: Math.max(0, Number(g.distanceKm) || 0), count: Math.max(0, Number(g.count) || 0) }
-  } catch {
-    return EMPTY
-  }
-}
-
-function saveGoal(g: WalkGoal) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(g))
-  } catch {
-    /* 저장 실패는 무시 (시크릿 모드 등) */
-  }
-}
-
-/** 이번 주 산책 목표(거리/횟수) 설정 + 달성률 카드. 목표는 기기(localStorage)에 저장한다. */
+/** 이번 주 산책 목표(거리/횟수) 설정 + 달성률 카드. 목표는 계정(walk_goals)에 저장돼 기기 간 동기화된다. */
 export function WalkGoalCard({ walks }: { walks: WalkLike[] }) {
   const t = useTranslations('walks')
-  // SSR/CSR 첫 렌더 일치(하이드레이션)를 위해 마운트 후 localStorage를 읽는다.
-  const [goal, setGoal] = useState<WalkGoal>(EMPTY)
-  const [mounted, setMounted] = useState(false)
+  const supabase = createClient()
+  const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState({ distanceKm: '', count: '' })
 
-  useEffect(() => {
-    setGoal(loadGoal())
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
+  const { data: goal = EMPTY } = useQuery({
+    queryKey: ['walk-goal'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return EMPTY
+      // 마이그레이션(walk_goals) 미적용 환경에서도 안전하게 미설정으로 처리
+      const { data, error } = await supabase
+        .from('walk_goals')
+        .select('distance_km, count')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (error || !data) return EMPTY
+      return { distanceKm: Number(data.distance_km) || 0, count: Number(data.count) || 0 }
+    },
+  })
 
   const thisWeek = summarizeWalks(walks).thisWeek
   const p = weeklyGoalProgress(thisWeek, goal)
@@ -55,21 +45,26 @@ export function WalkGoalCard({ walks }: { walks: WalkLike[] }) {
     setEditing(true)
   }
 
-  const commit = () => {
-    const next: WalkGoal = {
-      distanceKm: Math.max(0, Number(draft.distanceKm) || 0),
-      count: Math.max(0, Math.round(Number(draft.count) || 0)),
+  const persist = async (next: WalkGoal) => {
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase
+        .from('walk_goals')
+        .upsert({ user_id: user.id, distance_km: next.distanceKm, count: next.count }, { onConflict: 'user_id' })
     }
-    setGoal(next)
-    saveGoal(next)
+    await qc.invalidateQueries({ queryKey: ['walk-goal'] })
+    setSaving(false)
     setEditing(false)
   }
 
-  const clear = () => {
-    setGoal(EMPTY)
-    saveGoal(EMPTY)
-    setEditing(false)
-  }
+  const commit = () =>
+    persist({
+      distanceKm: Math.max(0, Number(draft.distanceKm) || 0),
+      count: Math.max(0, Math.round(Number(draft.count) || 0)),
+    })
+
+  const clear = () => persist(EMPTY)
 
   if (editing) {
     return (
@@ -97,12 +92,12 @@ export function WalkGoalCard({ walks }: { walks: WalkLike[] }) {
         </div>
         <p className="text-xs text-gray-400">{t('goalHint')}</p>
         <div className="flex items-center gap-2">
-          <button onClick={commit} className="btn-primary flex-1 py-2 text-sm">{t('goalSave')}</button>
-          <button onClick={() => setEditing(false)} className="flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg border border-gray-200">
+          <button onClick={commit} disabled={saving} className="btn-primary flex-1 py-2 text-sm disabled:opacity-50">{t('goalSave')}</button>
+          <button onClick={() => setEditing(false)} disabled={saving} className="flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg border border-gray-200 disabled:opacity-50">
             {t('goalCancel')}
           </button>
           {p.hasGoal && (
-            <button onClick={clear} className="py-2 px-3 text-sm font-medium text-red-500 rounded-lg border border-red-200">
+            <button onClick={clear} disabled={saving} className="py-2 px-3 text-sm font-medium text-red-500 rounded-lg border border-red-200 disabled:opacity-50">
               {t('goalClear')}
             </button>
           )}
