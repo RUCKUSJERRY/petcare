@@ -94,3 +94,50 @@ export function summarizeWalks(walks: WalkLike[], now: Date = new Date(), weeks 
   const maxWeekDistance = buckets.reduce((mx, b) => Math.max(mx, b.distance_m), 0)
   return { thisWeek, thisMonth, all, weekly: buckets, maxWeekDistance }
 }
+
+/** 주간 산책 목표. 0 = 해당 항목 미설정(사용 안 함) */
+export interface WalkGoal {
+  distanceKm: number
+  count: number
+}
+
+export interface GoalDimension {
+  /** 목표가 설정된 항목인지 (값 > 0) */
+  active: boolean
+  /** 달성률 0~100 (목표 초과 시 100으로 클램프) */
+  pct: number
+  met: boolean
+}
+
+export interface GoalProgress {
+  /** 거리·횟수 중 하나라도 설정됐는지 */
+  hasGoal: boolean
+  /** 설정된 모든 항목을 달성했는지 */
+  achieved: boolean
+  distance: GoalDimension & { remainingM: number }
+  count: GoalDimension & { remaining: number }
+}
+
+/** 이번 주 합계와 목표를 비교해 항목별 달성률·달성여부를 계산한다. */
+export function weeklyGoalProgress(thisWeek: WalkTotals, goal: WalkGoal): GoalProgress {
+  const goalM = Math.max(0, goal.distanceKm || 0) * 1000
+  const goalCount = Math.max(0, goal.count || 0)
+
+  const distActive = goalM > 0
+  const distMet = distActive && thisWeek.distance_m >= goalM
+  const distPct = distActive ? Math.min(100, Math.round((thisWeek.distance_m / goalM) * 100)) : 0
+
+  const cntActive = goalCount > 0
+  const cntMet = cntActive && thisWeek.count >= goalCount
+  const cntPct = cntActive ? Math.min(100, Math.round((thisWeek.count / goalCount) * 100)) : 0
+
+  const hasGoal = distActive || cntActive
+  const achieved = hasGoal && (!distActive || distMet) && (!cntActive || cntMet)
+
+  return {
+    hasGoal,
+    achieved,
+    distance: { active: distActive, pct: distPct, met: distMet, remainingM: Math.max(0, goalM - thisWeek.distance_m) },
+    count: { active: cntActive, pct: cntPct, met: cntMet, remaining: Math.max(0, goalCount - thisWeek.count) },
+  }
+}

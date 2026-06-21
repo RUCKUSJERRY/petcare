@@ -80,6 +80,10 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       setError(t('categoryRequired'))
       return
     }
+    if (!form.title.trim() || !form.content.trim()) {
+      setError(t('contentRequired'))
+      return
+    }
     setSaving(true)
     setError(null)
     const { error: updErr } = await supabase
@@ -107,19 +111,19 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-gray-900">글 수정</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('editTitle')}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 카테고리 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">카테고리 *</label>
-          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="카테고리" aria-required>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('categoryLabel')}</label>
+          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label={t('category')} aria-required>
             {CATEGORIES.map(c => (
               <button
                 key={c}
@@ -141,10 +145,10 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
 
         {/* 제목 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">제목 *</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('titleLabel')}</label>
           <input
             className="input"
-            placeholder="제목을 입력하세요"
+            placeholder={t('titlePlaceholder')}
             maxLength={100}
             value={form.title}
             onChange={e => set('title', e.target.value)}
@@ -155,10 +159,10 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
 
         {/* 내용 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">내용 *</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('contentLabel')}</label>
           <textarea
             className="input min-h-[160px] resize-y"
-            placeholder="내용을 입력하세요"
+            placeholder={t('contentPlaceholder')}
             maxLength={5000}
             value={form.content}
             onChange={e => set('content', e.target.value)}
@@ -170,7 +174,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         {/* 사진 (선택) */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">
-            사진 <span className="text-gray-400 font-normal">(선택)</span>
+            {t('photo')} <span className="text-gray-400 font-normal">{t('optional')}</span>
           </label>
           <MultiImagePicker
             bucket="post-images"
@@ -184,14 +188,14 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         {pets && pets.length > 0 && (
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">
-              품종 태그 <span className="text-gray-400 font-normal">(선택)</span>
+              {t('breedTag')} <span className="text-gray-400 font-normal">{t('optional')}</span>
             </label>
             <select
               className="input"
               value={form.breed_id}
               onChange={e => set('breed_id', e.target.value)}
             >
-              <option value="">선택 안 함</option>
+              <option value="">{t('breedNone')}</option>
               {Array.from(
                 new Map(
                   pets
@@ -208,7 +212,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <button type="submit" disabled={saving} className="btn-primary w-full py-3 mt-2">
-          {saving ? '수정 중...' : '수정 완료'}
+          {saving ? t('updating') : t('updateSubmit')}
         </button>
       </form>
     </div>

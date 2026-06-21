@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { timeAgo, categoryColor } from '@/lib/utils'
+import { timeAgo, categoryColor, todayKST, addDays } from '@/lib/utils'
 import { PRODUCT_CATEGORIES } from '@/lib/records'
 import { activeNextDue } from '@/lib/recurrence'
 import { getTranslations } from 'next-intl/server'
@@ -21,7 +21,8 @@ export default async function DashboardPage() {
 
   // 30일 이내 예정 + 지난 건강 관리 알림 (접종·심장사상충·구충 등 모든 카테고리)
   const petIds = (pets ?? []).map((p: Pet) => p.id)
-  const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const todayStr = todayKST()
+  const soon = addDays(todayStr, 30)
 
   let vaccAlerts: CareAlert[] = []
   if (petIds.length > 0) {
@@ -34,7 +35,6 @@ export default async function DashboardPage() {
       .order('event_on', { ascending: false })
 
     type Row = { id: string; pet_id: string; category: RecordCategory; title: string; event_on: string; next_due_on: string | null; recur_rule: string | null }
-    const todayStr = new Date().toISOString().slice(0, 10)
     const latestByLine = new Map<string, Row>()
     for (const r of (data ?? []) as Row[]) {
       const key = PRODUCT_CATEGORIES.has(r.category)

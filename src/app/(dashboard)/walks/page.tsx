@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { cn, formatDistance, formatDuration, formatPace, timeAgo } from '@/lib/utils'
 import { summarizeWalks } from '@/lib/walkStats'
+import { WalkGoalCard } from './_components/WalkGoalCard'
 import type { Walk } from '@/types'
 
 type Tab = 'mine' | 'shared'
@@ -152,8 +153,13 @@ function WalksContent() {
         ))}
       </div>
 
-      {/* 내 산책 통계 (내 산책 탭 + 기록 있을 때) */}
-      {tab === 'mine' && !mineLoading && mine.length > 0 && <WalkStatsCard walks={mine} />}
+      {/* 내 산책 통계 + 주간 목표 (내 산책 탭 + 기록 있을 때) */}
+      {tab === 'mine' && !mineLoading && mine.length > 0 && (
+        <>
+          <WalkGoalCard walks={mine} />
+          <WalkStatsCard walks={mine} />
+        </>
+      )}
 
       {loading ? (
         <CardSkeletonList count={3} />

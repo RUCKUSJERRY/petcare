@@ -18,6 +18,7 @@ import {
   formatWon,
   nextAnniversary,
   daysTogether,
+  todayKST,
 } from './utils'
 
 describe('calcPetAge', () => {
@@ -65,11 +66,30 @@ describe('daysUntil / ddayBadge', () => {
     expect(daysUntil('2026-06-08')).toBe(-1)
   })
 
+  it('기준일(todayStr)을 넘기면 시스템 시간 대신 그 날짜로 계산', () => {
+    expect(daysUntil('2026-06-20', '2026-06-20')).toBe(0)
+    expect(daysUntil('2026-06-21', '2026-06-20')).toBe(1)
+    expect(daysUntil('2026-06-19', '2026-06-20')).toBe(-1)
+    expect(ddayBadge('2026-06-20', '2026-06-20')).toEqual({ text: 'D-day', tone: 'today' })
+    expect(ddayBadge('2026-06-22', '2026-06-20')).toEqual({ text: 'D-2', tone: 'soon' })
+  })
+
   it('배지 텍스트와 톤', () => {
     expect(ddayBadge('2026-06-09')).toEqual({ text: 'D-day', tone: 'today' })
     expect(ddayBadge('2026-06-10')).toEqual({ text: 'D-1', tone: 'soon' })
     expect(ddayBadge('2026-06-20')).toEqual({ text: 'D-11', tone: 'upcoming' })
     expect(ddayBadge('2026-06-07')).toEqual({ text: '2일 지남', tone: 'overdue' })
+  })
+})
+
+describe('todayKST', () => {
+  afterEach(() => vi.useRealTimers())
+  it('UTC와 무관하게 KST(+9) 달력 날짜를 반환', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-20T20:00:00Z')) // KST 2026-06-21 05:00
+    expect(todayKST()).toBe('2026-06-21')
+    vi.setSystemTime(new Date('2026-06-20T10:00:00Z')) // KST 2026-06-20 19:00
+    expect(todayKST()).toBe('2026-06-20')
   })
 })
 

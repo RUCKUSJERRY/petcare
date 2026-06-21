@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-06-20T07:41:21.885Z
+--  생성 시각: 2026-06-20T23:55:33.314Z
 -- =============================================================
 
 
@@ -316,6 +316,15 @@ create table if not exists public.walk_comments (
   created_at timestamptz not null default now()
 );
 
+-- ── 02.1_table/walk_goals.sql ──
+-- walk_goals : 사용자별 주간 산책 목표 (거리 km · 횟수). 사용자당 1행, 0 = 미설정.
+create table if not exists public.walk_goals (
+  user_id      uuid primary key,
+  distance_km  numeric not null default 0 check (distance_km >= 0),
+  count        integer not null default 0 check (count >= 0),
+  updated_at   timestamptz not null default now()
+);
+
 -- ── 02.1_table/walk_guides.sql ──
 -- walk_guides : 활동 가이드 (산책/놀이/훈련 등, 종/견종/크기/나이 범위별)
 create table if not exists public.walk_guides (
@@ -567,6 +576,12 @@ alter table public.walk_comments add constraint walk_comments_user_id_fkey
   foreign key (user_id) references public.profiles(id) on delete cascade;
 
 create index if not exists idx_walk_comments on public.walk_comments (walk_id, created_at);
+
+-- ── 02.2_index_fk/walk_goals.sql ──
+-- walk_goals : 외래키 (PK가 user_id라 별도 인덱스 불필요)
+alter table public.walk_goals drop constraint if exists walk_goals_user_id_fkey;
+alter table public.walk_goals add constraint walk_goals_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
 
 -- ── 02.2_index_fk/walk_guides.sql ──
 -- walk_guides : 외래키 + 인덱스
@@ -900,6 +915,12 @@ create trigger trg_notify_like_ins after insert on public.post_likes
 create trigger trg_notify_like_del after delete on public.post_likes
   for each row execute function public.remove_like_notification();
 
+-- ── 02.4_trigger/walk_goals.sql ──
+-- walk_goals : updated_at 자동 갱신 트리거
+drop trigger if exists trg_touch_walk_goals on public.walk_goals;
+create trigger trg_touch_walk_goals before update on public.walk_goals
+  for each row execute function public.touch_updated_at();
+
 -- ── 02.4_trigger/walk_guides.sql ──
 -- walk_guides : updated_at 자동 갱신 트리거
 drop trigger if exists trg_touch_walk_guides on public.walk_guides;
@@ -1200,6 +1221,16 @@ create policy "walk_comments_insert_own" on public.walk_comments for insert
     select 1 from public.walks w where w.id = walk_id and (w.is_public or w.user_id = auth.uid())));
 create policy "walk_comments_delete_own" on public.walk_comments for delete
   using (auth.uid() = user_id);
+
+-- ── 02.6_policy/walk_goals.sql ──
+-- walk_goals : RLS (본인 목표만 조회/생성/수정)
+alter table public.walk_goals enable row level security;
+drop policy if exists "walk_goals_select_own" on public.walk_goals;
+drop policy if exists "walk_goals_insert_own" on public.walk_goals;
+drop policy if exists "walk_goals_update_own" on public.walk_goals;
+create policy "walk_goals_select_own" on public.walk_goals for select using (auth.uid() = user_id);
+create policy "walk_goals_insert_own" on public.walk_goals for insert with check (auth.uid() = user_id);
+create policy "walk_goals_update_own" on public.walk_goals for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ── 02.6_policy/walk_guides.sql ──
 -- walk_guides : RLS + 공개 읽기 정책

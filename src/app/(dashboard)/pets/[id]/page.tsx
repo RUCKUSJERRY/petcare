@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { calcPetAge, lifeStageColor, nextAnniversary, daysTogether, ddayBadge } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, nextAnniversary, daysTogether, ddayBadge, todayKST } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -253,7 +253,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>
-            <input className="input" type="date" max={new Date().toISOString().slice(0, 10)}
+            <input className="input" type="date" max={todayKST()}
               value={form.adopted_on} onChange={e => set('adopted_on', e.target.value)} />
           </div>
           <div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeWalks, type WalkLike } from './walkStats'
+import { summarizeWalks, weeklyGoalProgress, type WalkLike, type WalkTotals } from './walkStats'
 
 // 기준: 2026-06-17(수). 그 주 월요일 = 2026-06-15.
 const NOW = new Date('2026-06-17T12:00:00')
@@ -43,5 +43,46 @@ describe('summarizeWalks', () => {
     expect(s.all.count).toBe(0)
     expect(s.weekly).toHaveLength(6)
     expect(s.maxWeekDistance).toBe(0)
+  })
+})
+
+describe('weeklyGoalProgress', () => {
+  const week = (distance_m: number, count: number): WalkTotals => ({ distance_m, count, duration_s: 0 })
+
+  it('목표 미설정이면 hasGoal=false', () => {
+    const p = weeklyGoalProgress(week(5000, 3), { distanceKm: 0, count: 0 })
+    expect(p.hasGoal).toBe(false)
+    expect(p.achieved).toBe(false)
+  })
+
+  it('거리 목표 진행률·달성', () => {
+    const p = weeklyGoalProgress(week(3000, 2), { distanceKm: 10, count: 0 })
+    expect(p.distance.active).toBe(true)
+    expect(p.distance.pct).toBe(30)
+    expect(p.distance.met).toBe(false)
+    expect(p.distance.remainingM).toBe(7000)
+    expect(p.achieved).toBe(false)
+
+    const done = weeklyGoalProgress(week(12000, 1), { distanceKm: 10, count: 0 })
+    expect(done.distance.pct).toBe(100) // 초과해도 100 클램프
+    expect(done.distance.met).toBe(true)
+    expect(done.achieved).toBe(true)
+  })
+
+  it('횟수 목표', () => {
+    const p = weeklyGoalProgress(week(0, 3), { distanceKm: 0, count: 5 })
+    expect(p.count.pct).toBe(60)
+    expect(p.count.remaining).toBe(2)
+    expect(p.achieved).toBe(false)
+  })
+
+  it('거리+횟수 모두 설정 시 둘 다 충족해야 달성', () => {
+    const partial = weeklyGoalProgress(week(10000, 2), { distanceKm: 8, count: 5 })
+    expect(partial.distance.met).toBe(true)
+    expect(partial.count.met).toBe(false)
+    expect(partial.achieved).toBe(false)
+
+    const all = weeklyGoalProgress(week(10000, 5), { distanceKm: 8, count: 5 })
+    expect(all.achieved).toBe(true)
   })
 })

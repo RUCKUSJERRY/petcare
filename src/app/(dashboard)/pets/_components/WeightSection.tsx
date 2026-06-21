@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { todayKST } from '@/lib/utils'
 import type { WeightLog } from '@/types'
 
 export function WeightSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
@@ -18,7 +19,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   const [showAll, setShowAll] = useState(false)
   const [form, setForm] = useState({
     weight_kg: '',
-    measured_on: new Date().toISOString().slice(0, 10),
+    measured_on: todayKST(),
   })
 
   const [editingGoal, setEditingGoal] = useState(false)
@@ -70,7 +71,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
     })
     setSaving(false)
     if (insErr) { setError(t('errSaveFailed')); return }
-    setForm({ weight_kg: '', measured_on: new Date().toISOString().slice(0, 10) })
+    setForm({ weight_kg: '', measured_on: todayKST() })
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
   }
@@ -170,7 +171,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               className="input"
               type="date"
               value={form.measured_on}
-              max={new Date().toISOString().slice(0, 10)}
+              max={todayKST()}
               onChange={e => setForm(f => ({ ...f, measured_on: e.target.value }))}
             />
           </div>
