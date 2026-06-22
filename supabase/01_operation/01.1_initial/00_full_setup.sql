@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-06-22T03:19:26.229Z
+--  생성 시각: 2026-06-22T05:10:46.479Z
 -- =============================================================
 
 
@@ -168,6 +168,21 @@ create table if not exists public.notifications (
   created_at   timestamptz not null default now()
 );
 
+-- ── 02.1_table/payments.sql ──
+-- payments : 결제 이력 (첫 결제 + 매월 자동결제). 분석/정산·중복결제 방지용.
+-- order_id 는 멱등키(같은 주문 중복 승인 방지). 서버 전용(RLS 정책 미정의).
+create table if not exists public.payments (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null,
+  order_id     text not null unique,
+  payment_key  text,
+  amount       integer not null check (amount >= 0),
+  status       text not null default 'DONE',
+  method       text,
+  kind         text not null default 'initial' check (kind in ('initial', 'renewal')),
+  created_at   timestamptz not null default now()
+);
+
 -- ── 02.1_table/pet_invitations.sql ──
 -- pet_invitations : 반려동물 공동 관리 초대 (토큰 링크)
 create table if not exists public.pet_invitations (
@@ -328,6 +343,25 @@ create table if not exists public.records (
   next_due_on      date,
   last_reminded_on date,
   created_at       timestamptz not null default now()
+);
+
+-- ── 02.1_table/subscriptions.sql ──
+-- subscriptions : 프리미엄 정기결제(토스 빌링) 구독. 사용자당 1행.
+-- billing_key(결제수단 토큰)는 민감정보 → RLS로 클라이언트 접근을 전면 차단하고
+-- 서버(service_role)에서만 읽고 쓴다. (정책 미정의 = 서버 전용)
+create table if not exists public.subscriptions (
+  id                 uuid primary key default gen_random_uuid(),
+  user_id            uuid not null unique,
+  status             text not null default 'active' check (status in ('active', 'canceled', 'past_due')),
+  billing_key        text not null,
+  customer_key       text not null,
+  card_company       text,
+  card_number_masked text,
+  amount             integer not null check (amount >= 0),
+  current_period_end timestamptz not null,
+  canceled_at        timestamptz,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
 );
 
 -- ── 02.1_table/walk_comments.sql ──
@@ -506,6 +540,14 @@ alter table public.notifications add constraint notifications_comment_id_fkey
 create index if not exists idx_notif_recipient on public.notifications (recipient_id, created_at desc);
 create index if not exists idx_notif_unread on public.notifications (recipient_id) where read = false;
 
+-- ── 02.2_index_fk/payments.sql ──
+-- payments : 외래키 + 인덱스
+alter table public.payments drop constraint if exists payments_user_id_fkey;
+alter table public.payments add constraint payments_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
+create index if not exists idx_payments_user on public.payments (user_id, created_at desc);
+
 -- ── 02.2_index_fk/pet_invitations.sql ──
 -- pet_invitations : 외래키 + 인덱스
 alter table public.pet_invitations drop constraint if exists pet_invitations_pet_id_fkey;
@@ -599,6 +641,15 @@ alter table public.records add constraint records_pet_id_fkey
 
 create index if not exists idx_records_pet_event on public.records (pet_id, event_on desc);
 create index if not exists idx_records_pet_due   on public.records (pet_id, next_due_on);
+
+-- ── 02.2_index_fk/subscriptions.sql ──
+-- subscriptions : 외래키 + 인덱스
+alter table public.subscriptions drop constraint if exists subscriptions_user_id_fkey;
+alter table public.subscriptions add constraint subscriptions_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
+-- 갱신 크론이 "결제 예정 도래분"을 빠르게 찾기 위한 인덱스
+create index if not exists idx_subscriptions_renew on public.subscriptions (status, current_period_end);
 
 -- ── 02.2_index_fk/walk_comments.sql ──
 -- walk_comments : 외래키 + 인덱스
@@ -949,6 +1000,12 @@ create trigger trg_notify_like_ins after insert on public.post_likes
 create trigger trg_notify_like_del after delete on public.post_likes
   for each row execute function public.remove_like_notification();
 
+-- ── 02.4_trigger/subscriptions.sql ──
+-- subscriptions : updated_at 자동 갱신 트리거
+drop trigger if exists trg_touch_subscriptions on public.subscriptions;
+create trigger trg_touch_subscriptions before update on public.subscriptions
+  for each row execute function public.touch_updated_at();
+
 -- ── 02.4_trigger/walk_goals.sql ──
 -- walk_goals : updated_at 자동 갱신 트리거
 drop trigger if exists trg_touch_walk_goals on public.walk_goals;
@@ -1100,6 +1157,11 @@ create policy "notif_update_own" on public.notifications for update
 create policy "notif_delete_own" on public.notifications for delete
   using (auth.uid() = recipient_id);
 
+-- ── 02.6_policy/payments.sql ──
+-- payments : RLS (서버 전용)
+-- 결제 이력은 서버(service_role)에서만 적재/조회한다. 정책 미정의 = 클라이언트 차단.
+alter table public.payments enable row level security;
+
 -- ── 02.6_policy/pet_invitations.sql ──
 -- pet_invitations : RLS (owner만 조회/생성/수정/삭제)
 alter table public.pet_invitations enable row level security;
@@ -1248,6 +1310,13 @@ create policy "records_member_select" on public.records for select using (public
 create policy "records_member_insert" on public.records for insert with check (public.is_pet_member(pet_id));
 create policy "records_member_update" on public.records for update using (public.is_pet_member(pet_id));
 create policy "records_member_delete" on public.records for delete using (public.is_pet_member(pet_id));
+
+-- ── 02.6_policy/subscriptions.sql ──
+-- subscriptions : RLS (서버 전용)
+-- billing_key 등 결제수단 토큰을 보호하기 위해 클라이언트 직접 접근을 전면 차단한다.
+-- RLS를 켜고 정책을 만들지 않으면 anon/authenticated는 어떤 행도 읽고 쓸 수 없고,
+-- service_role(서버 라우트)만 접근한다. 구독 상태 표시는 /api/billing/me 가 대신 제공.
+alter table public.subscriptions enable row level security;
 
 -- ── 02.6_policy/walk_comments.sql ──
 -- walk_comments : RLS (공유/본인 산책에만 댓글 조회·생성, 본인 댓글만 삭제)
