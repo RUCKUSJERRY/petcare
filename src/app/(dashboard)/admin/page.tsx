@@ -26,6 +26,7 @@ export default function AdminPage() {
 
   const [price, setPrice] = useState('')
   const [ads, setAds] = useState(true)
+  const [cooldown, setCooldown] = useState('3')
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -53,6 +54,7 @@ export default function AdminPage() {
     if (settings && !loaded) {
       setPrice(settings.get('premium_price_krw') ?? '3900')
       setAds(settings.get('ads_enabled') !== 'false')
+      setCooldown(settings.get('ad_cooldown_min') ?? '3')
       setLoaded(true)
     }
   }, [settings, loaded])
@@ -73,9 +75,12 @@ export default function AdminPage() {
     setSaved(false)
     const n = parseInt(price.replace(/[^0-9]/g, ''), 10)
     const priceVal = Number.isFinite(n) && n > 0 ? String(n) : '3900'
+    const cd = parseInt(cooldown.replace(/[^0-9]/g, ''), 10)
+    const cdVal = Number.isFinite(cd) && cd >= 0 ? String(cd) : '3'
     await supabase.from('app_settings').upsert([
       { key: 'premium_price_krw', value: priceVal },
       { key: 'ads_enabled', value: ads ? 'true' : 'false' },
+      { key: 'ad_cooldown_min', value: cdVal },
     ], { onConflict: 'key' })
     setSaving(false)
     setSaved(true)
@@ -127,6 +132,14 @@ export default function AdminPage() {
           <span className="text-sm text-gray-700">{t('adsLabel')}</span>
           <input type="checkbox" checked={ads} onChange={e => setAds(e.target.checked)} className="w-5 h-5 accent-primary-500" />
         </label>
+        <div>
+          <label className="text-xs font-semibold text-gray-500 block mb-1">{t('cooldownLabel')}</label>
+          <input
+            className="input" type="number" min="0" inputMode="numeric"
+            value={cooldown} onChange={e => setCooldown(e.target.value)}
+          />
+          <p className="text-[11px] text-gray-400 mt-1">{t('cooldownHint')}</p>
+        </div>
         <button onClick={save} disabled={saving} className="btn-primary w-full py-3">
           {saving ? t('saving') : saved ? t('saved') : t('saveBtn')}
         </button>

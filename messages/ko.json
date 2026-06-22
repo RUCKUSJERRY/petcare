@@ -905,6 +905,8 @@
     "priceLabel": "프리미엄 월 가격 (원)",
     "priceHint": "변경 시 결제·프리미엄 화면에 바로 반영됩니다.",
     "adsLabel": "전면 광고 표시",
+    "cooldownLabel": "광고 최소 간격 (분)",
+    "cooldownHint": "한 번 노출 후 이 시간 동안은 광고를 다시 띄우지 않아요. 0이면 매번 노출.",
     "saveBtn": "저장하기",
     "saving": "저장 중…",
     "saved": "저장됐어요 ✓",

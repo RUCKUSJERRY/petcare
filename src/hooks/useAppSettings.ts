@@ -3,12 +3,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { premiumPriceKRW as priceFromEnv } from '@/lib/pricing'
-import { adsEnabled as adsEnabledEnv } from '@/lib/ads'
+import { adsEnabled as adsEnabledEnv, AD_COOLDOWN_MS } from '@/lib/ads'
 
 export interface AppSettings {
   premiumPriceKRW: number
   /** 운영설정 + 환경변수 둘 다 켜져 있을 때만 광고 노출 */
   adsEnabled: boolean
+  /** 전면 광고 최소 간격(ms). 관리자가 분 단위로 조정. */
+  adCooldownMs: number
 }
 
 /**
@@ -20,18 +22,23 @@ export function useAppSettings(): AppSettings {
   const { data } = useQuery<AppSettings>({
     queryKey: ['app-settings'],
     queryFn: async () => {
-      const fallback: AppSettings = { premiumPriceKRW: priceFromEnv(), adsEnabled: adsEnabledEnv() }
+      const fallback: AppSettings = {
+        premiumPriceKRW: priceFromEnv(), adsEnabled: adsEnabledEnv(), adCooldownMs: AD_COOLDOWN_MS,
+      }
       const { data, error } = await supabase.from('app_settings').select('key, value')
       if (error || !data) return fallback
       const map = new Map(data.map(r => [r.key as string, r.value as string]))
       const priceRaw = map.get('premium_price_krw')
       const price = priceRaw ? parseInt(priceRaw.replace(/[^0-9]/g, ''), 10) : NaN
+      const cdRaw = map.get('ad_cooldown_min')
+      const cdMin = cdRaw != null ? parseInt(cdRaw.replace(/[^0-9]/g, ''), 10) : NaN
       return {
         premiumPriceKRW: Number.isFinite(price) && price > 0 ? price : priceFromEnv(),
         adsEnabled: map.get('ads_enabled') !== 'false' && adsEnabledEnv(),
+        adCooldownMs: Number.isFinite(cdMin) && cdMin >= 0 ? cdMin * 60 * 1000 : AD_COOLDOWN_MS,
       }
     },
     staleTime: 5 * 60 * 1000,
   })
-  return data ?? { premiumPriceKRW: priceFromEnv(), adsEnabled: adsEnabledEnv() }
+  return data ?? { premiumPriceKRW: priceFromEnv(), adsEnabled: adsEnabledEnv(), adCooldownMs: AD_COOLDOWN_MS }
 }
