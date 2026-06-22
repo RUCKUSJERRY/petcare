@@ -4,28 +4,38 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { usePlan } from '@/hooks/usePlan'
+import { useAppSettings } from '@/hooks/useAppSettings'
 
-const DISMISS_KEY = 'petcare:premiumUpsellDismiss'
+const DISMISS_KEY = 'petcare:premiumUpsellDismissAt'
+
+/** 닫은 지 cooldownMs 가 지나지 않았으면 true (계속 숨김). 0이면 항상 노출. */
+function dismissedRecently(cooldownMs: number): boolean {
+  if (typeof window === 'undefined' || cooldownMs <= 0) return false
+  const raw = window.localStorage.getItem(DISMISS_KEY)
+  const at = raw ? parseInt(raw, 10) : NaN
+  return Number.isFinite(at) && Date.now() - at < cooldownMs
+}
 
 /**
- * 대시보드용 프리미엄 업셀 카드. 무료 사용자에게만 노출하고, ✕로 닫으면 해당 세션 동안 숨긴다.
- * 마이페이지 외에 홈에서도 구독으로 진입할 수 있게 한다.
+ * 대시보드용 프리미엄 업셀 카드. 무료 사용자에게만 노출하고, ✕로 닫으면
+ * 관리자가 정한 시간(분) 동안 숨겼다가 다시 노출한다. (localStorage 타임스탬프)
  */
 export function PremiumUpsellCard() {
   const t = useTranslations('premium')
   const { isPremium } = usePlan()
+  const { upsellDismissMs } = useAppSettings()
   const [dismissed, setDismissed] = useState(true) // SSR 깜빡임 방지
 
   useEffect(() => {
-    setDismissed(sessionStorage.getItem(DISMISS_KEY) === '1')
-  }, [])
+    setDismissed(dismissedRecently(upsellDismissMs))
+  }, [upsellDismissMs])
 
   if (isPremium || dismissed) return null
 
   const close = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    sessionStorage.setItem(DISMISS_KEY, '1')
+    window.localStorage.setItem(DISMISS_KEY, String(Date.now()))
     setDismissed(true)
   }
 
