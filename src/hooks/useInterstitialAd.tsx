@@ -2,8 +2,8 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { AdInterstitial } from '@/components/ui/AdInterstitial'
-import { adsEnabled } from '@/lib/ads'
 import { usePlan } from '@/hooks/usePlan'
+import { useAppSettings } from '@/hooks/useAppSettings'
 import type { Species } from '@/types'
 
 /**
@@ -18,17 +18,18 @@ import type { Species } from '@/types'
  */
 export function useInterstitialAd(species?: Species) {
   const { isPremium } = usePlan()
+  const { adsEnabled } = useAppSettings()
   const [open, setOpen] = useState(false)
   const actionRef = useRef<(() => void) | null>(null)
 
   const requestAd = useCallback((action: () => void) => {
-    if (isPremium || !adsEnabled()) {
+    if (isPremium || !adsEnabled) {
       action()
       return
     }
     actionRef.current = action
     setOpen(true)
-  }, [isPremium])
+  }, [isPremium, adsEnabled])
 
   const run = useCallback(() => {
     const action = actionRef.current
