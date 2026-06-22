@@ -14,6 +14,7 @@ import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { RecordsScanModal } from '../pets/_components/RecordsScanModal'
 import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
 import { buildRecordsHtml, openPrintWindow, type ExportRecord } from '@/lib/exportRecords'
+import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 import { useTranslations } from 'next-intl'
 import type { RecordCategory } from '@/types'
 
@@ -157,16 +158,22 @@ export default function SchedulePage() {
   const soon = visible.filter(i => { const d = daysUntil(i.next_due_on); return d >= 0 && d <= 7 })
   const later = visible.filter(i => daysUntil(i.next_due_on) > 7)
 
+  // OCR 스캔·기록 내보내기 직전 전면 광고(무료 사용자). 프리미엄/광고 OFF/쿨다운 시 즉시 진행.
+  const { requestAd, adNode } = useInterstitialAd()
+
   const openScan = () => {
     setMenuOpen(false)
     if (!selectedPetId) { setScanNotice(true); return }
     setScanNotice(false)
-    setShowScan(true)
+    requestAd(() => setShowScan(true))
   }
 
   const [exporting, setExporting] = useState(false)
-  const exportRecords = async () => {
+  const exportRecords = () => {
     setMenuOpen(false)
+    requestAd(() => { void runExport() })
+  }
+  const runExport = async () => {
     setExporting(true)
     try {
       const petIds = selectedPetId ? [selectedPetId] : Array.from(new Set(history.map(h => h.pet_id)))
@@ -353,6 +360,8 @@ export default function SchedulePage() {
           )}
         </div>
       )}
+
+      {adNode}
 
       {showScan && selectedPetId && (
         <RecordsScanModal petId={selectedPetId}
