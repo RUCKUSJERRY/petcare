@@ -4,8 +4,21 @@ import type { RecordCategory } from '@/types'
 export const RECORD_CATEGORIES: RecordCategory[] = [
   '진료', '접종', '심장사상충', '구충', '외부기생충', '건강검진',
   '미용', '양치', '발톱', '목욕', '귀청소',
-  '식사', '간식', '기타',
+  '식사', '간식', '물', '소변', '대변', '투약', '증상', '기타',
 ]
+
+/** 원탭으로 "지금" 남기는 생활기록 카테고리(오늘의 기록 바 순서). 육아앱식 빠른 로깅 대상. */
+export const DAILY_LOG_CATEGORIES: RecordCategory[] = [
+  '식사', '간식', '물', '소변', '대변', '투약', '증상',
+]
+
+/** 생활기록 여부 — 일정(예정/반복) 대신 시간순 타임라인으로 다루는 카테고리 */
+export const DAILY_LOG_SET = new Set<RecordCategory>(DAILY_LOG_CATEGORIES)
+
+/** 항목명 미입력 시 사용할 기본 제목(생활기록은 카테고리명을 그대로 제목으로). */
+export function defaultRecordTitle(category: RecordCategory): string {
+  return category
+}
 
 /** 항목명(title)이 서로 달라야 별개 일정으로 보는 카테고리(제품/백신 구분).
  *  그 외는 카테고리 단위로 "최신 1건"만 집계한다. (일정 중복 방지) */
@@ -81,5 +94,10 @@ export const CATEGORY_CONFIG: Record<RecordCategory, CategoryConfig> = {
       { key: 'amount', label: '양', type: 'text', placeholder: '예: 1개' },
     ],
   },
+  물: { titleLabel: '메모', titlePlaceholder: '예: 평소량 / 적게 마심 (선택)', fields: [] },
+  소변: { titleLabel: '상태 · 메모', titlePlaceholder: '예: 정상 / 자주 / 색 진함 (선택)', fields: [] },
+  대변: { titleLabel: '상태 · 메모', titlePlaceholder: '예: 정상 / 무름 / 설사 / 혈변 (선택)', fields: [] },
+  투약: { titleLabel: '약 이름', titlePlaceholder: '예: 심장약, 관절영양제 (선택)', fields: [] },
+  증상: { titleLabel: '증상', titlePlaceholder: '예: 구토 2회, 기침, 다리 절뚝 (선택)', fields: [] },
   기타: { titleLabel: '항목명', titlePlaceholder: '항목명', fields: [] },
 }

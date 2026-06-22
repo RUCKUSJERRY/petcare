@@ -5,3 +5,4 @@ alter table public.records add constraint records_pet_id_fkey
 
 create index if not exists idx_records_pet_event on public.records (pet_id, event_on desc);
 create index if not exists idx_records_pet_due   on public.records (pet_id, next_due_on);
+create index if not exists idx_records_pet_event_at on public.records (pet_id, event_at desc);

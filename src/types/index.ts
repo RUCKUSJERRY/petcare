@@ -259,7 +259,8 @@ export interface WeightLog {
 /** 통합 기록 카테고리 (구글 캘린더형 단일 모델) */
 export type RecordCategory =
   | '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진' | '진료'
-  | '미용' | '양치' | '발톱' | '목욕' | '귀청소' | '식사' | '간식'
+  | '미용' | '양치' | '발톱' | '목욕' | '귀청소'
+  | '식사' | '간식' | '소변' | '대변' | '물' | '투약' | '증상'
   | '기타'
 
 /** 통합 기록 (records 테이블) — 캘린더/목록은 이 공통 컬럼만 사용 */
@@ -269,6 +270,7 @@ export interface PetRecord {
   category: RecordCategory
   title: string
   event_on: string             // 시행/진료/발생일 YYYY-MM-DD
+  event_at: string | null      // 생활기록 시각(ISO) — 타임라인 정렬용. 일정 기록은 null
   place_name: string | null
   place_lat: number | null
   place_lng: number | null
