@@ -415,7 +415,10 @@
     "saveFailed": "저장에 실패했어요. 다시 시도해주세요.",
     "saved": "저장됐어요 ✓",
     "saveButton": "저장하기",
-    "viewOnboarding": "사용 안내 다시 보기"
+    "viewOnboarding": "사용 안내 다시 보기",
+    "premium": "펫케어 프리미엄",
+    "premiumHint": "광고 없이 더 쾌적하게 — 혜택 보기",
+    "premiumActive": "프리미엄 이용 중 👑"
   },
   "notifications": {
     "title": "알림",
@@ -843,5 +846,39 @@
     "emptyHint": "일정에서 진료·미용 등 기록에 비용을 입력하면 여기서 월별·항목별로 모아볼 수 있어요.",
     "goRecord": "일정에서 기록하기 →",
     "disclaimer": "비용이 입력된 기록만 집계됩니다. 일정 화면에서 각 기록의 비용을 입력·수정할 수 있어요."
+  },
+  "affiliate": {
+    "heading": "이런 상품은 어때요?",
+    "adLabel": "광고",
+    "disclosure": "제휴 링크가 포함되어 있으며, 구매 시 일정액의 수수료를 제공받을 수 있습니다."
+  },
+  "ads": {
+    "title": "광고",
+    "sponsored": "SPONSORED",
+    "close": "닫기",
+    "cta": "자세히 보기",
+    "continue": "계속하기",
+    "countdown": "{sec}초 후 시작할 수 있어요",
+    "removeAds": "프리미엄으로 광고 없이 이용하기"
+  },
+  "premium": {
+    "title": "펫케어 프리미엄",
+    "back": "뒤로",
+    "heroTitle": "광고 없이, 더 똑똑하게",
+    "heroSubtitle": "반려생활을 더 편하게 만드는 프리미엄 혜택",
+    "currentFree": "현재 무료 플랜을 이용 중이에요.",
+    "activeBadge": "프리미엄을 이용 중이에요 👑",
+    "activeUntil": "{date}까지 이용 가능",
+    "comingSoon": "준비 중",
+    "perMonth": "/ 월",
+    "upgradeCta": "프리미엄 시작하기",
+    "paymentComingSoon": "결제 연동을 준비 중이에요. 오픈 시 알려드릴게요!",
+    "disclaimer": "프리미엄 결제는 현재 준비 중입니다. 광고 제거 외 혜택은 순차적으로 제공될 예정이에요.",
+    "benefit": {
+      "noAds": { "title": "광고 제거", "desc": "산책 시작 등에서 전면 광고가 표시되지 않아요" },
+      "reports": { "title": "고급 케어 리포트", "desc": "비용·건강·체중 추세를 PDF로 정리" },
+      "ocr": { "title": "무제한 영수증 스캔", "desc": "AI 영수증·이력서 인식을 제한 없이" },
+      "family": { "title": "가족 공유 확대", "desc": "더 많은 가족과 함께 관리" }
+    }
   }
 }

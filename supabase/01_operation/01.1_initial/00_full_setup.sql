@@ -2,13 +2,24 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-06-20T23:55:33.314Z
+--  생성 시각: 2026-06-22T03:19:26.229Z
 -- =============================================================
 
 
 -- ┌──────────────────────────────────────────────
 -- │ 02.1_table
 -- └──────────────────────────────────────────────
+
+-- ── 02.1_table/affiliate_clicks.sql ──
+-- affiliate_clicks : 제휴 상품 클릭 로그 (수익화 - 어필리에이트 전환 측정용)
+-- 어떤 상품을 어느 화면(context)에서 눌렀는지 적재해 제휴 매출/클릭률 분석에 사용한다.
+create table if not exists public.affiliate_clicks (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid,
+  product_id  text not null,
+  context     text,
+  created_at  timestamptz not null default now()
+);
 
 -- ── 02.1_table/breed_food_rules.sql ──
 -- breed_food_rules : 견종/묘종별 음식 예외 규칙 (override)
@@ -236,11 +247,24 @@ create table if not exists public.posts (
 -- ── 02.1_table/profiles.sql ──
 -- profiles : 사용자 표시 정보 (auth.users 1:1)
 create table if not exists public.profiles (
-  id           uuid primary key,
-  display_name text not null,
-  avatar_url   text,
-  created_at   timestamptz not null default now()
+  id            uuid primary key,
+  display_name  text not null,
+  avatar_url    text,
+  plan          text not null default 'free' check (plan in ('free', 'premium')),
+  premium_until timestamptz,
+  created_at    timestamptz not null default now()
 );
+
+-- 기존 테이블 보강 (재실행 안전) — 요금제(plan)·프리미엄 만료일(premium_until)
+-- plan='premium' 이고 premium_until 이 미래(또는 null=무기한)이면 프리미엄으로 본다.
+alter table public.profiles add column if not exists plan text not null default 'free';
+alter table public.profiles add column if not exists premium_until timestamptz;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_plan_check') then
+    alter table public.profiles
+      add constraint profiles_plan_check check (plan in ('free', 'premium'));
+  end if;
+end $$;
 
 -- ── 02.1_table/push_subscriptions.sql ──
 -- push_subscriptions : 웹 푸시 구독 정보 (브라우저별 endpoint/키)
@@ -388,6 +412,16 @@ create table if not exists public.weight_logs (
 -- ┌──────────────────────────────────────────────
 -- │ 02.2_index_fk
 -- └──────────────────────────────────────────────
+
+-- ── 02.2_index_fk/affiliate_clicks.sql ──
+-- affiliate_clicks : 외래키 + 인덱스
+-- user_id 는 비로그인 클릭(null)도 허용하므로 not null 로 두지 않는다. 삭제 시 로그는 보존.
+alter table public.affiliate_clicks drop constraint if exists affiliate_clicks_user_id_fkey;
+alter table public.affiliate_clicks add constraint affiliate_clicks_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete set null;
+
+create index if not exists idx_affiliate_clicks_product on public.affiliate_clicks (product_id, created_at desc);
+create index if not exists idx_affiliate_clicks_created on public.affiliate_clicks (created_at desc);
 
 -- ── 02.2_index_fk/breed_food_rules.sql ──
 -- breed_food_rules : 외래키 + 인덱스
@@ -969,6 +1003,14 @@ left join public.breeds   b  on b.id = p.breed_id;
 -- ┌──────────────────────────────────────────────
 -- │ 02.6_policy
 -- └──────────────────────────────────────────────
+
+-- ── 02.6_policy/affiliate_clicks.sql ──
+-- affiliate_clicks : RLS (클릭 적재는 누구나 insert, 조회/수정/삭제는 막음 - 분석은 service_role)
+-- 본인 클릭이면 user_id=auth.uid(), 비로그인이면 user_id is null 로만 insert 허용.
+alter table public.affiliate_clicks enable row level security;
+drop policy if exists "affiliate_clicks_insert" on public.affiliate_clicks;
+create policy "affiliate_clicks_insert" on public.affiliate_clicks for insert
+  with check (user_id is null or auth.uid() = user_id);
 
 -- ── 02.6_policy/breed_food_rules.sql ──
 -- breed_food_rules : RLS + 공개 읽기 정책

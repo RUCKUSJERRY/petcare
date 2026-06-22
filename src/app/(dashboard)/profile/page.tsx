@@ -11,6 +11,8 @@ import { LogoutButton } from '@/components/ui/LogoutButton'
 import { PushToggle } from '@/components/ui/PushToggle'
 import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
+import Link from 'next/link'
+import { usePlan } from '@/hooks/usePlan'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -18,6 +20,7 @@ export default function ProfilePage() {
   const tc = useTranslations('common')
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { isPremium } = usePlan()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -125,6 +128,19 @@ export default function ProfilePage() {
         <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
           {saving ? tc('saving') : done ? t('saved') : t('saveButton')}
         </button>
+
+        {/* 프리미엄 진입점 */}
+        <Link
+          href="/premium"
+          className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-2xl shrink-0" aria-hidden>👑</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-900">{t('premium')}</div>
+            <div className="text-xs text-gray-400">{isPremium ? t('premiumActive') : t('premiumHint')}</div>
+          </div>
+          <span className="text-gray-300 shrink-0" aria-hidden>›</span>
+        </Link>
 
         {/* 알림 설정 */}
         <div className="border-t border-gray-100 pt-4">

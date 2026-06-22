@@ -71,6 +71,8 @@ async function tryGemini(base64: string, mimeType: string): Promise<{ records: O
   if (!apiKey) return { error: 'not_configured' }
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+    // Gemini가 응답을 지연하면 maxDuration까지 요청이 묶여 클라이언트의 무료 OCR(Tesseract)
+    // 폴백도 늦어진다. 타임아웃을 두어 빠르게 실패시키고 폴백이 동작하도록 한다.
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -78,6 +80,7 @@ async function tryGemini(base64: string, mimeType: string): Promise<{ records: O
         contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
         generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA },
       }),
+      signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
