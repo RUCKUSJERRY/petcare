@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchWalkGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import type { Pet } from '@/types'
@@ -139,6 +140,9 @@ export default function WalkPage() {
           </div>
         ))
       )}
+
+      {/* 하단 고정 제휴 배너(산책용품) */}
+      <StickyAffiliateBanner species={pets[0]?.species ?? 'dog'} context="walk" />
     </div>
   )
 }

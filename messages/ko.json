@@ -191,6 +191,7 @@
   "foods": {
     "title": "음식 안전 정보",
     "petBasis": "{name} 기준",
+    "feedGuideTitle": "사료·급여 가이드",
     "dog": "강아지",
     "cat": "고양이",
     "searchPlaceholder": "음식 이름 검색...",
@@ -872,6 +873,10 @@
     "back": "뒤로",
     "heroTitle": "광고 없이, 더 똑똑하게",
     "heroSubtitle": "반려생활을 더 편하게 만드는 프리미엄 혜택",
+    "upsellTitle": "펫케어 프리미엄",
+    "upsellDesc": "광고 없이 더 쾌적하게 — 혜택을 확인해 보세요",
+    "upsellCta": "프리미엄 보기",
+    "upsellDismiss": "닫기",
     "comingSoon": "준비 중",
     "perMonth": "/ 월",
     "subscribeCta": "프리미엄 구독 시작하기",

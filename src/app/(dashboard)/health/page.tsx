@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchHealthGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import type { HealthGuide, Pet } from '@/types'
@@ -97,6 +98,9 @@ export default function HealthPage() {
           </div>
         ))
       )}
+
+      {/* 하단 고정 제휴 배너(건강용품·영양제) */}
+      <StickyAffiliateBanner species={pets[0]?.species ?? 'dog'} context="health" />
     </div>
   )
 }

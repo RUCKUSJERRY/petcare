@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, RecordCategory } from '@/types'
 import { PetSection } from './_components/PetSection'
+import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -63,6 +64,9 @@ export default async function DashboardPage() {
     <div className="px-4 py-6 space-y-6">
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} />
+
+      {/* 프리미엄 업셀 (무료 사용자만, 닫기 가능) */}
+      <PremiumUpsellCard />
 
       {/* 지도 (실종·동물병원·애견카페/식당) */}
       <Link href="/map" className="card flex items-center gap-3 hover:shadow-md transition-shadow">

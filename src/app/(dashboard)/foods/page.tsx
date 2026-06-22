@@ -6,10 +6,44 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
+import { calcPetAge } from '@/lib/utils'
+import { foodGuidesForSpecies, type FoodGuideTopic } from '@/lib/foodGuideData'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
-import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
+import { FeedCalculator } from '../care/_components/FeedCalculator'
+import type { BreedFoodRule, FoodItem, FoodSafety, PetAge, Species } from '@/types'
+
+/** 생애 단계 → 급여 계산기 기본 계수 */
+function toFeedFactor(lifeStage: PetAge['lifeStage'] | undefined): 'neutered' | 'growth' | 'senior' {
+  if (lifeStage === '퍼피' || lifeStage === '키튼') return 'growth'
+  if (lifeStage === '시니어') return 'senior'
+  return 'neutered'
+}
+
+/** 사료·간식 가이드 접이식 카드 */
+function FoodGuideCard({ guide }: { guide: FoodGuideTopic }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="card space-y-2 border-l-4 border-primary-400" style={{ borderRadius: '0 12px 12px 0' }}>
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2.5 text-left">
+        <span className="text-2xl shrink-0" aria-hidden>{guide.icon}</span>
+        <span className="flex-1 font-semibold text-gray-900">{guide.title}</span>
+        <span className="text-gray-400 text-sm shrink-0">{open ? '접기' : '열기'}</span>
+      </button>
+      {open && (
+        <ul className="space-y-1.5 pt-1">
+          {guide.points.map((p, i) => (
+            <li key={i} className="flex gap-2 text-sm text-gray-600 leading-relaxed">
+              <span className="text-primary-400 shrink-0" aria-hidden>•</span>
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
 type Filter = typeof FILTERS[number]
@@ -142,6 +176,10 @@ export default function FoodsPage() {
   // 펫 선택기가 없는 경우(펫 1마리 이하)에만 종 탭 노출
   const showSpeciesTabs = !myPets || myPets.length <= 1
 
+  // 급여량 계산기 기본값 (선택된 펫 → 없으면 첫 펫 기준)
+  const calcPet = activePet ?? myPets?.[0] ?? null
+  const calcAge = calcPet ? calcPetAge(calcPet.birth_year, calcPet.birth_month, calcPet.species) : null
+
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -256,6 +294,17 @@ export default function FoodsPage() {
           })}
         </div>
       )}
+
+      {/* 사료·급여 가이드 (급여량 계산기 + 사료/간식 정보) */}
+      <section className="space-y-2 pt-2">
+        <h2 className="text-sm font-semibold text-gray-700">{t('feedGuideTitle')}</h2>
+        <FeedCalculator
+          species={species}
+          defaultWeight={calcPet?.weight_kg ?? null}
+          defaultFactor={toFeedFactor(calcAge?.lifeStage)}
+        />
+        {foodGuidesForSpecies(species).map(g => <FoodGuideCard key={g.id} guide={g} />)}
+      </section>
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
         {t('disclaimer')}

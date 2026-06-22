@@ -3,7 +3,7 @@ import type { Species } from '@/types'
 /**
  * 제휴(어필리에이트) 상품 카탈로그 + 클릭 추적.
  *
- * 수익 모델(B): 사료 계산기·음식 가이드 등 자연스러운 맥락에 추천 상품을 노출하고,
+ * 수익 모델(B): 음식·활동·건강·생활관리 등 맥락에 맞는 추천 상품을 노출하고,
  * 제휴 링크를 통해 구매가 발생하면 수수료를 받는다(예: 쿠팡 파트너스).
  *
  * 실제 제휴 ID/링크는 코드에 하드코딩하지 않고 환경변수로 주입한다.
@@ -11,10 +11,22 @@ import type { Species } from '@/types'
  * 미설정 시에는 상품의 기본 link(검색/랜딩)를 그대로 사용한다.
  */
 
-export type AffiliateContext = 'feed' | 'foods' | 'ad'
+export type AffiliateContext = 'feed' | 'foods' | 'walk' | 'health' | 'care' | 'ad'
+
+type ProductCategory = 'food' | 'supplement' | 'walk' | 'health' | 'care'
+
+/** 맥락 → 노출할 상품 카테고리 */
+const CONTEXT_CATEGORIES: Record<Exclude<AffiliateContext, 'ad'>, ProductCategory[]> = {
+  feed: ['food'],
+  foods: ['food', 'supplement'],
+  walk: ['walk'],
+  health: ['health', 'supplement'],
+  care: ['care'],
+}
 
 export interface AffiliateProduct {
   id: string
+  category: ProductCategory
   /** 노출 대상 종 (없으면 공통) */
   species?: Species
   emoji: string
@@ -26,55 +38,39 @@ export interface AffiliateProduct {
   link: string
 }
 
+const SEARCH = (q: string) => `https://www.coupang.com/np/search?q=${encodeURIComponent(q)}`
+
 /**
  * MVP 카탈로그. 실제 운영 시에는 DB/CMS로 옮겨 관리할 수 있다.
  * link 는 제휴 랜딩(검색 결과 등)으로, 파트너 태그가 있으면 자동 부착된다.
  */
 const CATALOG: AffiliateProduct[] = [
-  {
-    id: 'dog-food-premium',
-    species: 'dog',
-    emoji: '🦴',
-    title: '강아지 사료 추천 모음',
-    desc: '연령·체중별 베스트 건사료를 비교해 보세요',
-    priceText: '특가',
-    link: 'https://www.coupang.com/np/search?q=강아지+사료',
-  },
-  {
-    id: 'cat-food-premium',
-    species: 'cat',
-    emoji: '🐟',
-    title: '고양이 사료 추천 모음',
-    desc: '기호성 좋은 인기 건사료를 한눈에',
-    priceText: '특가',
-    link: 'https://www.coupang.com/np/search?q=고양이+사료',
-  },
-  {
-    id: 'dog-supplement',
-    species: 'dog',
-    emoji: '💊',
-    title: '강아지 영양제·관절 보조제',
-    desc: '관절·피부·장 건강 보조제 인기 상품',
-    link: 'https://www.coupang.com/np/search?q=강아지+영양제',
-  },
-  {
-    id: 'cat-supplement',
-    species: 'cat',
-    emoji: '💊',
-    title: '고양이 영양제·헤어볼 케어',
-    desc: '헤어볼·관절·영양 보조제 인기 상품',
-    link: 'https://www.coupang.com/np/search?q=고양이+영양제',
-  },
+  // 사료 (음식)
+  { id: 'dog-food', category: 'food', species: 'dog', emoji: '🦴', title: '강아지 사료 추천 모음', desc: '연령·체중별 베스트 건사료 비교', priceText: '특가', link: SEARCH('강아지 사료') },
+  { id: 'cat-food', category: 'food', species: 'cat', emoji: '🐟', title: '고양이 사료 추천 모음', desc: '기호성 좋은 인기 건사료', priceText: '특가', link: SEARCH('고양이 사료') },
+  // 영양제 (음식·건강)
+  { id: 'dog-supplement', category: 'supplement', species: 'dog', emoji: '💊', title: '강아지 영양제·관절 보조제', desc: '관절·피부·장 건강 보조제', link: SEARCH('강아지 영양제') },
+  { id: 'cat-supplement', category: 'supplement', species: 'cat', emoji: '💊', title: '고양이 영양제·헤어볼 케어', desc: '헤어볼·관절·영양 보조제', link: SEARCH('고양이 영양제') },
+  // 활동 (산책)
+  { id: 'dog-walk', category: 'walk', species: 'dog', emoji: '🦮', title: '강아지 산책용품', desc: '하네스·리드줄·산책가방', priceText: '인기', link: SEARCH('강아지 하네스 리드줄') },
+  { id: 'dog-toy', category: 'walk', species: 'dog', emoji: '🎾', title: '노즈워크·산책 장난감', desc: '활동량·두뇌 자극 장난감', link: SEARCH('강아지 노즈워크 장난감') },
+  { id: 'cat-walk', category: 'walk', species: 'cat', emoji: '🐈', title: '고양이 하네스·산책줄', desc: '안전한 외출용 하네스', link: SEARCH('고양이 하네스') },
+  { id: 'cat-toy', category: 'walk', species: 'cat', emoji: '🪶', title: '고양이 사냥놀이 장난감', desc: '운동량 채우는 인터랙티브 토이', link: SEARCH('고양이 장난감 낚싯대') },
+  // 건강
+  { id: 'dog-dental', category: 'health', species: 'dog', emoji: '🦷', title: '강아지 구강케어', desc: '치약·덴탈껌·치석 관리', link: SEARCH('강아지 치약 덴탈') },
+  { id: 'cat-dental', category: 'health', species: 'cat', emoji: '🦷', title: '고양이 구강·헤어볼 케어', desc: '덴탈·헤어볼 관리 용품', link: SEARCH('고양이 덴탈 헤어볼') },
+  { id: 'health-checkup', category: 'health', emoji: '🩺', title: '가정용 건강검진 키트', desc: '소변·기생충 등 자가 점검', link: SEARCH('반려동물 건강검진 키트') },
+  // 생활관리 (위생·미용)
+  { id: 'dog-grooming', category: 'care', species: 'dog', emoji: '🧼', title: '강아지 미용·목욕용품', desc: '샴푸·발톱깎이·귀세정제', priceText: '인기', link: SEARCH('강아지 샴푸 미용용품') },
+  { id: 'cat-grooming', category: 'care', species: 'cat', emoji: '🧴', title: '고양이 위생·미용용품', desc: '빗·발톱깎이·위생용품', link: SEARCH('고양이 미용 위생용품') },
+  { id: 'potty-pad', category: 'care', emoji: '🚽', title: '배변패드·위생용품', desc: '패드·탈취·청소용품', link: SEARCH('강아지 배변패드') },
 ]
 
 /** 종/맥락에 맞는 추천 상품을 반환한다. */
 export function getAffiliateProducts(species: Species, context: AffiliateContext): AffiliateProduct[] {
-  const isSupplement = (p: AffiliateProduct) => p.id.includes('supplement')
-  return CATALOG.filter(p => {
-    if (p.species && p.species !== species) return false
-    // 사료 계산기 맥락은 사료를, 음식 가이드 맥락은 영양제를 우선 노출
-    return context === 'feed' ? !isSupplement(p) : isSupplement(p)
-  })
+  if (context === 'ad') return []
+  const cats = CONTEXT_CATEGORIES[context]
+  return CATALOG.filter(p => cats.includes(p.category) && (!p.species || p.species === species))
 }
 
 /** 전면 광고 소재로 쓸 추천 상품 하나를 반환한다 (종 정보가 있으면 우선 매칭). */
