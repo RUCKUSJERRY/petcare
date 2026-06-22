@@ -191,6 +191,7 @@
   "foods": {
     "title": "음식 안전 정보",
     "petBasis": "{name} 기준",
+    "feedGuideTitle": "사료·급여 가이드",
     "dog": "강아지",
     "cat": "고양이",
     "searchPlaceholder": "음식 이름 검색...",
@@ -570,6 +571,9 @@
     "petBasis": "{name} 기준",
     "viewList": "목록",
     "viewCalendar": "캘린더",
+    "viewHistory": "이력",
+    "historyHeading": "전체 기록 {count}건",
+    "historyEmpty": "아직 입력한 기록이 없어요.",
     "addSchedule": "+ 일정",
     "addRecord": "+ 기록",
     "addMedical": "진료",
@@ -852,6 +856,7 @@
   "affiliate": {
     "heading": "이런 상품은 어때요?",
     "adLabel": "광고",
+    "dismiss": "닫기",
     "disclosure": "제휴 링크가 포함되어 있으며, 구매 시 일정액의 수수료를 제공받을 수 있습니다."
   },
   "ads": {
@@ -868,6 +873,10 @@
     "back": "뒤로",
     "heroTitle": "광고 없이, 더 똑똑하게",
     "heroSubtitle": "반려생활을 더 편하게 만드는 프리미엄 혜택",
+    "upsellTitle": "펫케어 프리미엄",
+    "upsellDesc": "광고 없이 더 쾌적하게 — 혜택을 확인해 보세요",
+    "upsellCta": "프리미엄 보기",
+    "upsellDismiss": "닫기",
     "comingSoon": "준비 중",
     "perMonth": "/ 월",
     "subscribeCta": "프리미엄 구독 시작하기",

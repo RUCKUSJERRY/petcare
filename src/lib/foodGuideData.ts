@@ -1,0 +1,70 @@
+import type { Species } from '@/types'
+
+/**
+ * 사료·간식 가이드 (정적 콘텐츠). 표준 수의 영양 가이드(AAFCO, VCA, AAHA 등) 기반의 일반 정보.
+ * careGuideData 와 동일하게 한국어 콘텐츠를 데이터로 보관한다(출력/표시용이라 i18n 불필요).
+ */
+export interface FoodGuideTopic {
+  id: string
+  icon: string
+  title: string
+  points: string[]
+}
+
+const COMMON: FoodGuideTopic[] = [
+  {
+    id: 'choose',
+    icon: '🥣',
+    title: '사료 고르기',
+    points: [
+      'AAFCO(또는 동등) 영양 기준 충족 표기와 "완전 균형식(complete & balanced)" 문구를 확인하세요.',
+      '생애 단계(퍼피·키튼 / 성견·성묘 / 시니어)에 맞는 제품을 고르세요.',
+      '주원료(첫 번째 표기 성분)가 명확한 단백질원(닭·연어 등)인지 확인하면 좋아요.',
+      '개봉 후에는 밀폐 용기에 담아 서늘하고 건조한 곳에 보관하고, 개봉 1개월 내 소진을 권장해요.',
+    ],
+  },
+  {
+    id: 'treats',
+    icon: '🦴',
+    title: '간식 급여 원칙',
+    points: [
+      '간식은 하루 총 섭취 칼로리의 10%를 넘지 않게 주세요. (나머지 90%는 균형식 사료)',
+      '양념된 사람 음식, 뼈, 자일리톨·초콜릿·포도 등은 절대 금지예요.',
+      '훈련 간식은 잘게 쪼개 양을 늘리지 않으면서 보상 횟수를 늘릴 수 있어요.',
+    ],
+  },
+  {
+    id: 'transition',
+    icon: '🔄',
+    title: '사료 교체 방법',
+    points: [
+      '새 사료로 한 번에 바꾸면 소화 장애가 올 수 있어요. 7~10일에 걸쳐 점진적으로 섞어 주세요.',
+      '예: 1~3일 기존75%+신규25% → 4~6일 50:50 → 7~9일 25:75 → 이후 100%.',
+      '구토·설사가 지속되면 전환 속도를 늦추고, 심하면 수의사와 상담하세요.',
+    ],
+  },
+  {
+    id: 'feeding',
+    icon: '🍽️',
+    title: '급여량·급여 방식',
+    points: [
+      '사료 포장의 체중별 권장량은 출발점일 뿐, 활동량·중성화 여부로 조절하세요. (위 계산기 참고)',
+      '자율급식(상시 비치)은 과식·비만 위험이 있어, 정해진 양을 나눠 주는 제한급식을 권장해요.',
+      '신선한 물은 항상 충분히 두고, 체중을 주기적으로 기록해 추세를 확인하세요.',
+    ],
+  },
+]
+
+const CAT_EXTRA: FoodGuideTopic = {
+  id: 'cat-water',
+  icon: '💧',
+  title: '고양이 수분·습식',
+  points: [
+    '고양이는 물을 적게 마시는 편이라 비뇨기 건강을 위해 습식(캔)을 함께 주면 도움이 돼요.',
+    '급수기를 활용하거나 그릇을 여러 곳에 두면 음수량을 늘릴 수 있어요.',
+  ],
+}
+
+export function foodGuidesForSpecies(species: Species): FoodGuideTopic[] {
+  return species === 'cat' ? [...COMMON, CAT_EXTRA] : COMMON
+}

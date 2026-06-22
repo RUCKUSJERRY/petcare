@@ -9,15 +9,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
-import { FeedCalculator } from './_components/FeedCalculator'
+import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import type { PetAge, Species } from '@/types'
-
-/** 생애 단계 → 급여 계산기 기본 계수 */
-function toFeedFactor(lifeStage: PetAge['lifeStage'] | undefined): 'neutered' | 'growth' | 'senior' {
-  if (lifeStage === '퍼피' || lifeStage === '키튼') return 'growth'
-  if (lifeStage === '시니어') return 'senior'
-  return 'neutered'
-}
 
 /** calcPetAge의 lifeStage → 가이드 단계로 매핑 */
 function toStage(lifeStage: PetAge['lifeStage']): CareGuideStage {
@@ -134,11 +127,6 @@ export default function CarePage() {
         <CardSkeletonList count={4} />
       ) : (
         <div className="space-y-3">
-          <FeedCalculator
-            species={species}
-            defaultWeight={pet?.weight_kg ?? null}
-            defaultFactor={toFeedFactor(age?.lifeStage)}
-          />
           {guides.map(g => (
             <GuideCard key={g.id} guide={g} stage={stage} size={size} />
           ))}
@@ -151,6 +139,9 @@ export default function CarePage() {
           <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">{t('registerPet')}</Link>
         </div>
       )}
+
+      {/* 하단 고정 제휴 배너(생활관리 용품) */}
+      <StickyAffiliateBanner species={species} context="care" />
     </div>
   )
 }
