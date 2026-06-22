@@ -4,10 +4,13 @@ create table if not exists public.records (
   pet_id           uuid not null,
   category         text not null check (category in (
                      '접종','심장사상충','구충','외부기생충','건강검진','진료',
-                     '미용','양치','발톱','목욕','귀청소','식사','간식','기타'
+                     '미용','양치','발톱','목욕','귀청소',
+                     '식사','간식','소변','대변','물','투약','증상',
+                     '기타'
                    )),
   title            text not null,
   event_on         date not null default current_date,
+  event_at         timestamptz,                  -- 생활기록 시각(시간순 타임라인용). 일정 기록은 NULL
   place_name       text,
   place_lat        double precision,
   place_lng        double precision,

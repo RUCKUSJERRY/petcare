@@ -9,7 +9,7 @@ import { careCategoryIcon, todayKST } from '@/lib/utils'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
 import { deleteImageByUrl } from '@/lib/upload'
-import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE } from '@/lib/records'
+import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE, DAILY_LOG_SET, defaultRecordTitle } from '@/lib/records'
 import {
   type RecurRule, type Weekday, type WeekOrdinal,
   WEEKDAY_LABELS, WEEK_ORDINAL_LABELS,
@@ -124,16 +124,30 @@ export function RecordForm({
   const toggleWeekday = (w: Weekday) =>
     setByweekday(ws => ws.includes(w) ? ws.filter(x => x !== w) : [...ws, w])
 
+  const isDailyLog = DAILY_LOG_SET.has(category)
+
   const submit = async () => {
     if (!effectivePetId) { setError(t('errNoPet')); return }
-    if (!title.trim()) { setError(t('errNoTitle')); return }
     if (!recurOn && manualDue && manualDue < eventOn) { setError(t('errDueAfter')); return }
     setSaving(true); setError(null)
+    // 제목은 선택 — 비우면 카테고리명을 제목으로(생활기록을 빠르게 남기기 위함)
+    const finalTitle = title.trim() || defaultRecordTitle(category)
+    // 생활기록은 시간순 타임라인용 시각을 기록(기록일 + 현재 시:분). 편집 시 기존 값 유지.
+    let eventAt: string | null = record?.event_at ?? null
+    if (isDailyLog && !eventAt) {
+      const now = new Date()
+      const d = parseYMD(eventOn)
+      d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0)
+      eventAt = d.toISOString()
+    } else if (!isDailyLog) {
+      eventAt = record?.event_at ?? null
+    }
     const common = {
       pet_id: effectivePetId,
       category,
-      title: title.trim(),
+      title: finalTitle,
       event_on: eventOn,
+      event_at: eventAt,
       place_name: place.name.trim() || null,
       place_lat: place.lat,
       place_lng: place.lng,
@@ -262,7 +276,8 @@ export function RecordForm({
         </div>
       ))}
 
-      {/* 반복 설정 (구글 캘린더형) */}
+      {/* 반복 설정 (구글 캘린더형) — 생활기록(식사·배변 등)에는 숨김 */}
+      {!isDailyLog && (
       <div className="rounded-lg bg-gray-50 p-2.5 space-y-2">
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={recurOn} onChange={e => setRecurOn(e.target.checked)}
@@ -338,6 +353,7 @@ export function RecordForm({
           </div>
         )}
       </div>
+      )}
 
       {/* 메모 */}
       <div>

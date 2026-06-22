@@ -4,6 +4,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import type { CareAlert, Pet } from '@/types'
 
 // 맞춤 '가이드' 바로가기 (기록과 구분되도록 라벨 명확화)
@@ -119,6 +120,17 @@ export function SelectedPetSummary({
         >
           <span aria-hidden>📷</span> {t('scan')}
         </Link>
+      </div>
+
+      {/* 오늘의 기록 — 육아앱식 원탭 생활기록(식사·배변·투약 등) */}
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-xs font-semibold text-white/70">{t('todayLogSection')}</p>
+        <Link href={`/schedule?pet=${pet.id}&view=today`} className="text-xs text-white/70 hover:text-white">
+          {t('detail')} ›
+        </Link>
+      </div>
+      <div className="mt-1.5">
+        <QuickLogBar petId={pet.id} tone="onPrimary" />
       </div>
 
       {/* 맞춤 '가이드' 바로가기 (선택된 아이 기준으로 필터됨) — 기록과 구분 */}

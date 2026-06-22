@@ -13,12 +13,14 @@ import { RecordForm } from '../pets/_components/RecordForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { RecordsScanModal } from '../pets/_components/RecordsScanModal'
 import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
+import { QuickLogBar } from '../pets/_components/QuickLogBar'
+import { TodayTimeline } from '../pets/_components/TodayTimeline'
 import { buildRecordsHtml, openPrintWindow, type ExportRecord } from '@/lib/exportRecords'
 import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 import { useTranslations } from 'next-intl'
 import type { RecordCategory } from '@/types'
 
-type View = 'calendar' | 'list' | 'history'
+type View = 'today' | 'calendar' | 'list' | 'history'
 
 type ScheduleItem = {
   id: string
@@ -48,6 +50,7 @@ export default function SchedulePage() {
   const qc = useQueryClient()
   const t = useTranslations('schedule')
   const tc = useTranslations('common')
+  const tq = useTranslations('quickLog')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const [view, setView] = useState<View>('calendar')
   const [showAdd, setShowAdd] = useState(false)
@@ -66,6 +69,7 @@ export default function SchedulePage() {
     const pet = params.get('pet')
     if (pet) setSelectedPetId(pet)
     if (focus) { setView('calendar'); setFocusDate(focus) }
+    if (params.get('view') === 'today') setView('today')
     if (params.get('add') === '1') setShowAdd(true)
     if (params.get('scan') === '1') setShowScan(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -274,7 +278,7 @@ export default function SchedulePage() {
       {!q && (
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
-            {([['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
+            {([['today', t('viewToday')], ['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
               <button key={v} onClick={() => setView(v)}
                 className={cn('flex-1 py-1.5 rounded-md text-sm font-medium transition-colors',
                   view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500')}>
@@ -346,6 +350,20 @@ export default function SchedulePage() {
               </button>
             ))
           )}
+        </div>
+      ) : view === 'today' ? (
+        <div className="space-y-4">
+          <div className="card space-y-2">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">{tq('sectionTitle')}</p>
+              <p className="text-xs text-gray-400">{tq('sectionSubtitle')}</p>
+            </div>
+            <QuickLogBar
+              petId={selectedPetId}
+              onLogged={() => qc.invalidateQueries({ queryKey: ['today-timeline', selectedPetId] })}
+            />
+          </div>
+          <TodayTimeline petId={selectedPetId} showPetName={!selectedPetId} onSelect={setDetailId} />
         </div>
       ) : isLoading ? (
         <CardSkeletonList count={4} />

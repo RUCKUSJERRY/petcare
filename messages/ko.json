@@ -87,7 +87,8 @@
     "guideActivity": "활동",
     "guideLife": "생활",
     "record": "기록",
-    "scan": "스캔"
+    "scan": "스캔",
+    "todayLogSection": "🐾 오늘의 기록"
   },
   "pets": {
     "title": "내 아이",
@@ -624,7 +625,10 @@
     "exporting": "준비 중…",
     "exportHeadingPet": "{name} 건강·관리 기록",
     "exportHeadingAll": "전체 반려동물 기록",
-    "exportPopupBlocked": "팝업이 차단됐어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해주세요."
+    "exportPopupBlocked": "팝업이 차단됐어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해주세요.",
+    "viewToday": "오늘",
+    "todayHeading": "오늘 기록 {count}건",
+    "todayEmpty": "아직 오늘 남긴 생활기록이 없어요. 위 버튼으로 바로 남겨보세요."
   },
   "walkSocial": {
     "anonymousOwner": "익명의 보호자",
@@ -931,5 +935,19 @@
     "affiliate7d": "제휴 클릭(7일)",
     "topProducts": "인기 제휴 상품",
     "clicks": "{n}회"
+  },
+  "quickLog": {
+    "sectionTitle": "오늘의 기록",
+    "sectionSubtitle": "탭 한 번으로 식사·배변·투약을 바로 남겨요",
+    "logged": "{label} 기록 완료",
+    "undo": "되돌리기",
+    "viewTimeline": "오늘 기록 전체 보기",
+    "needPet": "기록할 아이를 먼저 선택해주세요",
+    "todayCount": "오늘 {count}",
+    "emptyToday": "아직 오늘 남긴 생활기록이 없어요",
+    "emptyTodayHint": "위 버튼을 탭하면 지금 시각으로 바로 기록돼요",
+    "lastAt": "마지막 {time}",
+    "timelineTitle": "오늘 기록",
+    "more": "상세"
   }
 }

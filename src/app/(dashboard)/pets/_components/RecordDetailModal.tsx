@@ -53,7 +53,13 @@ export function RecordDetailModal({
 
   const afterChange = () => {
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
-    if (record) qc.invalidateQueries({ queryKey: ['records', record.pet_id] })
+    if (record) {
+      qc.invalidateQueries({ queryKey: ['records', record.pet_id] })
+      qc.invalidateQueries({ queryKey: ['today-log', record.pet_id] })
+      qc.invalidateQueries({ queryKey: ['today-timeline', record.pet_id] })
+    }
+    // 전체(아이 미선택) 타임라인도 갱신
+    qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record', recordId] })
     onChanged?.()
   }
