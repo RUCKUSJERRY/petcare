@@ -8,7 +8,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
-import { AffiliateProducts } from '@/components/ui/AffiliateProducts'
+import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
@@ -257,12 +257,12 @@ export default function FoodsPage() {
         </div>
       )}
 
-      {/* 맥락 추천: 종별 영양제 제휴 상품 */}
-      <AffiliateProducts species={species} context="foods" className="pt-1" />
-
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
         {t('disclaimer')}
       </div>
+
+      {/* 하단 고정 제휴 배너(닫기 가능) */}
+      <StickyAffiliateBanner species={species} context="foods" />
     </div>
   )
 }

@@ -18,7 +18,7 @@ import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 import { useTranslations } from 'next-intl'
 import type { RecordCategory } from '@/types'
 
-type View = 'calendar' | 'list'
+type View = 'calendar' | 'list' | 'history'
 
 type ScheduleItem = {
   id: string
@@ -231,6 +231,25 @@ export default function SchedulePage() {
     )
   }
 
+  // 전체 기록(이력) 한 줄 — event_on(기록일) 기준, 탭하면 상세
+  const HistoryRow = ({ h }: { h: HistoryItem }) => (
+    <button onClick={() => setDetailId(h.id)} className="w-full text-left">
+      <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
+        <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(h.category)}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400">{h.pet_species === 'cat' ? '🐱' : '🐶'} {h.pet_name}</span>
+            <span className="text-xs text-gray-300">·</span>
+            <span className="text-xs text-gray-400">{h.category}</span>
+            {h.place && <><span className="text-xs text-gray-300">·</span><span className="text-xs text-gray-400 truncate">{h.place}</span></>}
+          </div>
+          <p className="text-sm font-semibold text-gray-900 truncate">{h.title}</p>
+        </div>
+        <span className="text-xs text-gray-400 tabular-nums shrink-0">{h.event_on.replace(/-/g, '.')}</span>
+      </div>
+    </button>
+  )
+
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -255,7 +274,7 @@ export default function SchedulePage() {
       {!q && (
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
-            {([['calendar', t('viewCalendar')], ['list', t('viewList')]] as const).map(([v, label]) => (
+            {([['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
               <button key={v} onClick={() => setView(v)}
                 className={cn('flex-1 py-1.5 rounded-md text-sm font-medium transition-colors',
                   view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500')}>
@@ -332,6 +351,25 @@ export default function SchedulePage() {
         <CardSkeletonList count={4} />
       ) : view === 'calendar' ? (
         <ScheduleCalendar items={visible} history={visibleHistory} focusDate={focusDate} onSelect={setDetailId} />
+      ) : view === 'history' ? (
+        visibleHistory.length === 0 ? (
+          <div className="card text-center py-12 text-gray-400">
+            <div className="text-4xl mb-3">🗂️</div>
+            {t('historyEmpty')}
+            <p className="text-xs mt-2">{t('emptyHint')}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-500">{t('historyHeading', { count: visibleHistory.length })}</h2>
+              <button onClick={exportRecords} disabled={exporting}
+                className="btn-secondary text-xs py-1.5 px-2.5 shrink-0 disabled:opacity-50">
+                📄 {exporting ? t('exporting') : t('exportRecords')}
+              </button>
+            </div>
+            <div className="space-y-2">{visibleHistory.map(h => <HistoryRow key={h.id} h={h} />)}</div>
+          </div>
+        )
       ) : visible.length === 0 ? (
         <div className="card text-center py-12 text-gray-400">
           <div className="text-4xl mb-3">🗓️</div>
