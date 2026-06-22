@@ -2,5 +2,7 @@
 insert into public.app_settings (key, value) values
   ('premium_price_krw', '3900'),
   ('ads_enabled', 'true'),
-  ('ad_cooldown_min', '3')
+  ('ad_cooldown_min', '3'),
+  ('upsell_dismiss_min', '1440'),
+  ('banner_dismiss_min', '1440')
 on conflict (key) do nothing;

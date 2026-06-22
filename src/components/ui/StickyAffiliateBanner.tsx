@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
+import { useAppSettings } from '@/hooks/useAppSettings'
 import {
   buildAffiliateUrl,
   getAffiliateProducts,
@@ -19,9 +20,17 @@ async function trackClick(productId: string, context: AffiliateContext) {
   } catch { /* 무시 */ }
 }
 
+/** 닫은 지 cooldownMs 가 지나지 않았으면 true (계속 숨김). 0이면 항상 노출. */
+function dismissedRecently(key: string, cooldownMs: number): boolean {
+  if (typeof window === 'undefined' || cooldownMs <= 0) return false
+  const raw = window.localStorage.getItem(key)
+  const at = raw ? parseInt(raw, 10) : NaN
+  return Number.isFinite(at) && Date.now() - at < cooldownMs
+}
+
 /**
  * 하단 고정 제휴 배너. 한 개 상품을 화면 하단(내비게이션 위)에 띄우고 X로 닫는다.
- * 닫으면 해당 세션 동안 다시 보이지 않는다(sessionStorage).
+ * 닫으면 관리자가 정한 시간(분) 동안 숨겼다가 다시 노출한다. (localStorage 타임스탬프)
  */
 export function StickyAffiliateBanner({
   species,
@@ -31,18 +40,19 @@ export function StickyAffiliateBanner({
   context: AffiliateContext
 }) {
   const t = useTranslations('affiliate')
+  const { bannerDismissMs } = useAppSettings()
   const [dismissed, setDismissed] = useState(true) // SSR 깜빡임 방지: 마운트 후 결정
-  const key = `petcare:affDismiss:${context}`
+  const key = `petcare:affDismissAt:${context}`
 
   useEffect(() => {
-    setDismissed(sessionStorage.getItem(key) === '1')
-  }, [key])
+    setDismissed(dismissedRecently(key, bannerDismissMs))
+  }, [key, bannerDismissMs])
 
   const products = getAffiliateProducts(species, context)
   const product = products[0]
   if (!product || dismissed) return null
 
-  const close = () => { sessionStorage.setItem(key, '1'); setDismissed(true) }
+  const close = () => { window.localStorage.setItem(key, String(Date.now())); setDismissed(true) }
   const onClick = () => {
     trackClick(product.id, context)
     window.open(buildAffiliateUrl(product.link), '_blank', 'noopener,noreferrer')
