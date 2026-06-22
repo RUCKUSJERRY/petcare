@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { usePlan } from '@/hooks/usePlan'
-import { formatKRW, premiumPriceKRW } from '@/lib/pricing'
+import { useAppSettings } from '@/hooks/useAppSettings'
+import { formatKRW } from '@/lib/pricing'
 
 /** 토스 customerKey (서버 lib/toss.customerKeyForUser 와 동일 규칙). 서버 전용 모듈을 클라에 끌어오지 않도록 인라인. */
 const customerKeyForUser = (userId: string) => 'cus_' + userId.replace(/-/g, '')
@@ -29,7 +30,7 @@ export default function PremiumPage() {
   const qc = useQueryClient()
   const supabase = createClient()
   const { isPremium } = usePlan()
-  const price = premiumPriceKRW()
+  const { premiumPriceKRW: price } = useAppSettings()
 
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null)

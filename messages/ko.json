@@ -418,7 +418,9 @@
     "viewOnboarding": "사용 안내 다시 보기",
     "premium": "펫케어 프리미엄",
     "premiumHint": "광고 없이 더 쾌적하게 — 혜택 보기",
-    "premiumActive": "프리미엄 이용 중 👑"
+    "premiumActive": "프리미엄 이용 중 👑",
+    "admin": "관리자",
+    "adminHint": "가격·광고 설정 및 수익화 통계"
   },
   "notifications": {
     "title": "알림",
@@ -892,5 +894,28 @@
       "ocr": { "title": "무제한 영수증 스캔", "desc": "AI 영수증·이력서 인식을 제한 없이" },
       "family": { "title": "가족 공유 확대", "desc": "더 많은 가족과 함께 관리" }
     }
+  },
+  "admin": {
+    "title": "관리자",
+    "back": "뒤로",
+    "loading": "확인 중…",
+    "forbidden": "관리자만 접근할 수 있어요.",
+    "goHome": "홈으로",
+    "settings": "수익화 설정",
+    "priceLabel": "프리미엄 월 가격 (원)",
+    "priceHint": "변경 시 결제·프리미엄 화면에 바로 반영됩니다.",
+    "adsLabel": "전면 광고 표시",
+    "saveBtn": "저장하기",
+    "saving": "저장 중…",
+    "saved": "저장됐어요 ✓",
+    "stats": "수익화 통계",
+    "revenue": "누적 매출",
+    "paymentsCount": "결제 건수",
+    "subsActive": "활성 구독",
+    "subsOther": "해지/실패",
+    "affiliateTotal": "제휴 클릭(전체)",
+    "affiliate7d": "제휴 클릭(7일)",
+    "topProducts": "인기 제휴 상품",
+    "clicks": "{n}회"
   }
 }

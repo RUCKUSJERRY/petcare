@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { addOneMonth, chargeBilling, customerKeyForUser, issueBillingKey, TossError, tossConfigured } from '@/lib/toss'
-import { premiumPriceKRW } from '@/lib/pricing'
+import { getPremiumPriceServer } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -26,7 +26,6 @@ export async function POST(req: Request) {
   if (!authKey) return NextResponse.json({ error: 'authKey_required' }, { status: 400 })
 
   const customerKey = customerKeyForUser(user.id)
-  const amount = premiumPriceKRW()
 
   let admin
   try {
@@ -34,6 +33,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'service_role_not_configured' }, { status: 500 })
   }
+
+  // 가격은 운영설정(app_settings) 기준 — 클라이언트 입력을 신뢰하지 않는다.
+  const amount = await getPremiumPriceServer(admin)
 
   try {
     // 1) 빌링키 발급

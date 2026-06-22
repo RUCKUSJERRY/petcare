@@ -2,13 +2,21 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-06-22T05:10:46.479Z
+--  생성 시각: 2026-06-22T05:47:50.645Z
 -- =============================================================
 
 
 -- ┌──────────────────────────────────────────────
 -- │ 02.1_table
 -- └──────────────────────────────────────────────
+
+-- ── 02.1_table/admin_users.sql ──
+-- admin_users : 관리자 계정 (운영자만). 서버/SQL로만 관리하며 RLS로 클라이언트 접근 차단.
+-- 권한 상승 방지를 위해 profiles.is_admin 컬럼 대신 별도 테이블로 분리한다.
+create table if not exists public.admin_users (
+  user_id    uuid primary key,
+  created_at timestamptz not null default now()
+);
 
 -- ── 02.1_table/affiliate_clicks.sql ──
 -- affiliate_clicks : 제휴 상품 클릭 로그 (수익화 - 어필리에이트 전환 측정용)
@@ -19,6 +27,15 @@ create table if not exists public.affiliate_clicks (
   product_id  text not null,
   context     text,
   created_at  timestamptz not null default now()
+);
+
+-- ── 02.1_table/app_settings.sql ──
+-- app_settings : 운영 설정 키-값 저장소 (가격·광고 토글 등). 코드 수정/재배포 없이 변경.
+-- 공개 읽기(가격·광고 노출 판단), 쓰기는 관리자만(RLS).
+create table if not exists public.app_settings (
+  key        text primary key,
+  value      text,
+  updated_at timestamptz not null default now()
 );
 
 -- ── 02.1_table/breed_food_rules.sql ──
@@ -447,6 +464,12 @@ create table if not exists public.weight_logs (
 -- │ 02.2_index_fk
 -- └──────────────────────────────────────────────
 
+-- ── 02.2_index_fk/admin_users.sql ──
+-- admin_users : 외래키 (PK가 user_id라 별도 인덱스 불필요)
+alter table public.admin_users drop constraint if exists admin_users_user_id_fkey;
+alter table public.admin_users add constraint admin_users_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
 -- ── 02.2_index_fk/affiliate_clicks.sql ──
 -- affiliate_clicks : 외래키 + 인덱스
 -- user_id 는 비로그인 클릭(null)도 허용하므로 not null 로 두지 않는다. 삭제 시 로그는 보존.
@@ -779,6 +802,16 @@ begin
 end;
 $$;
 
+-- ── 02.3_function/is_admin.sql ──
+-- is_admin : 현재 사용자가 관리자인지 (RLS 헬퍼 + 클라이언트 rpc 용)
+-- security definer 라 RLS로 막힌 admin_users 를 우회 조회한다.
+create or replace function public.is_admin()
+returns boolean language sql security definer set search_path = public stable as $$
+  select exists (
+    select 1 from public.admin_users a where a.user_id = auth.uid()
+  );
+$$;
+
 -- ── 02.3_function/is_pet_member.sql ──
 -- is_pet_member : 현재 사용자가 해당 반려동물 구성원인지 (RLS 헬퍼)
 create or replace function public.is_pet_member(p_pet_id uuid)
@@ -929,6 +962,12 @@ end $$;
 -- │ 02.4_trigger
 -- └──────────────────────────────────────────────
 
+-- ── 02.4_trigger/app_settings.sql ──
+-- app_settings : updated_at 자동 갱신 트리거
+drop trigger if exists trg_touch_app_settings on public.app_settings;
+create trigger trg_touch_app_settings before update on public.app_settings
+  for each row execute function public.touch_updated_at();
+
 -- ── 02.4_trigger/auth_users.sql ──
 -- auth.users : 신규 가입 시 profiles 자동 생성 트리거
 drop trigger if exists on_auth_user_created on auth.users;
@@ -1061,6 +1100,11 @@ left join public.breeds   b  on b.id = p.breed_id;
 -- │ 02.6_policy
 -- └──────────────────────────────────────────────
 
+-- ── 02.6_policy/admin_users.sql ──
+-- admin_users : RLS (서버 전용). 정책 미정의 → anon/authenticated 접근 차단.
+-- 관리자 여부 확인은 security definer 함수 is_admin() 으로 우회 조회한다.
+alter table public.admin_users enable row level security;
+
 -- ── 02.6_policy/affiliate_clicks.sql ──
 -- affiliate_clicks : RLS (클릭 적재는 누구나 insert, 조회/수정/삭제는 막음 - 분석은 service_role)
 -- 본인 클릭이면 user_id=auth.uid(), 비로그인이면 user_id is null 로만 insert 허용.
@@ -1068,6 +1112,16 @@ alter table public.affiliate_clicks enable row level security;
 drop policy if exists "affiliate_clicks_insert" on public.affiliate_clicks;
 create policy "affiliate_clicks_insert" on public.affiliate_clicks for insert
   with check (user_id is null or auth.uid() = user_id);
+
+-- ── 02.6_policy/app_settings.sql ──
+-- app_settings : RLS (공개 읽기, 관리자만 쓰기)
+alter table public.app_settings enable row level security;
+drop policy if exists "app_settings_read"   on public.app_settings;
+drop policy if exists "app_settings_insert"  on public.app_settings;
+drop policy if exists "app_settings_update"  on public.app_settings;
+create policy "app_settings_read"   on public.app_settings for select using (true);
+create policy "app_settings_insert" on public.app_settings for insert with check (public.is_admin());
+create policy "app_settings_update" on public.app_settings for update using (public.is_admin()) with check (public.is_admin());
 
 -- ── 02.6_policy/breed_food_rules.sql ──
 -- breed_food_rules : RLS + 공개 읽기 정책
@@ -1395,6 +1449,20 @@ create policy "weight_owner_delete" on public.weight_logs for delete using (publ
 -- ┌──────────────────────────────────────────────
 -- │ 02.7_data
 -- └──────────────────────────────────────────────
+
+-- ── 02.7_data/admin_users.sql ──
+-- admin_users : 초기 관리자 지정 (해당 이메일로 가입돼 있어야 적용; 미가입이면 no-op).
+-- 가입 후 이 구문을 다시 실행하면 관리자로 등록된다. 재실행 안전.
+insert into public.admin_users (user_id)
+select id from auth.users where email = 'yongjun5645@gmail.com'
+on conflict (user_id) do nothing;
+
+-- ── 02.7_data/app_settings.sql ──
+-- app_settings : 기본값 시드 (없을 때만 삽입 → 관리자가 바꾼 값은 보존)
+insert into public.app_settings (key, value) values
+  ('premium_price_krw', '3900'),
+  ('ads_enabled', 'true')
+on conflict (key) do nothing;
 
 -- ── 02.7_data/breed_food_rules.sql ──
 -- breed_food_rules : 견종/묘종별 음식 예외 규칙 시드 (출처: AKC, ASPCA, VCA)
