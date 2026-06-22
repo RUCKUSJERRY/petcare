@@ -132,6 +132,8 @@ export interface Profile {
   id: string
   display_name: string
   avatar_url: string | null
+  plan: 'free' | 'premium'
+  premium_until: string | null
   created_at: string
 }
 

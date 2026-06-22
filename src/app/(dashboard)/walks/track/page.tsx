@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
 import { WalkPhotoComposer } from '../_components/WalkPhotoComposer'
 import { deleteImageByUrl } from '@/lib/upload'
+import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 
 type Phase = 'idle' | 'tracking' | 'finished'
 
@@ -80,6 +81,10 @@ export default function WalkTrackPage() {
     if (selectedPetId) setPetId(selectedPetId)
     else if (pets && pets.length === 1) setPetId(pets[0].id)
   }, [selectedPetId, pets])
+
+  // 산책 시작 직전 전면 광고(무료 사용자) — 프리미엄/광고비활성 시 즉시 시작
+  const adSpecies = pets?.find(p => p.id === petId)?.species
+  const { requestAd, adNode } = useInterstitialAd(adSpecies)
 
   const drawPoint = (lat: number, lng: number) => {
     const maps = mapsRef.current
@@ -246,6 +251,7 @@ export default function WalkTrackPage() {
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-[60] bg-gray-100 overflow-hidden flex flex-col">
+      {adNode}
       {/* 지도 */}
       <div className="relative flex-1">
         <div ref={mapRef} className="absolute inset-0" />
@@ -291,7 +297,7 @@ export default function WalkTrackPage() {
 
         {phase === 'idle' && (
           <div className="space-y-2">
-            <button onClick={start} className="btn-primary w-full py-3.5 text-base font-semibold">
+            <button onClick={() => requestAd(start)} className="btn-primary w-full py-3.5 text-base font-semibold">
               ▶ {t('startTracking')}
             </button>
             <button onClick={() => router.back()} className="w-full py-2 text-sm text-gray-400">

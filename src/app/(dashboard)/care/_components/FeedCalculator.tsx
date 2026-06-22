@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { Species } from '@/types'
+import { AffiliateProducts } from '@/components/ui/AffiliateProducts'
 
 /**
  * 일일 권장 칼로리·급여량 계산기 (수의학 표준 RER/MER 공식).
@@ -131,6 +132,9 @@ export function FeedCalculator({
           )}
 
           <p className="text-[11px] text-gray-400 leading-relaxed">{t('disclaimer')}</p>
+
+          {/* 맥락 추천: 종별 사료 제휴 상품 */}
+          <AffiliateProducts species={species} context="feed" className="pt-1" />
         </div>
       )}
     </div>
