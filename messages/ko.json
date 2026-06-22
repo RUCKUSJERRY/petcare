@@ -88,7 +88,8 @@
     "guideLife": "생활",
     "record": "기록",
     "scan": "스캔",
-    "todayLogSection": "🐾 오늘의 기록"
+    "todayLogSection": "🐾 오늘의 기록",
+    "recordManual": "직접입력"
   },
   "pets": {
     "title": "내 아이",
@@ -902,10 +903,22 @@
     "pastDue": "최근 자동 결제가 실패했어요. 결제수단을 다시 등록해주세요.",
     "disclaimer": "테스트 결제 환경입니다. 실제 청구는 정식 오픈(가맹 계약) 후 적용됩니다. 광고 제거 외 혜택은 순차 제공될 예정이에요.",
     "benefit": {
-      "noAds": { "title": "광고 제거", "desc": "산책 시작 등에서 전면 광고가 표시되지 않아요" },
-      "reports": { "title": "고급 케어 리포트", "desc": "비용·건강·체중 추세를 PDF로 정리" },
-      "ocr": { "title": "무제한 영수증 스캔", "desc": "AI 영수증·이력서 인식을 제한 없이" },
-      "family": { "title": "가족 공유 확대", "desc": "더 많은 가족과 함께 관리" }
+      "noAds": {
+        "title": "광고 제거",
+        "desc": "산책 시작 등에서 전면 광고가 표시되지 않아요"
+      },
+      "reports": {
+        "title": "고급 케어 리포트",
+        "desc": "비용·건강·체중 추세를 PDF로 정리"
+      },
+      "ocr": {
+        "title": "무제한 영수증 스캔",
+        "desc": "AI 영수증·이력서 인식을 제한 없이"
+      },
+      "family": {
+        "title": "가족 공유 확대",
+        "desc": "더 많은 가족과 함께 관리"
+      }
     }
   },
   "admin": {
@@ -948,6 +961,7 @@
     "emptyTodayHint": "위 버튼을 탭하면 지금 시각으로 바로 기록돼요",
     "lastAt": "마지막 {time}",
     "timelineTitle": "오늘 기록",
-    "more": "상세"
+    "more": "상세",
+    "moreCount": "+{count}건 더 보기"
   }
 }

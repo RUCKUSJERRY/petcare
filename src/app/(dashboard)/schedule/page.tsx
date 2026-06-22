@@ -360,6 +360,7 @@ export default function SchedulePage() {
             </div>
             <QuickLogBar
               petId={selectedPetId}
+              onOpenDetail={setDetailId}
               onLogged={() => qc.invalidateQueries({ queryKey: ['today-timeline', selectedPetId] })}
             />
           </div>
