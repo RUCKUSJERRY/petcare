@@ -13,6 +13,9 @@
 /** 광고를 닫고 행동을 진행할 수 있게 되기까지의 카운트다운(초) */
 export const AD_COUNTDOWN_SEC = 5
 
+/** 전면 광고 최소 간격(ms). 한 번 노출되면 이 시간 동안은 다른 전면 광고를 띄우지 않는다(이탈 방지). */
+export const AD_COOLDOWN_MS = 3 * 60 * 1000
+
 /** 전역 광고 활성화 여부 (기본 on, 'false' 로 끔) */
 export function adsEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ADS_ENABLED !== 'false'
