@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { NotificationBell } from './NotificationBell'
+import { PetAvatar } from './PetAvatar'
 
 export function AppHeader() {
   const t = useTranslations('header')
@@ -94,11 +95,8 @@ export function AppHeader() {
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
                 )}
               >
-                {pet.photo_url ? (
-                  <img src={pet.photo_url} className="w-4 h-4 rounded-full object-cover" alt="" />
-                ) : (
-                  <span className="text-sm leading-none">{pet.species === 'cat' ? '🐱' : '🐶'}</span>
-                )}
+                <PetAvatar photoUrl={pet.photo_url} species={pet.species}
+                  className="w-4 h-4" emojiClassName="text-sm leading-none" />
                 <span>{pet.name}</span>
               </button>
             ))
