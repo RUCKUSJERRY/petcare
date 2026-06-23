@@ -6,17 +6,9 @@ import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversar
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
-import { TodayTimeline } from '@/app/(dashboard)/pets/_components/TodayTimeline'
+import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
 import type { CareAlert, Pet } from '@/types'
-
-// 맞춤 '가이드' 바로가기 (기록과 구분되도록 라벨 명확화)
-const QUICK_LINKS = [
-  { href: '/foods', emoji: '🥩', key: 'guideFood' as const },
-  { href: '/health', emoji: '🩺', key: 'guideHealth' as const },
-  { href: '/walk', emoji: '🎾', key: 'guideActivity' as const },
-  { href: '/care', emoji: '🧼', key: 'guideLife' as const },
-]
 
 /**
  * 헤더에서 선택한 아이의 요약 카드.
@@ -114,8 +106,8 @@ export function SelectedPetSummary({
       <div className="mt-1.5 space-y-2">
         {/* 원탭 칩(가로 스크롤): 탭하면 지금 시각으로 바로 기록 */}
         <QuickLogBar petId={pet.id} tone="onPrimary" onOpenDetail={setDetailId} />
-        {/* 오늘 기록 시간순 흐름 — 항목을 누르면 상세로 진입 */}
-        <TodayTimeline petId={pet.id} tone="onPrimary" limit={4} onSelect={setDetailId} />
+        {/* 기록 시간순 흐름(무한 스크롤 피드) — 항목을 누르면 상세로 진입 */}
+        <RecordFeed petId={pet.id} tone="onPrimary" scroll onSelect={setDetailId} />
         {/* 상세 입력: 체중·직접 입력·영수증 스캔 */}
         <div className="grid grid-cols-3 gap-2 pt-0.5">
           <Link href={`/pets/${pet.id}?add=weight`}
@@ -131,21 +123,6 @@ export function SelectedPetSummary({
             <span aria-hidden>📷</span> {t('scan')}
           </Link>
         </div>
-      </div>
-
-      {/* 맞춤 '가이드' 바로가기 (선택된 아이 기준으로 필터됨) — 기록과 구분 */}
-      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">{t('guideSection')}</p>
-      <div className="grid grid-cols-4 gap-2">
-        {QUICK_LINKS.map(l => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className="flex flex-col items-center gap-0.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 transition-colors"
-          >
-            <span className="text-lg leading-none">{l.emoji}</span>
-            <span className="text-xs font-medium">{t(l.key)}</span>
-          </Link>
-        ))}
       </div>
     </div>
 

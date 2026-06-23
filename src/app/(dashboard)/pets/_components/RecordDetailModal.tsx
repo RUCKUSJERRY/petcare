@@ -57,9 +57,11 @@ export function RecordDetailModal({
       qc.invalidateQueries({ queryKey: ['records', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['today-log', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['today-timeline', record.pet_id] })
+      qc.invalidateQueries({ queryKey: ['record-feed', record.pet_id] })
     }
-    // 전체(아이 미선택) 타임라인도 갱신
+    // 전체(아이 미선택) 타임라인·피드도 갱신
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
+    qc.invalidateQueries({ queryKey: ['record-feed', null] })
     qc.invalidateQueries({ queryKey: ['record', recordId] })
     onChanged?.()
   }

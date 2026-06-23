@@ -962,6 +962,11 @@
     "lastAt": "마지막 {time}",
     "timelineTitle": "오늘 기록",
     "more": "상세",
-    "moreCount": "+{count}건 더 보기"
+    "moreCount": "+{count}건 더 보기",
+    "feedEmpty": "아직 기록이 없어요",
+    "labelToday": "오늘",
+    "labelYesterday": "어제",
+    "labelDate": "{month}월 {day}일",
+    "loadingMore": "불러오는 중…"
   }
 }
