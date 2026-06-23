@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
+import { TodayTimeline } from '@/app/(dashboard)/pets/_components/TodayTimeline'
+import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
 import type { CareAlert, Pet } from '@/types'
 
 // 맞춤 '가이드' 바로가기 (기록과 구분되도록 라벨 명확화)
@@ -28,6 +31,7 @@ export function SelectedPetSummary({
 }) {
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
+  const [detailId, setDetailId] = useState<string | null>(null)
   if (!selectedPetId) return null
 
   const pet = pets.find(p => p.id === selectedPetId)
@@ -43,6 +47,7 @@ export function SelectedPetSummary({
     .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
 
   return (
+    <>
     <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-5 text-white shadow-sm">
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
@@ -99,38 +104,33 @@ export function SelectedPetSummary({
         </Link>
       )}
 
-      {/* 빠른 '기록' 입력 (아이 상세의 해당 폼/스캔을 바로 열어줌) */}
-      <p className="mt-3 mb-1.5 text-xs font-semibold text-white/70">{t('recordSection')}</p>
-      <div className="grid grid-cols-3 gap-2">
-        <Link
-          href={`/pets/${pet.id}?add=weight`}
-          className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
-        >
-          <span aria-hidden>⚖️</span> {t('weight')}
-        </Link>
-        <Link
-          href={`/schedule?pet=${pet.id}&add=1`}
-          className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
-        >
-          <span aria-hidden>📝</span> {t('record')}
-        </Link>
-        <Link
-          href={`/schedule?pet=${pet.id}&scan=1`}
-          className="flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg py-2.5 text-sm font-medium transition-colors"
-        >
-          <span aria-hidden>📷</span> {t('scan')}
-        </Link>
-      </div>
-
-      {/* 오늘의 기록 — 육아앱식 원탭 생활기록(식사·배변·투약 등) */}
+      {/* 기록하기 — 육아앱식 원탭 생활기록 + 오늘 타임라인 + 상세 입력(체중/직접/스캔) */}
       <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-semibold text-white/70">{t('todayLogSection')}</p>
+        <p className="text-xs font-semibold text-white/70">{t('recordSection')}</p>
         <Link href={`/schedule?pet=${pet.id}&view=today`} className="text-xs text-white/70 hover:text-white">
           {t('detail')} ›
         </Link>
       </div>
-      <div className="mt-1.5">
-        <QuickLogBar petId={pet.id} tone="onPrimary" />
+      <div className="mt-1.5 space-y-2">
+        {/* 원탭 칩(가로 스크롤): 탭하면 지금 시각으로 바로 기록 */}
+        <QuickLogBar petId={pet.id} tone="onPrimary" onOpenDetail={setDetailId} />
+        {/* 오늘 기록 시간순 흐름 — 항목을 누르면 상세로 진입 */}
+        <TodayTimeline petId={pet.id} tone="onPrimary" limit={4} onSelect={setDetailId} />
+        {/* 상세 입력: 체중·직접 입력·영수증 스캔 */}
+        <div className="grid grid-cols-3 gap-2 pt-0.5">
+          <Link href={`/pets/${pet.id}?add=weight`}
+            className="flex items-center justify-center gap-1 bg-white/15 hover:bg-white/25 rounded-lg py-2 text-xs font-medium transition-colors">
+            <span aria-hidden>⚖️</span> {t('weight')}
+          </Link>
+          <Link href={`/schedule?pet=${pet.id}&add=1`}
+            className="flex items-center justify-center gap-1 bg-white/15 hover:bg-white/25 rounded-lg py-2 text-xs font-medium transition-colors">
+            <span aria-hidden>📝</span> {t('recordManual')}
+          </Link>
+          <Link href={`/schedule?pet=${pet.id}&scan=1`}
+            className="flex items-center justify-center gap-1 bg-white/15 hover:bg-white/25 rounded-lg py-2 text-xs font-medium transition-colors">
+            <span aria-hidden>📷</span> {t('scan')}
+          </Link>
+        </div>
       </div>
 
       {/* 맞춤 '가이드' 바로가기 (선택된 아이 기준으로 필터됨) — 기록과 구분 */}
@@ -148,5 +148,10 @@ export function SelectedPetSummary({
         ))}
       </div>
     </div>
+
+    {detailId && (
+      <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} />
+    )}
+    </>
   )
 }

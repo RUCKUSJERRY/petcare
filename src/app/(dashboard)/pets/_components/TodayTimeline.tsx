@@ -29,14 +29,20 @@ const hhmm = (iso: string | null) => {
 export function TodayTimeline({
   petId,
   showPetName = false,
+  tone = 'plain',
+  limit,
   onSelect,
 }: {
   petId: string | null
   showPetName?: boolean
+  tone?: 'plain' | 'onPrimary'
+  /** 표시할 최대 개수(홈 인라인용). 초과분은 '+N건 더'로 안내 */
+  limit?: number
   onSelect: (id: string) => void
 }) {
   const t = useTranslations('quickLog')
   const supabase = createClient()
+  const onP = tone === 'onPrimary'
 
   const { data: rows = [] } = useQuery({
     queryKey: ['today-timeline', petId],
@@ -53,6 +59,8 @@ export function TodayTimeline({
   })
 
   if (rows.length === 0) {
+    // 홈 인라인(onPrimary)에서는 카드가 커지지 않게 한 줄 힌트만
+    if (onP) return <p className="text-xs text-white/70 py-1">{t('emptyTodayHint')}</p>
     return (
       <div className="card text-center py-10 text-gray-400">
         <div className="text-3xl mb-2">🐾</div>
@@ -62,31 +70,54 @@ export function TodayTimeline({
     )
   }
 
+  const shown = limit ? rows.slice(0, limit) : rows
+  const more = rows.length - shown.length
+
+  // 시간순 흐름이 보이도록 좌측에 점·세로선(타임라인) 표시
+  const rowCls = onP
+    ? 'flex items-center gap-2.5 rounded-lg bg-white/12 hover:bg-white/20 px-2.5 py-1.5 transition-colors'
+    : 'card flex items-center gap-3 hover:shadow-md transition-shadow'
+
   return (
-    <div className="space-y-2">
-      {rows.map(r => (
+    <div className={onP ? 'space-y-1.5' : 'space-y-2'}>
+      {shown.map(r => (
         <button key={r.id} onClick={() => onSelect(r.id)} className="w-full text-left">
-          <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
-            <span className="text-xs font-semibold text-gray-400 tabular-nums w-10 shrink-0 text-center">
+          <div className={rowCls}>
+            <span className={`text-xs font-semibold tabular-nums shrink-0 text-center ${onP ? 'text-white/80 w-9' : 'text-gray-400 w-10'}`}>
               {hhmm(r.event_at)}
             </span>
-            <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(r.category)}</span>
+            <span className={`shrink-0 ${onP ? 'text-base' : 'text-xl'}`} aria-hidden>{careCategoryIcon(r.category)}</span>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                {showPetName && r.pet && (
-                  <>
-                    <span className="text-xs text-gray-400">{r.pet.species === 'cat' ? '🐱' : '🐶'} {r.pet.name}</span>
-                    <span className="text-xs text-gray-300">·</span>
-                  </>
-                )}
-                <span className="text-xs text-gray-400">{r.category}</span>
-              </div>
-              <p className="text-sm font-semibold text-gray-900 truncate">{r.title}</p>
-              {r.memo && <p className="text-xs text-gray-400 truncate">{r.memo}</p>}
+              {onP ? (
+                <p className="text-sm font-medium text-white truncate">
+                  {showPetName && r.pet ? `${r.pet.name} · ` : ''}{r.title}
+                  {r.memo ? <span className="text-white/60"> · {r.memo}</span> : ''}
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    {showPetName && r.pet && (
+                      <>
+                        <span className="text-xs text-gray-400">{r.pet.species === 'cat' ? '🐱' : '🐶'} {r.pet.name}</span>
+                        <span className="text-xs text-gray-300">·</span>
+                      </>
+                    )}
+                    <span className="text-xs text-gray-400">{r.category}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{r.title}</p>
+                  {r.memo && <p className="text-xs text-gray-400 truncate">{r.memo}</p>}
+                </>
+              )}
             </div>
+            <span aria-hidden className={onP ? 'text-white/40 shrink-0' : 'text-gray-300 shrink-0'}>›</span>
           </div>
         </button>
       ))}
+      {more > 0 && (
+        <p className={`text-xs text-center pt-0.5 ${onP ? 'text-white/70' : 'text-gray-400'}`}>
+          {t('moreCount', { count: more })}
+        </p>
+      )}
     </div>
   )
 }

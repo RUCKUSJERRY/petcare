@@ -26,10 +26,13 @@ export function QuickLogBar({
   petId,
   tone = 'plain',
   onLogged,
+  onOpenDetail,
 }: {
   petId: string | null
   tone?: 'plain' | 'onPrimary'
   onLogged?: () => void
+  /** 방금 기록한 항목(또는 토스트)을 누르면 상세로 진입 */
+  onOpenDetail?: (id: string) => void
 }) {
   const t = useTranslations('quickLog')
   const supabase = createClient()
@@ -66,6 +69,7 @@ export function QuickLogBar({
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['today-log', petId] })
+    qc.invalidateQueries({ queryKey: ['today-timeline', petId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     if (petId) qc.invalidateQueries({ queryKey: ['records', petId] })
   }
@@ -107,30 +111,37 @@ export function QuickLogBar({
     ? 'bg-white/15 hover:bg-white/25 text-white'
     : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
   const badgeCls = onP ? 'bg-white/30 text-white' : 'bg-primary-100 text-primary-600'
+  // 가로 스크롤 끝을 알리는 페이드(스와이프 가능 암시) — 톤별 배경색에 맞춤
+  const fadeFrom = onP ? 'from-primary-600' : 'from-white'
 
   return (
     <div>
-      <div className="grid grid-cols-4 gap-1.5">
-        {DAILY_LOG_CATEGORIES.map(cat => {
-          const s = stat.get(cat)
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => log(cat)}
-              disabled={busy === cat}
-              className={`relative flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 transition-colors disabled:opacity-60 ${chipBase}`}
-            >
-              {s && s.count > 0 && (
-                <span className={`absolute top-0.5 right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[10px] font-bold leading-[15px] ${badgeCls}`}>
-                  {s.count}
-                </span>
-              )}
-              <span className="text-lg leading-none" aria-hidden>{careCategoryIcon(cat)}</span>
-              <span className="text-[11px] font-medium">{cat}</span>
-            </button>
-          )
-        })}
+      {/* 원탭 칩 — 가로 스크롤(커뮤니티 필터식). 좌우로 밀어 더 많은 항목 선택 */}
+      <div className="relative">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 snap-x">
+          {DAILY_LOG_CATEGORIES.map(cat => {
+            const s = stat.get(cat)
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => log(cat)}
+                disabled={busy === cat}
+                className={`relative w-[58px] shrink-0 snap-start flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 transition-colors disabled:opacity-60 ${chipBase}`}
+              >
+                {s && s.count > 0 && (
+                  <span className={`absolute top-0.5 right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[10px] font-bold leading-[15px] ${badgeCls}`}>
+                    {s.count}
+                  </span>
+                )}
+                <span className="text-lg leading-none" aria-hidden>{careCategoryIcon(cat)}</span>
+                <span className="text-[11px] font-medium">{cat}</span>
+              </button>
+            )
+          })}
+        </div>
+        {/* 오른쪽에 더 있다는 페이드 힌트 */}
+        <div className={`pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l ${fadeFrom} to-transparent`} />
       </div>
 
       {notice && (
@@ -139,8 +150,15 @@ export function QuickLogBar({
 
       {toast && (
         <div className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${onP ? 'bg-white/20 text-white' : 'bg-gray-900 text-white'}`}>
-          <span aria-hidden>{careCategoryIcon(toast.label)}</span>
-          <span className="flex-1 truncate">{t('logged', { label: toast.label })} · {toast.time}</span>
+          <button
+            type="button"
+            onClick={() => onOpenDetail?.(toast.id)}
+            className="flex items-center gap-2 flex-1 min-w-0 text-left"
+          >
+            <span aria-hidden>{careCategoryIcon(toast.label)}</span>
+            <span className="flex-1 truncate">{t('logged', { label: toast.label })} · {toast.time}</span>
+            {onOpenDetail && <span aria-hidden className="opacity-60 shrink-0">›</span>}
+          </button>
           <button onClick={undo} className="text-xs font-semibold underline shrink-0">{t('undo')}</button>
         </div>
       )}
