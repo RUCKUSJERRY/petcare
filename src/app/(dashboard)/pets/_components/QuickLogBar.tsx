@@ -70,6 +70,7 @@ export function QuickLogBar({
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['today-log', petId] })
     qc.invalidateQueries({ queryKey: ['today-timeline', petId] })
+    qc.invalidateQueries({ queryKey: ['record-feed', petId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     if (petId) qc.invalidateQueries({ queryKey: ['records', petId] })
   }
