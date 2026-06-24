@@ -1,6 +1,7 @@
 import { BottomNav } from '@/components/ui/BottomNav'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { OnboardingModal } from '@/components/ui/OnboardingModal'
+import { QuickRecordFab } from '@/components/ui/QuickRecordFab'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="max-w-lg mx-auto pb-20">
         {children}
       </main>
+      <QuickRecordFab />
       <BottomNav />
       <OnboardingModal />
     </div>
