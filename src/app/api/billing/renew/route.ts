@@ -52,16 +52,24 @@ export async function GET(req: Request) {
       // 만료일이 과거여도 끊김 없이 이어지도록 기존 만료일 기준으로 1개월 연장
       const base = new Date(s.current_period_end) > now ? new Date(s.current_period_end) : now
       const newEnd = addOneMonth(base)
-      await admin.from('subscriptions')
+      // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
+      // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
+      const { error: subErr } = await admin.from('subscriptions')
         .update({ current_period_end: newEnd.toISOString() })
         .eq('user_id', s.user_id)
-      await admin.from('payments').insert({
+      const { error: payErr } = await admin.from('payments').insert({
         user_id: s.user_id, order_id: charge.orderId, payment_key: charge.paymentKey,
         amount: s.amount, status: charge.status, method: charge.method ?? null, kind: 'renewal',
       })
-      await admin.from('profiles')
+      const { error: profErr } = await admin.from('profiles')
         .update({ plan: 'premium', premium_until: newEnd.toISOString() })
         .eq('id', s.user_id)
+      if (subErr || payErr || profErr) {
+        console.error('[billing/renew] charged but DB update failed', s.user_id, {
+          orderId: charge.orderId, paymentKey: charge.paymentKey,
+          subErr: subErr?.message, payErr: payErr?.message, profErr: profErr?.message,
+        })
+      }
       charged++
     } catch (err) {
       const msg = err instanceof TossError ? `${err.code}:${err.message}` : String(err)

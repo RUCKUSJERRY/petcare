@@ -93,7 +93,11 @@ export async function GET(req: Request) {
       })
       sent++
     }
-    await admin.from('records').update({ last_reminded_on: today }).eq('id', r.id)
+    // 당일 중복 발송 방지 플래그. 갱신 실패 시 다음 cron에서 같은 사용자에게 중복 푸시가
+    // 갈 수 있으므로 조용히 넘기지 않고 로그로 남긴다.
+    const { error: markErr } = await admin
+      .from('records').update({ last_reminded_on: today }).eq('id', r.id)
+    if (markErr) console.error('[care-reminders] last_reminded_on update failed', r.id, markErr.message)
   }
 
   const result = { processed: rows.length, sent, force }
