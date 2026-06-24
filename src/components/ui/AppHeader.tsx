@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { NotificationBell } from './NotificationBell'
 import { PetAvatar } from './PetAvatar'
@@ -22,11 +22,21 @@ export function AppHeader() {
   const profileActive = pathname.startsWith('/profile')
 
   const { data: pets } = useMyPets()
+  // 아이가 1마리뿐일 때의 자동 선택을 마운트당 1회만 수행 (수동 해제는 존중)
+  const autoSelected = useRef(false)
 
-  // 자가 복구: 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
+  // 자가 복구 + 1마리 자동 선택
   useEffect(() => {
-    if (pets && selectedPetId && !pets.some(p => p.id === selectedPetId)) {
+    if (!pets) return
+    // 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
+    if (selectedPetId && !pets.some(p => p.id === selectedPetId)) {
       setSelectedPetId(null)
+      return
+    }
+    // 아이가 1마리뿐이면 자동 선택 — 매번 칩을 탭하지 않아도 원탭 기록·스캔·체중이 바로 동작
+    if (!selectedPetId && !autoSelected.current && pets.length === 1) {
+      autoSelected.current = true
+      setSelectedPetId(pets[0].id)
     }
   }, [pets, selectedPetId, setSelectedPetId])
 

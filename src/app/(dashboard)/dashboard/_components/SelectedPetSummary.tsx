@@ -97,7 +97,7 @@ export function SelectedPetSummary({
       <div className="mt-3 flex items-center justify-between">
         <p className="text-xs font-semibold text-white/70">{t('recordSection')}</p>
         <Link href={`/schedule?pet=${pet.id}&view=today`} className="text-xs text-white/70 hover:text-white">
-          {t('detail')} ›
+          {t('recordMore')} ›
         </Link>
       </div>
       <div className="mt-1.5 space-y-2">
