@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import type { Breed, Pet } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { PetAvatar } from '@/components/ui/PetAvatar'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
@@ -167,11 +168,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 프로필 카드 */}
       {!editing ? (
         <div className="card flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
-            {pet.photo_url
-              ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-              : (pet.species === 'cat' ? '🐱' : '🐶')}
-          </div>
+          <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
+            className="w-16 h-16 bg-primary-100" emojiClassName="text-3xl" />
           <div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-gray-900">{pet.name}</span>

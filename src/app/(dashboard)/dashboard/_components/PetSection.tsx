@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { CareAlert, Pet } from '@/types'
+import { PetAvatar } from '@/components/ui/PetAvatar'
 import { SelectedPetSummary } from './SelectedPetSummary'
 import { VaccAlerts } from './VaccAlerts'
 import { WeightInsightCard } from './WeightInsightCard'
@@ -117,12 +118,8 @@ function PetRow({ pet }: { pet: Pet }) {
   return (
     <Link href={`/pets/${pet.id}`}>
       <div className="card flex items-center gap-4 hover:shadow-md transition-shadow">
-        <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl flex-shrink-0">
-          {pet.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-          ) : (pet.species === 'cat' ? '🐱' : '🐶')}
-        </div>
+        <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
+          className="w-14 h-14 bg-primary-100" emojiClassName="text-2xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-bold text-gray-900">{pet.name}</span>

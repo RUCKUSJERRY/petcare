@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
+import { PetAvatar } from '@/components/ui/PetAvatar'
 import type { CareAlert, Pet } from '@/types'
 
 /**
@@ -42,12 +43,8 @@ export function SelectedPetSummary({
     <>
     <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-5 text-white shadow-sm">
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
-          {pet.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
-          ) : (pet.species === 'cat' ? '🐱' : '🐶')}
-        </div>
+        <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
+          className="w-16 h-16 bg-white/20" emojiClassName="text-3xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold truncate">{pet.name}</span>
@@ -100,7 +97,7 @@ export function SelectedPetSummary({
       <div className="mt-3 flex items-center justify-between">
         <p className="text-xs font-semibold text-white/70">{t('recordSection')}</p>
         <Link href={`/schedule?pet=${pet.id}&view=today`} className="text-xs text-white/70 hover:text-white">
-          {t('detail')} ›
+          {t('recordMore')} ›
         </Link>
       </div>
       <div className="mt-1.5 space-y-2">

@@ -16,6 +16,15 @@
     "more": "더보기",
     "edit": "수정"
   },
+  "quickRecord": {
+    "open": "기록하기",
+    "title": "🐾 오늘의 기록",
+    "pickPet": "어떤 아이의 기록인가요?",
+    "weight": "체중",
+    "manual": "직접입력",
+    "scan": "스캔",
+    "viewToday": "오늘의 기록 전체 보기"
+  },
   "header": {
     "myPetsAria": "내 아이 관리",
     "registerPet": "내 아이 등록하기 →",
@@ -78,6 +87,7 @@
     "birthdayBadge": "🎂 생일 {dday}",
     "together": "함께한 지 {days}일째",
     "recordSection": "📝 기록하기",
+    "recordMore": "전체",
     "guideSection": "📚 맞춤 가이드",
     "weight": "체중",
     "care": "관리",
