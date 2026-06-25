@@ -39,6 +39,7 @@ export function QuickLogBar({
   const qc = useQueryClient()
   const [toast, setToast] = useState<{ id: string; label: string; time: string } | null>(null)
   const [notice, setNotice] = useState(false)
+  const [undoErr, setUndoErr] = useState(false)
   const [busy, setBusy] = useState<RecordCategory | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -93,6 +94,7 @@ export function QuickLogBar({
       .single()
     setBusy(null)
     if (error || !data) return
+    setUndoErr(false)
     showToast(data.id as string, cat, hhmm(now.toISOString()))
     invalidate()
     onLogged?.()
@@ -100,10 +102,17 @@ export function QuickLogBar({
 
   const undo = async () => {
     if (!toast) return
-    const id = toast.id
+    const snapshot = toast
     setToast(null)
+    setUndoErr(false)
     if (timer.current) clearTimeout(timer.current)
-    await supabase.from('records').delete().eq('id', id)
+    const { error } = await supabase.from('records').delete().eq('id', snapshot.id)
+    if (error) {
+      // 삭제 실패 시 토스트를 되살려 사용자가 다시 시도할 수 있게 한다(조용한 실패 방지)
+      setUndoErr(true)
+      showToast(snapshot.id, snapshot.label, snapshot.time)
+      return
+    }
     invalidate()
   }
 
@@ -162,6 +171,10 @@ export function QuickLogBar({
           </button>
           <button onClick={undo} className="text-xs font-semibold underline shrink-0">{t('undo')}</button>
         </div>
+      )}
+
+      {undoErr && (
+        <p className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('undoFailed')}</p>
       )}
     </div>
   )

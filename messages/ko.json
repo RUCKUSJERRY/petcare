@@ -328,6 +328,7 @@
     "goalSave": "저장",
     "goalCancel": "취소",
     "goalClear": "목표 끄기",
+    "goalSaveFailed": "목표 저장에 실패했어요. 다시 시도해주세요.",
     "goalHint": "거리·횟수 중 하나만 정해도 돼요. 0이면 사용 안 함."
   },
   "healthGuide": {
@@ -485,6 +486,8 @@
     "addRecord": "+ 기록",
     "errInvalidWeight": "체중을 올바르게 입력해주세요",
     "errSaveFailed": "저장에 실패했어요",
+    "errDeleteFailed": "삭제에 실패했어요. 다시 시도해주세요.",
+    "errGoalFailed": "목표 저장에 실패했어요. 다시 시도해주세요.",
     "latestMeasured": "최근 측정 {date}",
     "weightPlaceholder": "체중(kg)",
     "empty": "아직 기록이 없어요",
@@ -728,6 +731,8 @@
     "creating": "생성 중…",
     "invite": "+ 초대",
     "errInviteFailed": "초대 링크 생성에 실패했어요.",
+    "errRemoveFailed": "내보내기에 실패했어요. 다시 시도해주세요.",
+    "errLeaveFailed": "나가기에 실패했어요. 다시 시도해주세요.",
     "leaveConfirm": "{name} 공동 관리에서 나갈까요?",
     "inviteHint": "아래 링크를 보내면 상대가 구성원으로 참여할 수 있어요. (14일간 유효)",
     "shareTitle": "{name} 공동 관리 초대",
@@ -974,6 +979,7 @@
     "sectionSubtitle": "탭 한 번으로 식사·배변·투약을 바로 남겨요",
     "logged": "{label} 기록 완료",
     "undo": "되돌리기",
+    "undoFailed": "되돌리기에 실패했어요. 잠시 후 다시 시도해주세요.",
     "viewTimeline": "오늘 기록 전체 보기",
     "needPet": "기록할 아이를 먼저 선택해주세요",
     "todayCount": "오늘 {count}",

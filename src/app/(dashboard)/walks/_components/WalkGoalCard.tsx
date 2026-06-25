@@ -16,6 +16,7 @@ export function WalkGoalCard({ walks }: { walks: WalkLike[] }) {
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState({ distanceKm: '', count: '' })
 
   const { data: goal = EMPTY } = useQuery({
@@ -46,12 +47,13 @@ export function WalkGoalCard({ walks }: { walks: WalkLike[] }) {
   }
 
   const persist = async (next: WalkGoal) => {
-    setSaving(true)
+    setSaving(true); setError(null)
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase
+      const { error: upErr } = await supabase
         .from('walk_goals')
         .upsert({ user_id: user.id, distance_km: next.distanceKm, count: next.count }, { onConflict: 'user_id' })
+      if (upErr) { setError(t('goalSaveFailed')); setSaving(false); return }
     }
     await qc.invalidateQueries({ queryKey: ['walk-goal'] })
     setSaving(false)
@@ -91,6 +93,7 @@ export function WalkGoalCard({ walks }: { walks: WalkLike[] }) {
           </label>
         </div>
         <p className="text-xs text-gray-400">{t('goalHint')}</p>
+        {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="flex items-center gap-2">
           <button onClick={commit} disabled={saving} className="btn-primary flex-1 py-2 text-sm disabled:opacity-50">{t('goalSave')}</button>
           <button onClick={() => setEditing(false)} disabled={saving} className="flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg border border-gray-200 disabled:opacity-50">

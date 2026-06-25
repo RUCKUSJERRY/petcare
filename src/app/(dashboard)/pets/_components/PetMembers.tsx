@@ -57,18 +57,20 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
   }
 
   const removeMember = async (memberUserId: string) => {
-    setBusy(true)
-    await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', memberUserId)
+    setBusy(true); setError(null)
+    const { error: delErr } = await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', memberUserId)
     setBusy(false)
+    if (delErr) { setError(t('errRemoveFailed')); return }
     qc.invalidateQueries({ queryKey: ['pet-members', petId] })
   }
 
   const leave = async () => {
     if (!uid) return
     if (!confirm(t('leaveConfirm', { name: petName }))) return
-    setBusy(true)
-    await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', uid)
+    setBusy(true); setError(null)
+    const { error: delErr } = await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', uid)
     setBusy(false)
+    if (delErr) { setError(t('errLeaveFailed')); return }
     qc.invalidateQueries({ queryKey: ['my-pets'] })
     router.push('/dashboard')
   }
