@@ -4,9 +4,11 @@ import type { PetAge, Species } from '@/types'
  * 생년월로부터 현재 개월 수, 나이 단계 등을 계산
  */
 export function calcPetAge(birthYear: number, birthMonth: number, species: Species = 'dog'): PetAge {
-  const now = new Date()
+  // 생년월·기록 날짜가 모두 KST 달력 기준이므로, 서버(UTC)·해외 시간대에서 렌더해도
+  // "오늘"이 흔들리지 않도록 KST 기준 연/월로 계산한다.
+  const [nowYear, nowMonth] = todayKST().split('-').map(Number)
   const totalMonths =
-    (now.getFullYear() - birthYear) * 12 + (now.getMonth() + 1 - birthMonth)
+    (nowYear - birthYear) * 12 + (nowMonth - birthMonth)
 
   const months = Math.max(0, totalMonths)
   const years = Math.floor(months / 12)
@@ -40,14 +42,15 @@ export function formatWon(n: number | null | undefined): string {
  */
 export function nextAnniversary(month: number, day: number | null | undefined): string | null {
   if (!month || !day) return null
-  const now = new Date()
+  const today = todayKST()
+  const nowYear = Number(today.slice(0, 4))
   const clampDay = (y: number) => {
     const last = new Date(Date.UTC(y, month, 0)).getUTCDate() // 해당 월의 마지막 날
     return Math.min(day, last)
   }
-  for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+  for (let y = nowYear; y <= nowYear + 1; y++) {
     const candStr = new Date(Date.UTC(y, month - 1, clampDay(y))).toISOString().slice(0, 10)
-    if (daysUntil(candStr) >= 0) return candStr
+    if (daysUntil(candStr, today) >= 0) return candStr
   }
   return null
 }
@@ -58,7 +61,7 @@ export function nextAnniversary(month: number, day: number | null | undefined): 
  */
 export function daysTogether(adoptedOn: string | null | undefined): number | null {
   if (!adoptedOn) return null
-  const elapsed = -daysUntil(adoptedOn) // 과거일수록 양수
+  const elapsed = -daysUntil(adoptedOn, todayKST()) // 과거일수록 양수
   if (elapsed < 0) return null
   return elapsed + 1
 }

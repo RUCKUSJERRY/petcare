@@ -20,15 +20,17 @@ export default function CostsPage() {
   const [year, setYear] = useState<number | null>(null)
 
   // 비용이 입력된 기록만 (RLS가 내가 구성원인 아이만 반환)
-  const { data: records = [], isLoading } = useQuery({
+  const { data: records = [], isLoading, isError } = useQuery({
     queryKey: ['cost-records'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('records')
         .select('pet_id, category, event_on, cost')
         .not('cost', 'is', null)
         .gt('cost', 0)
         .order('event_on', { ascending: false })
+      // 에러를 던져 isError로 표면화 — 네트워크 실패가 "기록 없음"으로 오인되지 않도록.
+      if (error) throw error
       return (data ?? []) as (CostRecord & { pet_id: string })[]
     },
   })
@@ -78,6 +80,11 @@ export default function CostsPage() {
 
       {isLoading ? (
         <CardSkeletonList count={4} />
+      ) : isError ? (
+        <div className="card text-center py-12 text-gray-400 space-y-1">
+          <div className="text-4xl">⚠️</div>
+          <p>{t('loadError')}</p>
+        </div>
       ) : scoped.length === 0 ? (
         <div className="card text-center py-12 text-gray-400 space-y-2">
           <div className="text-4xl">🧾</div>

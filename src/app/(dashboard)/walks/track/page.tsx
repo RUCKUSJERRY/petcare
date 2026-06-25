@@ -229,8 +229,9 @@ export default function WalkTrackPage() {
     }).select('id').single()
     setSaving(false)
     if (error) {
-      // 저장 실패 시 방금 올린 사진은 고아가 되므로 정리
-      if (photoUrl) deleteImageByUrl(photoUrl)
+      // 저장 실패 시에는 사진을 지우지 않는다 — 사용자가 그대로 '다시 시도'할 수 있어야 한다.
+      // (사진을 미리 지우면 재시도 시 깨진 photo_url로 저장되거나 사진이 사라진다.
+      //  업로드된 파일은 폐기(discard) 시에만 정리한다.)
       setGeoError(t('errSaveRetry'))
       return
     }

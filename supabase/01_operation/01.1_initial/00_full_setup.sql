@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-06-22T23:11:56.676Z
+--  생성 시각: 2026-06-25T00:48:41.613Z
 -- =============================================================
 
 
@@ -26,6 +26,16 @@ create table if not exists public.affiliate_clicks (
   user_id     uuid,
   product_id  text not null,
   context     text,
+  created_at  timestamptz not null default now()
+);
+
+-- ── 02.1_table/ai_usage.sql ──
+-- ai_usage : AI 기능 호출 로그 (서버측 사용량 제한용)
+-- OCR 등 외부 LLM 비용이 드는 기능의 사용자별 호출을 기록해 시간당 횟수를 제한한다.
+create table if not exists public.ai_usage (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null,
+  kind        text not null,            -- 'ocr' 등 기능 구분
   created_at  timestamptz not null default now()
 );
 
@@ -482,6 +492,15 @@ alter table public.affiliate_clicks add constraint affiliate_clicks_user_id_fkey
 
 create index if not exists idx_affiliate_clicks_product on public.affiliate_clicks (product_id, created_at desc);
 create index if not exists idx_affiliate_clicks_created on public.affiliate_clicks (created_at desc);
+
+-- ── 02.2_index_fk/ai_usage.sql ──
+-- ai_usage : 외래키 + 인덱스
+alter table public.ai_usage drop constraint if exists ai_usage_user_id_fkey;
+alter table public.ai_usage add constraint ai_usage_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
+-- 사용자별 최근 호출(시간당 카운트) 조회용
+create index if not exists idx_ai_usage_user_kind_at on public.ai_usage (user_id, kind, created_at desc);
 
 -- ── 02.2_index_fk/breed_food_rules.sql ──
 -- breed_food_rules : 외래키 + 인덱스
@@ -1116,6 +1135,14 @@ alter table public.affiliate_clicks enable row level security;
 drop policy if exists "affiliate_clicks_insert" on public.affiliate_clicks;
 create policy "affiliate_clicks_insert" on public.affiliate_clicks for insert
   with check (user_id is null or auth.uid() = user_id);
+
+-- ── 02.6_policy/ai_usage.sql ──
+-- ai_usage : RLS (본인 사용기록만 조회/생성)
+alter table public.ai_usage enable row level security;
+drop policy if exists "ai_usage_select_own" on public.ai_usage;
+drop policy if exists "ai_usage_insert_own" on public.ai_usage;
+create policy "ai_usage_select_own" on public.ai_usage for select using (auth.uid() = user_id);
+create policy "ai_usage_insert_own" on public.ai_usage for insert with check (auth.uid() = user_id);
 
 -- ── 02.6_policy/app_settings.sql ──
 -- app_settings : RLS (공개 읽기, 관리자만 쓰기)

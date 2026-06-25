@@ -23,7 +23,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
   }
-  if (!authKey) return NextResponse.json({ error: 'authKey_required' }, { status: 400 })
+  if (typeof authKey !== 'string' || authKey.trim().length === 0 || authKey.length > 2000) {
+    return NextResponse.json({ error: 'authKey_required' }, { status: 400 })
+  }
 
   const customerKey = customerKeyForUser(user.id)
 

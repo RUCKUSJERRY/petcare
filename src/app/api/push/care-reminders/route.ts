@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
 import { careCategoryIcon, ddayBadge } from '@/lib/utils'
+import { cronAuthError } from '@/lib/cron'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -12,13 +13,8 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: Request) {
   // Vercel Cron은 CRON_SECRET이 설정되면 Authorization: Bearer <secret> 헤더를 보냄
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    const auth = req.headers.get('authorization')
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-    }
-  }
+  const authErr = cronAuthError(req, 'care-reminders')
+  if (authErr) return authErr
 
   // 기록의 날짜(next_due_on 등)는 작성자 브라우저의 로컬(KST) 달력 날짜로 저장된다.
   // 서버 cron은 UTC로 동작하므로, 시차로 D-day가 하루 어긋나지 않도록 KST 기준 오늘/내일을 계산한다.
@@ -93,7 +89,11 @@ export async function GET(req: Request) {
       })
       sent++
     }
-    await admin.from('records').update({ last_reminded_on: today }).eq('id', r.id)
+    // 당일 중복 발송 방지 플래그. 갱신 실패 시 다음 cron에서 같은 사용자에게 중복 푸시가
+    // 갈 수 있으므로 조용히 넘기지 않고 로그로 남긴다.
+    const { error: markErr } = await admin
+      .from('records').update({ last_reminded_on: today }).eq('id', r.id)
+    if (markErr) console.error('[care-reminders] last_reminded_on update failed', r.id, markErr.message)
   }
 
   const result = { processed: rows.length, sent, force }

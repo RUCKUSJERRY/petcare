@@ -132,6 +132,7 @@ export default function MapPage() {
     const { data } = await supabase
       .from('map_favorites')
       .select('*')
+      .eq('user_id', uid)
       .order('created_at', { ascending: false })
     const favs = (data ?? []) as MapFavorite[]
     setFavorites(favs)
