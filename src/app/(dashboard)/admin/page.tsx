@@ -16,6 +16,16 @@ interface Stats {
   paymentsCount: number
   revenue: number
   topProducts: { product_id: string; count: number }[]
+  totalUsers: number
+  newUsers7d: number
+  newUsers30d: number
+  premiumUsers: number
+  conversionRate: number
+  revenue30d: number
+  payingUsers30d: number
+  arppu: number
+  arpu: number
+  churnRate: number
 }
 
 export default function AdminPage() {
@@ -167,6 +177,21 @@ export default function AdminPage() {
         <button onClick={save} disabled={saving} className="btn-primary w-full py-3">
           {saving ? t('saving') : saved ? t('saved') : t('saveBtn')}
         </button>
+      </section>
+
+      {/* 핵심 지표 (투자자/운영용 KPI) */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-gray-900">{t('kpi')}</h2>
+        <div className="grid grid-cols-2 gap-2">
+          <StatCard label={t('totalUsers')} value={stats ? `${stats.totalUsers}` : '—'} accent />
+          <StatCard label={t('premiumUsers')} value={stats ? `${stats.premiumUsers}` : '—'} />
+          <StatCard label={t('conversionRate')} value={stats ? `${stats.conversionRate}%` : '—'} />
+          <StatCard label={t('churnRate')} value={stats ? `${stats.churnRate}%` : '—'} />
+          <StatCard label={t('newUsers')} value={stats ? `+${stats.newUsers7d} / +${stats.newUsers30d}` : '—'} />
+          <StatCard label={t('mrr')} value={stats ? won(stats.revenue30d) : '—'} accent />
+          <StatCard label={t('arppu')} value={stats ? won(stats.arppu) : '—'} />
+          <StatCard label={t('arpu')} value={stats ? won(stats.arpu) : '—'} />
+        </div>
       </section>
 
       {/* 통계 */}

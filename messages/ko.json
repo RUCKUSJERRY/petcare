@@ -866,6 +866,7 @@
     "empty": "아직 기록된 비용이 없어요.",
     "emptyHint": "일정에서 진료·미용 등 기록에 비용을 입력하면 여기서 월별·항목별로 모아볼 수 있어요.",
     "goRecord": "일정에서 기록하기 →",
+    "loadError": "비용 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
     "disclaimer": "비용이 입력된 기록만 집계됩니다. 일정 화면에서 각 기록의 비용을 입력·수정할 수 있어요."
   },
   "affiliate": {
@@ -957,7 +958,16 @@
     "affiliateTotal": "제휴 클릭(전체)",
     "affiliate7d": "제휴 클릭(7일)",
     "topProducts": "인기 제휴 상품",
-    "clicks": "{n}회"
+    "clicks": "{n}회",
+    "kpi": "핵심 지표",
+    "totalUsers": "전체 사용자",
+    "premiumUsers": "유효 프리미엄",
+    "conversionRate": "전환율",
+    "churnRate": "해지율",
+    "newUsers": "신규(7일/30일)",
+    "mrr": "최근 30일 매출",
+    "arppu": "결제자 1인당(ARPPU)",
+    "arpu": "사용자 1인당(ARPU)"
   },
   "quickLog": {
     "sectionTitle": "오늘의 기록",

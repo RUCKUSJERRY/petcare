@@ -100,10 +100,28 @@ async function tryGemini(base64: string, mimeType: string): Promise<{ records: O
   }
 }
 
+// 사용자당 시간당 OCR 호출 상한 (외부 LLM 비용/쿼터 남용 방지)
+const OCR_HOURLY_LIMIT = 30
+
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  // 서버측 레이트리밋: 최근 1시간 호출 수 확인 (클라이언트 쿨다운과 별개의 방어선)
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { count } = await supabase
+    .from('ai_usage')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('kind', 'ocr')
+    .gte('created_at', since)
+  if ((count ?? 0) >= OCR_HOURLY_LIMIT) {
+    return NextResponse.json(
+      { error: 'rate_limited', message: '잠시 후 다시 시도해 주세요. (시간당 인식 횟수 초과)' },
+      { status: 429 }
+    )
+  }
 
   let imageUrl: string | undefined
   try {
@@ -125,6 +143,10 @@ export async function POST(req: Request) {
       { status: 503 }
     )
   }
+
+  // 여기부터 실제 Gemini(유료/쿼터) 호출 경로 — 레이트리밋 카운트 기록.
+  // (기록 실패해도 OCR 자체는 진행)
+  await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'ocr' })
 
   // 이미지 내려받아 base64 인코딩
   let base64: string

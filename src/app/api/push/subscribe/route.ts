@@ -16,6 +16,13 @@ export async function POST(req: Request) {
   if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
     return NextResponse.json({ error: 'invalid subscription' }, { status: 400 })
   }
+  // endpoint 형식 검증 — 잘못된 문자열이 저장되면 추후 푸시 발송 시 자원만 낭비된다.
+  try {
+    const u = new URL(sub.endpoint)
+    if (u.protocol !== 'https:') throw new Error('not https')
+  } catch {
+    return NextResponse.json({ error: 'invalid endpoint' }, { status: 400 })
+  }
 
   const { error } = await supabase
     .from('push_subscriptions')

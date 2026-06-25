@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { addOneMonth, chargeBilling, TossError, tossConfigured } from '@/lib/toss'
+import { cronAuthError } from '@/lib/cron'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -13,12 +14,8 @@ export const dynamic = 'force-dynamic'
  * CRON_SECRET 으로 보호.
  */
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    if (req.headers.get('authorization') !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-    }
-  }
+  const authErr = cronAuthError(req, 'billing/renew')
+  if (authErr) return authErr
   if (!tossConfigured()) return NextResponse.json({ error: 'payment_not_configured' }, { status: 503 })
 
   let admin
