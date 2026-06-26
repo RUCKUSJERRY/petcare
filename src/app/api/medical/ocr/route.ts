@@ -144,10 +144,6 @@ export async function POST(req: Request) {
     )
   }
 
-  // 여기부터 실제 Gemini(유료/쿼터) 호출 경로 — 레이트리밋 카운트 기록.
-  // (기록 실패해도 OCR 자체는 진행)
-  await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'ocr' })
-
   // 이미지 내려받아 base64 인코딩
   let base64: string
   let mimeType: string
@@ -163,6 +159,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'image_fetch_failed', message: '이미지를 불러오지 못했어요.' }, { status: 502 })
   }
+
+  // 실제 Gemini(유료/쿼터) 호출 직전에 레이트리밋 카운트 기록.
+  // 이미지 내려받기·크기검증 실패로 Gemini를 호출하지 않은 경우엔 카운트하지 않아
+  // 사용자의 시간당 한도를 헛되이 소모하지 않는다. (기록 실패해도 OCR 자체는 진행)
+  const { error: usageErr } = await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'ocr' })
+  if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
 
   const gemini = await tryGemini(base64, mimeType)
   if ('records' in gemini) {
