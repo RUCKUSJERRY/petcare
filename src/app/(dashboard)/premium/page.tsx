@@ -127,6 +127,14 @@ export default function PremiumPage() {
     { icon: '👨‍👩‍👧', key: 'family', ready: false },
   ]
 
+  // 무료 vs 프리미엄 비교 — 전환 의도를 명확히 하기 위한 표
+  const compareRows: { key: string; free: string; premium: string; ready: boolean }[] = [
+    { key: 'noAds', free: t('compareAdsFree'), premium: t('compareAdsPremium'), ready: true },
+    { key: 'ocr', free: t('compareOcrFree'), premium: t('compareOcrPremium'), ready: false },
+    { key: 'reports', free: t('compareReportsFree'), premium: t('compareReportsPremium'), ready: false },
+    { key: 'family', free: t('compareFamilyFree'), premium: t('compareFamilyPremium'), ready: false },
+  ]
+
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
@@ -203,6 +211,30 @@ export default function PremiumPage() {
           </li>
         ))}
       </ul>
+
+      {/* 무료 vs 프리미엄 한눈에 비교 */}
+      <div className="mt-6">
+        <h2 className="text-sm font-bold text-gray-900 mb-2">{t('compareTitle')}</h2>
+        <div className="rounded-xl border border-gray-100 overflow-hidden">
+          <div className="grid grid-cols-[1fr_4.5rem_4.5rem] text-xs">
+            <div className="bg-gray-50 px-3 py-2" />
+            <div className="bg-gray-50 px-2 py-2 text-center font-semibold text-gray-500">{t('compareFree')}</div>
+            <div className="bg-primary-50 px-2 py-2 text-center font-bold text-primary-700">👑 {t('comparePremium')}</div>
+            {compareRows.map(row => (
+              <div key={row.key} className="contents">
+                <div className="border-t border-gray-100 px-3 py-2.5 text-sm text-gray-700 flex items-center gap-1.5">
+                  {t(`benefit.${row.key}.title`)}
+                  {!row.ready && (
+                    <span className="text-[10px] px-1.5 py-px rounded-full bg-gray-100 text-gray-400">{t('compareSoon')}</span>
+                  )}
+                </div>
+                <div className="border-t border-gray-100 px-2 py-2.5 text-center text-gray-400">{row.free}</div>
+                <div className="border-t border-gray-100 bg-primary-50/40 px-2 py-2.5 text-center font-semibold text-primary-700">{row.premium}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* 가격 + 결제 CTA (구독 중이 아닐 때) */}
       {sub?.status !== 'active' && (

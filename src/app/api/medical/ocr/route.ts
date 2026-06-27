@@ -116,12 +116,20 @@ export async function POST(req: Request) {
     .eq('user_id', user.id)
     .eq('kind', 'ocr')
     .gte('created_at', since)
-  if ((count ?? 0) >= OCR_HOURLY_LIMIT) {
+  const used = count ?? 0
+  if (used >= OCR_HOURLY_LIMIT) {
     return NextResponse.json(
-      { error: 'rate_limited', message: '잠시 후 다시 시도해 주세요. (시간당 인식 횟수 초과)' },
+      {
+        error: 'rate_limited',
+        message: 'AI 인식 한도를 모두 사용했어요. (시간당 30회) 무료 인식으로 대체할게요.',
+        limit: OCR_HOURLY_LIMIT,
+        remaining: 0,
+      },
       { status: 429 }
     )
   }
+  // 이번 호출 이후 남는 AI 인식 횟수(이번 호출 1건 차감)
+  const remaining = Math.max(0, OCR_HOURLY_LIMIT - used - 1)
 
   let imageUrl: string | undefined
   try {
@@ -166,7 +174,7 @@ export async function POST(req: Request) {
 
   const gemini = await tryGemini(base64, mimeType)
   if ('records' in gemini) {
-    return NextResponse.json({ ok: true, records: gemini.records, source: 'gemini' })
+    return NextResponse.json({ ok: true, records: gemini.records, source: 'gemini', limit: OCR_HOURLY_LIMIT, remaining })
   }
 
   // Gemini 실패/한도초과 → 클라이언트 무료 OCR 폴백 유도

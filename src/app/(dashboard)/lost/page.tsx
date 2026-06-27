@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { daysUntil } from '@/lib/utils'
 import type { LostPet } from '@/types'
@@ -72,11 +73,7 @@ export default function LostListPage() {
       {isLoading ? (
         <CardSkeletonList count={4} />
       ) : items.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">🐾</div>
-          {t('emptyTitle')}
-          <p className="text-xs mt-2">{t('emptyHint')}</p>
-        </div>
+        <EmptyState icon="🐾" title={t('emptyTitle')} hint={t('emptyHint')} />
       ) : (
         <div className="space-y-2">
           {items.map(it => (

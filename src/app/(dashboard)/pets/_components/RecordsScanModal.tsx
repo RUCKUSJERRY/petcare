@@ -126,10 +126,20 @@ export function RecordsScanModal({
         body: JSON.stringify({ imageUrl: url }),
       })
       const json = await res.json().catch(() => ({}))
+      // 시간당 AI 인식 한도 초과(429)는 조용히 무료 인식으로만 넘어가지 않고 명확히 안내한다.
+      if (res.status === 429) {
+        setError(json.message || t('ocrLimitReached'))
+        await localFallback()
+        return
+      }
       const parsed = (res.ok ? (json.records ?? []) : []) as Record<string, unknown>[]
       // LLM 성공 → 그대로 사용. 실패/빈결과 → 무료 OCR 폴백
       if (parsed.length > 0) {
         setRows(parsed.map(toRow))
+        // 남은 AI 인식 횟수가 적으면(≤5) 미리 알려 준다.
+        if (typeof json.remaining === 'number' && json.remaining <= 5) {
+          setNotice(t('ocrRemainingLow', { n: json.remaining }))
+        }
         setPhase('review')
       } else {
         await localFallback()

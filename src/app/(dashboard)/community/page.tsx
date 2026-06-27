@@ -5,6 +5,7 @@ import { categoryColor, timeAgo } from '@/lib/utils'
 import type { PostCategory, PostListItem } from '@/types'
 import { SearchBar } from './_components/SearchBar'
 import { FilterScroller } from '@/components/ui/FilterScroller'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 const PAGE_SIZE = 20
@@ -123,13 +124,10 @@ export default async function CommunityPage({
       {/* 목록 */}
       <div className="px-4 space-y-3 mt-1">
         {posts.length === 0 ? (
-          <div className="card text-center py-12 text-gray-400">
-            {q
-              ? t('emptySearch', { q })
-              : mine
-              ? t('emptyMine')
-              : t('empty')}
-          </div>
+          <EmptyState
+            icon="💬"
+            title={q ? t('emptySearch', { q }) : mine ? t('emptyMine') : t('empty')}
+          />
         ) : (
           posts.map(post => (
             <Link key={post.id} href={`/community/${post.id}`} className="block">
