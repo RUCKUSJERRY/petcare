@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { timeAgo } from '@/lib/utils'
 import type { NotificationItem } from '@/types'
 
@@ -67,10 +68,7 @@ export default function NotificationsPage() {
       {isLoading ? (
         <CardSkeletonList count={5} />
       ) : items.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">🔔</div>
-          {t('empty')}
-        </div>
+        <EmptyState icon="🔔" title={t('empty')} />
       ) : (
         <div className="space-y-2">
           {items.map(n => (

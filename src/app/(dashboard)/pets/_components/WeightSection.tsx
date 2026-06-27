@@ -52,9 +52,10 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   })
 
   const saveGoal = async (value: number | null) => {
-    setGoalSaving(true)
-    await supabase.from('pets').update({ target_weight_kg: value }).eq('id', petId)
+    setGoalSaving(true); setError(null)
+    const { error: updErr } = await supabase.from('pets').update({ target_weight_kg: value }).eq('id', petId)
     setGoalSaving(false)
+    if (updErr) { setError(t('errGoalFailed')); return }
     setEditingGoal(false)
     qc.invalidateQueries({ queryKey: ['pet_target', petId] })
     qc.invalidateQueries({ queryKey: ['my-pets'] })
@@ -77,7 +78,9 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   }
 
   const remove = async (id: string) => {
-    await supabase.from('weight_logs').delete().eq('id', id)
+    setError(null)
+    const { error: delErr } = await supabase.from('weight_logs').delete().eq('id', id)
+    if (delErr) { setError(t('errDeleteFailed')); return }
     setConfirmDeleteId(null)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
   }
@@ -102,6 +105,8 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
           {adding ? tc('cancel') : t('addRecord')}
         </button>
       </div>
+
+      {error && !adding && <p className="text-sm text-red-500">{error}</p>}
 
       {/* 최근 체중 + 변화 */}
       {latest && (

@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { cn, formatWon, careCategoryIcon } from '@/lib/utils'
@@ -81,19 +82,18 @@ export default function CostsPage() {
       {isLoading ? (
         <CardSkeletonList count={4} />
       ) : isError ? (
-        <div className="card text-center py-12 text-gray-400 space-y-1">
-          <div className="text-4xl">⚠️</div>
-          <p>{t('loadError')}</p>
-        </div>
+        <EmptyState variant="error" title={t('loadError')} />
       ) : scoped.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400 space-y-2">
-          <div className="text-4xl">🧾</div>
-          <p>{t('empty')}</p>
-          <p className="text-xs px-6">{t('emptyHint')}</p>
-          <Link href="/schedule" className="inline-block text-sm text-primary-600 font-semibold pt-1">
-            {t('goRecord')}
-          </Link>
-        </div>
+        <EmptyState
+          icon="🧾"
+          title={t('empty')}
+          hint={t('emptyHint')}
+          action={
+            <Link href="/schedule" className="inline-block text-sm text-primary-600 font-semibold">
+              {t('goRecord')}
+            </Link>
+          }
+        />
       ) : (
         <>
           {/* 연도 선택 */}

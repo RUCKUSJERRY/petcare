@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { cn, formatDistance, formatDuration, formatPace, timeAgo } from '@/lib/utils'
 import { summarizeWalks } from '@/lib/walkStats'
 import { WalkGoalCard } from './_components/WalkGoalCard'
@@ -164,12 +165,7 @@ function WalksContent() {
       {loading ? (
         <CardSkeletonList count={3} />
       ) : list.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">🦮</div>
-          {tab === 'mine'
-            ? t('emptyMine')
-            : t('emptyShared')}
-        </div>
+        <EmptyState icon="🦮" title={tab === 'mine' ? t('emptyMine') : t('emptyShared')} />
       ) : (
         <div className="space-y-2">
           {list.map(w => (
