@@ -33,6 +33,11 @@ const STEPS: Step[] = [
     descKey: 'onboardingScheduleDesc',
   },
   {
+    selector: '[data-tour="quick-record"]',
+    titleKey: 'onboardingQuickRecordTitle',
+    descKey: 'onboardingQuickRecordDesc',
+  },
+  {
     selector: '[data-tour="nav-info"]',
     titleKey: 'onboardingInfoTitle',
     descKey: 'onboardingInfoDesc',

@@ -642,7 +642,8 @@
     "exportPopupBlocked": "팝업이 차단됐어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해주세요.",
     "viewToday": "오늘",
     "todayHeading": "오늘 기록 {count}건",
-    "todayEmpty": "아직 오늘 남긴 생활기록이 없어요. 위 버튼으로 바로 남겨보세요."
+    "todayEmpty": "아직 오늘 남긴 생활기록이 없어요. 위 버튼으로 바로 남겨보세요.",
+    "moreActions": "더보기"
   },
   "walkSocial": {
     "anonymousOwner": "익명의 보호자",
@@ -723,7 +724,9 @@
     "imgCamera": "📷 촬영",
     "imgGallery": "🖼️ 갤러리",
     "imgMaxReached": "사진은 최대 {max}장까지 올릴 수 있어요",
-    "imgCount": "{n}/{max}장"
+    "imgCount": "{n}/{max}장",
+    "onboardingQuickRecordTitle": "어디서든 ＋기록 ✏️",
+    "onboardingQuickRecordDesc": "이 ＋ 버튼을 누르면 어느 화면에서든 식사·배변·투약 같은 생활기록을 한 번에 남길 수 있어요."
   },
   "petMembers": {
     "title": "공동 관리",
@@ -949,7 +952,8 @@
         "title": "가족 공유 확대",
         "desc": "더 많은 가족과 함께 관리"
       }
-    }
+    },
+    "cancelNoActive": "활성 구독이 없어요. (이미 해지되었거나 만료된 상태예요.)"
   },
   "admin": {
     "title": "관리자",

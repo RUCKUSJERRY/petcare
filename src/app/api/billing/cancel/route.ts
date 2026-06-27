@@ -21,12 +21,14 @@ export async function POST() {
     return NextResponse.json({ error: 'service_role_not_configured' }, { status: 500 })
   }
 
-  const { error } = await admin
+  const { data, error } = await admin
     .from('subscriptions')
     .update({ status: 'canceled', canceled_at: new Date().toISOString() })
     .eq('user_id', user.id)
     .eq('status', 'active')
+    .select('id')
   if (error) return NextResponse.json({ error: 'failed' }, { status: 500 })
 
-  return NextResponse.json({ ok: true })
+  // 활성 구독이 없었으면(이미 해지/만료) 갱신만 멈출 게 없으므로 명확히 구분해 알린다.
+  return NextResponse.json({ ok: true, canceled: (data?.length ?? 0) > 0 })
 }

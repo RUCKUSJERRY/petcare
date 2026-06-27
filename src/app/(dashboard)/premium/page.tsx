@@ -113,7 +113,9 @@ export default function PremiumPage() {
     setBusy(true)
     try {
       const res = await fetch('/api/billing/cancel', { method: 'POST' })
-      if (res.ok) { setFlash({ kind: 'success', msg: t('cancelDone') }); refresh() }
+      const body = await res.json().catch(() => ({}))
+      if (res.ok && body.canceled) { setFlash({ kind: 'success', msg: t('cancelDone') }); refresh() }
+      else if (res.ok) { setFlash({ kind: 'error', msg: t('cancelNoActive') }); refresh() }
       else setFlash({ kind: 'error', msg: t('failMsg') })
     } finally {
       setBusy(false)

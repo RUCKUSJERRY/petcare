@@ -62,6 +62,7 @@ export function QuickRecordFab() {
             type="button"
             onClick={() => setOpen(true)}
             aria-label={t('open')}
+            data-tour="quick-record"
             className="pointer-events-auto w-14 h-14 rounded-full bg-primary-500 text-white shadow-lg shadow-primary-500/30 flex items-center justify-center hover:bg-primary-600 active:scale-95 transition-all"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

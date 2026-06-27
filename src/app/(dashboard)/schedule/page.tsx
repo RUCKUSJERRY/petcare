@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { PRODUCT_CATEGORIES } from '@/lib/records'
@@ -286,29 +287,34 @@ export default function SchedulePage() {
               </button>
             ))}
           </div>
-          <div className="relative shrink-0" ref={menuRef}>
+          {/* 기본 동작(직접 기록)은 한 번에 열고, 스캔·내보내기는 보조 메뉴(⋯)로 분리 */}
+          <div className="flex items-center gap-1.5 shrink-0" ref={menuRef}>
             <button
-              onClick={() => { if (showAdd) setShowAdd(false); else setMenuOpen(o => !o) }}
-              aria-haspopup="menu" aria-expanded={menuOpen}
+              onClick={() => { setMenuOpen(false); setShowAdd(v => !v) }}
               className={cn('text-sm py-1.5 px-3', showAdd ? 'btn-secondary' : 'btn-primary')}>
               {showAdd ? tc('close') : t('addRecord')}
             </button>
-            {menuOpen && !showAdd && (
-              <div role="menu" className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
-                <button role="menuitem" onClick={() => { setShowAdd(true); setMenuOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  📝 {t('addTitleItem')}
+            {!showAdd && (
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(o => !o)}
+                  aria-haspopup="menu" aria-expanded={menuOpen} aria-label={t('moreActions')}
+                  className="btn-secondary text-sm py-1.5 px-2.5 leading-none">
+                  ⋯
                 </button>
-                <div className="my-1 border-t border-gray-100" />
-                <button role="menuitem" onClick={openScan}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  📷 {t('addScan')}
-                </button>
-                <div className="my-1 border-t border-gray-100" />
-                <button role="menuitem" onClick={exportRecords} disabled={exporting}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                  📄 {exporting ? t('exporting') : t('exportRecords')}
-                </button>
+                {menuOpen && (
+                  <div role="menu" className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
+                    <button role="menuitem" onClick={openScan}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      📷 {t('addScan')}
+                    </button>
+                    <div className="my-1 border-t border-gray-100" />
+                    <button role="menuitem" onClick={exportRecords} disabled={exporting}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                      📄 {exporting ? t('exporting') : t('exportRecords')}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -372,11 +378,16 @@ export default function SchedulePage() {
         <ScheduleCalendar items={visible} history={visibleHistory} focusDate={focusDate} onSelect={setDetailId} />
       ) : view === 'history' ? (
         visibleHistory.length === 0 ? (
-          <div className="card text-center py-12 text-gray-400">
-            <div className="text-4xl mb-3">🗂️</div>
-            {t('historyEmpty')}
-            <p className="text-xs mt-2">{t('emptyHint')}</p>
-          </div>
+          <EmptyState
+            icon="🗂️"
+            title={t('historyEmpty')}
+            hint={t('emptyHint')}
+            action={
+              <button onClick={() => setShowAdd(true)} className="btn-primary text-sm py-1.5 px-4">
+                {t('addTitleItem')}
+              </button>
+            }
+          />
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -390,11 +401,16 @@ export default function SchedulePage() {
           </div>
         )
       ) : visible.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">🗓️</div>
-          {selectedName ? t('emptyPet', { name: selectedName }) : t('emptyAll')}
-          <p className="text-xs mt-2">{t('emptyHint')}</p>
-        </div>
+        <EmptyState
+          icon="🗓️"
+          title={selectedName ? t('emptyPet', { name: selectedName }) : t('emptyAll')}
+          hint={t('emptyHint')}
+          action={
+            <button onClick={() => setShowAdd(true)} className="btn-primary text-sm py-1.5 px-4">
+              {t('addTitleItem')}
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-5">
           {overdue.length > 0 && (
