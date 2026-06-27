@@ -4,17 +4,19 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import type { Pet, PostCategory } from '@/types'
-import { ImagePicker } from '@/components/ui/ImagePicker'
+import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
 export default function NewPostPage() {
+  const t = useTranslations('community')
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [form, setForm] = useState({
     category: '' as PostCategory | '',
     title: '',
@@ -43,27 +45,37 @@ export default function NewPostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.category) {
-      setError('카테고리를 선택해주세요')
+      setError(t('categoryRequired'))
+      return
+    }
+    if (!form.title.trim() || !form.content.trim()) {
+      setError(t('contentRequired'))
       return
     }
     setSaving(true)
     setError(null)
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setSaving(false)
+      setError(t('loginRequired'))
+      return
+    }
     const { data, error: insErr } = await supabase
       .from('posts')
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         category: form.category,
         title: form.title.trim(),
         content: form.content.trim(),
         breed_id: form.breed_id || null,
-        image_url: imageUrl,
+        image_url: imageUrls[0] ?? null,
+        image_urls: imageUrls.length ? imageUrls : null,
       })
       .select('id')
       .single()
     setSaving(false)
     if (insErr) {
-      setError('등록에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(t('createFailed'))
       return
     }
     router.push(`/community/${data!.id}`)
@@ -73,23 +85,25 @@ export default function NewPostPage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-gray-900">글쓰기</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('write')}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 카테고리 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">카테고리 *</label>
-          <div className="grid grid-cols-4 gap-2">
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('categoryLabel')}</label>
+          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label={t('category')} aria-required>
             {CATEGORIES.map(c => (
               <button
                 key={c}
                 type="button"
+                role="radio"
+                aria-checked={form.category === c}
                 onClick={() => set('category', c)}
                 className={`py-2 rounded-lg border text-sm font-medium transition-colors ${
                   form.category === c
@@ -105,39 +119,41 @@ export default function NewPostPage() {
 
         {/* 제목 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">제목 *</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('titleLabel')}</label>
           <input
             className="input"
-            placeholder="제목을 입력하세요"
+            placeholder={t('titlePlaceholder')}
             maxLength={100}
             value={form.title}
             onChange={e => set('title', e.target.value)}
             required
+            aria-required
           />
         </div>
 
         {/* 내용 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">내용 *</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('contentLabel')}</label>
           <textarea
             className="input min-h-[160px] resize-y"
-            placeholder="내용을 입력하세요"
+            placeholder={t('contentPlaceholder')}
             maxLength={5000}
             value={form.content}
             onChange={e => set('content', e.target.value)}
             required
+            aria-required
           />
         </div>
 
         {/* 사진 (선택) */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">
-            사진 <span className="text-gray-400 font-normal">(선택)</span>
+            {t('photo')} <span className="text-gray-400 font-normal">{t('optional')}</span>
           </label>
-          <ImagePicker
+          <MultiImagePicker
             bucket="post-images"
-            value={imageUrl}
-            onUploaded={setImageUrl}
+            value={imageUrls}
+            onChange={setImageUrls}
             onError={setError}
           />
         </div>
@@ -146,14 +162,14 @@ export default function NewPostPage() {
         {pets && pets.length > 0 && (
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">
-              품종 태그 <span className="text-gray-400 font-normal">(선택)</span>
+              {t('breedTag')} <span className="text-gray-400 font-normal">{t('optional')}</span>
             </label>
             <select
               className="input"
               value={form.breed_id}
               onChange={e => set('breed_id', e.target.value)}
             >
-              <option value="">선택 안 함</option>
+              <option value="">{t('breedNone')}</option>
               {/* 중복 견종 제거 */}
               {Array.from(
                 new Map(
@@ -171,7 +187,7 @@ export default function NewPostPage() {
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <button type="submit" disabled={saving} className="btn-primary w-full py-3 mt-2">
-          {saving ? '등록 중...' : '등록'}
+          {saving ? t('submitting') : t('submit')}
         </button>
       </form>
     </div>

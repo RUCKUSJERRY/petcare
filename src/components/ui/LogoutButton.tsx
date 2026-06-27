@@ -1,9 +1,11 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 
 export function LogoutButton() {
+  const t = useTranslations('ui')
   const supabase = createClient()
   const router = useRouter()
 
@@ -17,7 +19,7 @@ export function LogoutButton() {
       onClick={handleLogout}
       className="text-sm text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
     >
-      로그아웃
+      {t('logout')}
     </button>
   )
 }

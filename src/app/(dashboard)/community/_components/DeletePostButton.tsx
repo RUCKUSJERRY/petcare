@@ -5,8 +5,11 @@ import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
-export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUrl?: string | null }) {
+export function DeletePostButton({ postId, imageUrls = [] }: { postId: string; imageUrls?: string[] }) {
+  const t = useTranslations('community')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
@@ -19,12 +22,12 @@ export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUr
     const { error: delErr } = await supabase.from('posts').delete().eq('id', postId)
     if (delErr) {
       setDeleting(false)
-      setError('삭제에 실패했어요.')
+      setError(t('deletePostFailed'))
       setShowModal(false)
       return
     }
     // 첨부 이미지 정리(고아 방지)
-    if (imageUrl) deleteImageByUrl(imageUrl)
+    imageUrls.forEach(deleteImageByUrl)
     router.push('/community')
     router.refresh()
   }
@@ -35,7 +38,7 @@ export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUr
         onClick={() => setShowModal(true)}
         className="text-sm text-gray-400 hover:text-red-500"
       >
-        삭제
+        {tc('delete')}
       </button>
 
       {error && (
@@ -44,9 +47,9 @@ export function DeletePostButton({ postId, imageUrl }: { postId: string; imageUr
 
       {showModal && (
         <ConfirmModal
-          title="글 삭제"
-          description="삭제한 글은 복구할 수 없어요. 정말 삭제할까요?"
-          confirmLabel={deleting ? '삭제 중...' : '삭제'}
+          title={t('deletePostTitle')}
+          description={t('deletePostConfirm')}
+          confirmLabel={deleting ? t('deleting') : tc('delete')}
           destructive
           busy={deleting}
           onConfirm={handleDelete}

@@ -3,14 +3,56 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
+import { calcPetAge } from '@/lib/utils'
+import { foodGuidesForSpecies, type FoodGuideTopic } from '@/lib/foodGuideData'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
-import type { BreedFoodRule, FoodItem, FoodSafety, Species } from '@/types'
+import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
+import { FeedCalculator } from '../care/_components/FeedCalculator'
+import type { BreedFoodRule, FoodItem, FoodSafety, PetAge, Species } from '@/types'
+
+/** 생애 단계 → 급여 계산기 기본 계수 */
+function toFeedFactor(lifeStage: PetAge['lifeStage'] | undefined): 'neutered' | 'growth' | 'senior' {
+  if (lifeStage === '퍼피' || lifeStage === '키튼') return 'growth'
+  if (lifeStage === '시니어') return 'senior'
+  return 'neutered'
+}
+
+/** 사료·간식 가이드 접이식 카드 */
+function FoodGuideCard({ guide }: { guide: FoodGuideTopic }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="card space-y-2 border-l-4 border-primary-400" style={{ borderRadius: '0 12px 12px 0' }}>
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2.5 text-left">
+        <span className="text-2xl shrink-0" aria-hidden>{guide.icon}</span>
+        <span className="flex-1 font-semibold text-gray-900">{guide.title}</span>
+        <span className="text-gray-400 text-sm shrink-0">{open ? '접기' : '열기'}</span>
+      </button>
+      {open && (
+        <ul className="space-y-1.5 pt-1">
+          {guide.points.map((p, i) => (
+            <li key={i} className="flex gap-2 text-sm text-gray-600 leading-relaxed">
+              <span className="text-primary-400 shrink-0" aria-hidden>•</span>
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 const FILTERS = ['전체', '안전', '주의', '위험'] as const
 type Filter = typeof FILTERS[number]
+
+const CATEGORIES = ['전체', '육류', '채소', '과일', '유제품', '기타'] as const
+type CategoryFilter = typeof CATEGORIES[number]
+const categoryIcon: Record<string, string> = {
+  육류: '🥩', 채소: '🥦', 과일: '🍎', 유제품: '🥛', 기타: '🍽️',
+}
 
 const filterMap: Record<Filter, string | null> = {
   '전체': null, '안전': 'safe', '주의': 'caution', '위험': 'dangerous',
@@ -45,10 +87,12 @@ function cn(...c: (string | false | null | undefined)[]) {
 type FoodRow = FoodItem & { food_safety: FoodSafety[] }
 
 export default function FoodsPage() {
+  const t = useTranslations('foods')
   const { selectedPetId } = useSelectedPet()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
+  const [category, setCategory] = useState<CategoryFilter>('전체')
   const [species, setSpecies] = useState<Species>('dog')
   const [breedFilter, setBreedFilter] = useState<string>('all')
   const initialized = useRef(false)
@@ -116,7 +160,8 @@ export default function FoodsPage() {
     const effectiveSafety = ruleMap.get(food.id)?.override_safety || safety.safety_level
     const matchSearch = food.name_ko.includes(search)
     const matchFilter = filterMap[filter] === null || effectiveSafety === filterMap[filter]
-    return matchSearch && matchFilter
+    const matchCategory = category === '전체' || food.category === category
+    return matchSearch && matchFilter && matchCategory
   })
 
   const filterBtnStyle = (f: Filter) => {
@@ -131,13 +176,17 @@ export default function FoodsPage() {
   // 펫 선택기가 없는 경우(펫 1마리 이하)에만 종 탭 노출
   const showSpeciesTabs = !myPets || myPets.length <= 1
 
+  // 급여량 계산기 기본값 (선택된 펫 → 없으면 첫 펫 기준)
+  const calcPet = activePet ?? myPets?.[0] ?? null
+  const calcAge = calcPet ? calcPetAge(calcPet.birth_year, calcPet.birth_month, calcPet.species) : null
+
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader title="음식 안전 정보" />
+        <PageHeader title={t('title')} />
         {activePet && (
           <span className="text-sm text-primary-600 font-medium shrink-0">
-            {activePet.species === 'cat' ? '🐱' : '🐶'} {activePet.name} 기준
+            {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
           </span>
         )}
       </div>
@@ -145,12 +194,13 @@ export default function FoodsPage() {
       {/* 펫이 없거나 1마리일 때만 종 탭 직접 노출 */}
       {showSpeciesTabs && (
         <div className="flex gap-2">
-          {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
+          {([['dog', `🐶 ${t('dog')}`], ['cat', `🐱 ${t('cat')}`]] as const).map(([sp, label]) => (
             <button
               key={sp}
               onClick={() => {
                 setSpecies(sp)
                 setFilter('전체')
+                setCategory('전체')
                 setSearch('')
                 setBreedFilter('all')
               }}
@@ -167,7 +217,7 @@ export default function FoodsPage() {
 
       <input
         className="input"
-        placeholder="음식 이름 검색..."
+        placeholder={t('searchPlaceholder')}
         value={search}
         onChange={e => setSearch(e.target.value)}
       />
@@ -184,10 +234,26 @@ export default function FoodsPage() {
         ))}
       </div>
 
+      {/* 분류 필터 */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4">
+        {CATEGORIES.map(c => (
+          <button
+            key={c}
+            onClick={() => setCategory(c)}
+            className={cn(
+              'px-3 py-1 rounded-full text-xs font-medium border shrink-0 transition-colors',
+              category === c ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+            )}
+          >
+            {c === '전체' ? '전체' : `${categoryIcon[c]} ${c}`}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <CardSkeletonList count={5} />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">검색 결과가 없어요</div>
+        <div className="text-center py-12 text-gray-400">{t('noResults')}</div>
       ) : (
         <div className="space-y-2">
           {filtered.map(({ food, safety }) => {
@@ -212,16 +278,16 @@ export default function FoodsPage() {
                 {safety.reason && <p className="text-sm text-gray-600">{safety.reason}</p>}
                 {rule?.note && (
                   <p className={cn('text-xs px-2.5 py-1.5 rounded-lg font-medium', cautionBg[effectiveSafety])}>
-                    {breedName ?? '우리 아이'} 주의: {rule.note}
+                    {t('breedCaution', { breed: breedName ?? t('defaultBreed'), note: rule.note })}
                   </p>
                 )}
                 {!rule?.note && safety.caution && (
                   <p className={cn('text-xs px-2.5 py-1.5 rounded-lg', cautionBg[effectiveSafety])}>
-                    주의: {safety.caution}
+                    {t('caution', { caution: safety.caution })}
                   </p>
                 )}
                 {safety.source && (
-                  <p className="text-[11px] text-gray-400 text-right">출처: {safety.source}</p>
+                  <p className="text-[11px] text-gray-400 text-right">{t('source', { source: safety.source })}</p>
                 )}
               </div>
             )
@@ -229,10 +295,23 @@ export default function FoodsPage() {
         </div>
       )}
 
+      {/* 사료·급여 가이드 (급여량 계산기 + 사료/간식 정보) */}
+      <section className="space-y-2 pt-2">
+        <h2 className="text-sm font-semibold text-gray-700">{t('feedGuideTitle')}</h2>
+        <FeedCalculator
+          species={species}
+          defaultWeight={calcPet?.weight_kg ?? null}
+          defaultFactor={toFeedFactor(calcAge?.lifeStage)}
+        />
+        {foodGuidesForSpecies(species).map(g => <FoodGuideCard key={g.id} guide={g} />)}
+      </section>
+
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
-        ⓘ 본 정보는 ASPCA·AKC 등 공개 자료를 참고한 일반적인 안내이며, 개체별 건강 상태에 따라 다를 수 있어요.
-        이상 증상이 있거나 급여 여부가 불확실하면 반드시 수의사와 상담하세요.
+        {t('disclaimer')}
       </div>
+
+      {/* 하단 고정 제휴 배너(닫기 가능) */}
+      <StickyAffiliateBanner species={species} context="foods" />
     </div>
   )
 }

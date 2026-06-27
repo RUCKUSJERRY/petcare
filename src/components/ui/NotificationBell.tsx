@@ -1,26 +1,30 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { timeAgo } from '@/lib/utils'
+import { cn, timeAgo } from '@/lib/utils'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { NotificationItem } from '@/types'
 
-const typeText: Record<string, string> = {
-  comment: '님이 댓글을 남겼어요',
-  reply: '님이 답글을 남겼어요',
-  like: '님이 회원님의 글을 좋아해요',
+const typeTextKey: Record<string, string> = {
+  comment: 'notifTypeComment',
+  reply: 'notifTypeReply',
+  like: 'notifTypeLike',
 }
 const typeIcon: Record<string, string> = { comment: '💬', reply: '↩️', like: '❤️' }
 
 export function NotificationBell() {
+  const t = useTranslations('ui')
   const supabase = createClient()
   const qc = useQueryClient()
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const active = open || pathname.startsWith('/notifications')
 
   const { data: unread = 0 } = useQuery({
     queryKey: ['notifications-unread'],
@@ -89,8 +93,13 @@ export function NotificationBell() {
     <div data-tour="bell" className="relative shrink-0" ref={wrapRef}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="relative w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors"
-        aria-label={unread > 0 ? `알림 ${unread}건` : '알림'}
+        className={cn(
+          'relative w-8 h-8 rounded-full border flex items-center justify-center transition-colors',
+          active
+            ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
+            : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+        )}
+        aria-label={unread > 0 ? t('notifBellCount', { count: unread }) : t('notifBell')}
         aria-haspopup="true"
         aria-expanded={open}
       >
@@ -108,25 +117,25 @@ export function NotificationBell() {
       {open && (
         <div
           role="dialog"
-          aria-label="알림"
+          aria-label={t('notifBell')}
           className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl border border-gray-100 shadow-xl z-50 overflow-hidden"
         >
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
-            <span className="font-semibold text-gray-900 text-sm">알림</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('notifBell')}</span>
             {unread > 0 && (
               <button onClick={markAllRead} className="text-xs text-primary-600 font-semibold">
-                모두 읽음
+                {t('notifMarkAllRead')}
               </button>
             )}
           </div>
 
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">불러오는 중...</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-400">{t('notifLoading')}</div>
             ) : recent.length === 0 ? (
               <div className="px-4 py-10 text-center text-gray-400">
                 <div className="text-3xl mb-2">🔔</div>
-                <p className="text-sm">아직 알림이 없어요</p>
+                <p className="text-sm">{t('notifEmpty')}</p>
               </div>
             ) : (
               recent.map(n => (
@@ -140,7 +149,7 @@ export function NotificationBell() {
                   <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                     {n.actor_avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={n.actor_avatar} alt="" className="w-full h-full object-cover" />
+                      <img src={n.actor_avatar} alt={n.actor_name ?? t('notifAnonymous')} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-sm">{typeIcon[n.type]}</span>
                     )}
@@ -148,8 +157,8 @@ export function NotificationBell() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-800 leading-snug">
                       <span aria-hidden className="mr-1">{typeIcon[n.type]}</span>
-                      <span className="font-semibold">{n.actor_name ?? '익명의 보호자'}</span>
-                      {typeText[n.type]}
+                      <span className="font-semibold">{n.actor_name ?? t('notifAnonymous')}</span>
+                      {t(typeTextKey[n.type])}
                     </p>
                     {n.post_title && (
                       <p className="text-xs text-gray-400 truncate mt-0.5">“{n.post_title}”</p>
@@ -167,7 +176,7 @@ export function NotificationBell() {
             onClick={() => setOpen(false)}
             className="block text-center text-sm text-primary-600 font-semibold py-2.5 border-t border-gray-100 hover:bg-gray-50"
           >
-            전체 보기
+            {t('notifViewAll')}
           </Link>
         </div>
       )}

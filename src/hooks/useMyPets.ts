@@ -15,10 +15,11 @@ export function useMyPets() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return [] as Pet[]
+      // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환하므로 user_id 필터 불필요
+      // (공동 관리로 초대받은 아이도 함께 표시됨)
       const { data } = await supabase
         .from('pets')
         .select('*, breed:breeds(*)')
-        .eq('user_id', user.id)
         .order('created_at')
       return (data ?? []) as Pet[]
     },

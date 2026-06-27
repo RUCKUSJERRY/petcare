@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'pc-onboarding-v2'
@@ -7,45 +8,46 @@ export const OPEN_ONBOARDING_EVENT = 'pc:open-onboarding'
 
 type Step = {
   selector?: string // 강조할 요소 (없으면 가운데 환영 카드)
-  title: string
-  desc: string
+  titleKey: string
+  descKey: string
 }
 
 const STEPS: Step[] = [
   {
-    title: '펫케어에 오신 걸 환영해요 🐾',
-    desc: '주요 기능을 30초만에 둘러볼까요? 화면 곳곳을 짚어드릴게요.',
+    titleKey: 'onboardingWelcomeTitle',
+    descKey: 'onboardingWelcomeDesc',
   },
   {
     selector: '[data-tour="pets"]',
-    title: '우리 아이 선택',
-    desc: '여기서 아이를 고르면 음식·건강·활동·일정이 모두 그 아이 기준으로 바뀌어요.',
+    titleKey: 'onboardingPetsTitle',
+    descKey: 'onboardingPetsDesc',
   },
   {
     selector: '[data-tour="bell"]',
-    title: '알림',
-    desc: '댓글·답글·좋아요와 건강 일정 알림을 여기서 확인해요.',
+    titleKey: 'onboardingBellTitle',
+    descKey: 'onboardingBellDesc',
   },
   {
     selector: '[data-tour="schedule"]',
-    title: '건강 일정',
-    desc: '접종·심장사상충·구충 등 다가오는 예정일을 D-day로 모아봐요.',
+    titleKey: 'onboardingScheduleTitle',
+    descKey: 'onboardingScheduleDesc',
   },
   {
     selector: '[data-tour="nav-info"]',
-    title: '정보',
-    desc: '견종·나이에 맞는 음식·건강·활동 정보를 확인할 수 있어요.',
+    titleKey: 'onboardingInfoTitle',
+    descKey: 'onboardingInfoDesc',
   },
   {
     selector: '[data-tour="nav-community"]',
-    title: '커뮤니티',
-    desc: '다른 보호자들과 질문하고 일상을 나눠보세요.',
+    titleKey: 'onboardingCommunityTitle',
+    descKey: 'onboardingCommunityDesc',
   },
 ]
 
 const PAD = 6 // 강조 영역 여백
 
 export function OnboardingModal() {
+  const t = useTranslations('ui')
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
@@ -145,9 +147,9 @@ export function OnboardingModal() {
       )}
 
       {/* 말풍선 */}
-      <div style={tipStyle} className="bg-white rounded-2xl shadow-xl p-4" role="dialog" aria-modal="true" aria-label="사용 안내">
-        <h2 className="font-bold text-gray-900">{s.title}</h2>
-        <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{s.desc}</p>
+      <div style={tipStyle} className="bg-white rounded-2xl shadow-xl p-4" role="dialog" aria-modal="true" aria-label={t('onboardingAriaLabel')}>
+        <h2 className="font-bold text-gray-900">{t(s.titleKey)}</h2>
+        <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{t(s.descKey)}</p>
 
         <div className="flex items-center justify-between mt-4">
           {/* 인디케이터 */}
@@ -157,9 +159,9 @@ export function OnboardingModal() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={close} className="text-sm text-gray-400 px-2 py-1.5">건너뛰기</button>
+            <button onClick={close} className="text-sm text-gray-400 px-2 py-1.5">{t('onboardingSkip')}</button>
             <button onClick={next} className="btn-primary px-4 py-1.5 text-sm">
-              {last ? '시작하기' : '다음'}
+              {last ? t('onboardingStart') : t('onboardingNext')}
             </button>
           </div>
         </div>

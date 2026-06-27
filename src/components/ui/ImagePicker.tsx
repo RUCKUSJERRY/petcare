@@ -1,8 +1,22 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteImageByUrl, uploadImage, validateImage } from '@/lib/upload'
+
+/** 업로드 실패 원인을 사용자 친화적 메시지로 변환 */
+export function uploadErrorMessage(err: unknown, t: (key: string) => string): string {
+  const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase()
+  if (msg.includes('로그인')) return t('imgErrLoginRequired')
+  if (msg.includes('exceeded') || msg.includes('too large') || msg.includes('413')) {
+    return t('imgErrTooLarge')
+  }
+  if (msg.includes('fetch') || msg.includes('network') || msg.includes('timeout')) {
+    return t('imgErrNetwork')
+  }
+  return t('imgErrGeneric')
+}
 
 /**
  * 이미지 선택 + 업로드 + 미리보기 컴포넌트.
@@ -21,7 +35,9 @@ export function ImagePicker({
   onError?: (msg: string) => void
   shape?: 'square' | 'circle'
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const t = useTranslations('ui')
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [uploading, setUploading] = useState(false)
   // 이 컴포넌트에서 업로드(아직 미저장)한 URL들. 교체/제거 시 즉시 정리한다.
@@ -49,11 +65,11 @@ export function ImagePicker({
       }
       sessionUrls.current.add(url)
       onUploaded(url)
-    } catch {
-      onError?.('업로드에 실패했어요. 다시 시도해주세요.')
+    } catch (err) {
+      onError?.(uploadErrorMessage(err, t))
     } finally {
       setUploading(false)
-      if (inputRef.current) inputRef.current.value = ''
+      e.target.value = '' // 같은 파일 재선택 허용
     }
   }
 
@@ -75,44 +91,42 @@ export function ImagePicker({
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt="미리보기" className="w-full h-full object-cover" />
+          <img src={value} alt={t('imgPreviewAlt')} className="w-full h-full object-cover" />
         ) : (
           <span className="text-2xl text-gray-300">📷</span>
         )}
         {uploading && (
           <div className="absolute inset-0 bg-white/70 flex items-center justify-center text-xs text-gray-500">
-            업로드 중
+            {t('imgUploading')}
           </div>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="btn-secondary text-sm py-1.5 px-3"
-        >
-          {value ? '사진 변경' : '사진 추가'}
-        </button>
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => cameraRef.current?.click()} disabled={uploading}
+            className="btn-secondary text-sm py-1.5 px-3">
+            {t('imgCamera')}
+          </button>
+          <button type="button" onClick={() => galleryRef.current?.click()} disabled={uploading}
+            className="btn-secondary text-sm py-1.5 px-3">
+            {t('imgGallery')}
+          </button>
+        </div>
         {value && (
           <button
             type="button"
             onClick={handleRemove}
             className="text-xs text-gray-400 hover:text-red-500"
           >
-            제거
+            {t('imgRemove')}
           </button>
         )}
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleSelect}
-      />
+      {/* 촬영(카메라) / 갤러리(보관함) 분리 — 기기별로 카메라가 확실히 열리도록 */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSelect} />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleSelect} />
     </div>
   )
 }

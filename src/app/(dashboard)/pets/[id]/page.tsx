@@ -1,20 +1,28 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { calcPetAge, lifeStageColor } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { calcPetAge, lifeStageColor, nextAnniversary, daysTogether, ddayBadge, todayKST } from '@/lib/utils'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import type { Breed, Pet } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { PetAvatar } from '@/components/ui/PetAvatar'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
-import { CareSection } from '../_components/CareSection'
+import { PetMembers } from '../_components/PetMembers'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
+  const t = useTranslations('petDetail')
+  const tc = useTranslations('common')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // 홈 빠른 기록 버튼에서 ?add=weight 로 진입하면 체중 폼을 펼친 채로 시작
+  const addTarget = searchParams.get('add')
+  const weightRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
@@ -25,9 +33,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [uid, setUid] = useState<string | null>(null)
   const [form, setForm] = useState({
-    name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
+    name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
+  }, [supabase])
 
   const { data: pet, refetch } = useQuery({
     queryKey: ['pet', params.id],
@@ -56,12 +69,24 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         breed_id: pet.breed_id,
         birth_year: String(pet.birth_year),
         birth_month: String(pet.birth_month),
+        birth_day: pet.birth_day ? String(pet.birth_day) : '',
+        adopted_on: pet.adopted_on ?? '',
         gender: pet.gender,
         weight_kg: pet.weight_kg ? String(pet.weight_kg) : '',
       })
       setPhotoUrl(pet.photo_url)
     }
   }, [pet])
+
+  // ?add=weight 진입 시 체중 섹션으로 부드럽게 스크롤
+  useEffect(() => {
+    if (!pet || addTarget !== 'weight') return
+    const el = weightRef.current
+    if (el) {
+      const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+      return () => clearTimeout(t)
+    }
+  }, [pet, addTarget])
 
   const handleSave = async () => {
     setSaving(true)
@@ -71,13 +96,21 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
       birth_month: parseInt(form.birth_month),
+      birth_day: form.birth_day ? parseInt(form.birth_day) : null,
+      adopted_on: form.adopted_on || null,
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
     }).eq('id', params.id)
     setSaving(false)
     if (error) {
-      setSaveError('저장에 실패했어요. 다시 시도해주세요.')
+      setSaveError(t('errSaveFailed'))
+      // 저장이 실패하면 이번에 새로 올린 사진은 어디서도 참조되지 않는 고아가 된다.
+      // 정리하고 폼을 원본 사진으로 되돌린다.
+      if (photoUrl && photoUrl !== pet?.photo_url) {
+        deleteImageByUrl(photoUrl)
+        setPhotoUrl(pet?.photo_url ?? null)
+      }
       return
     }
     // 사진을 바꾼/지운 경우 기존 커밋 파일 정리(고아 방지)
@@ -94,7 +127,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     setDeleteError(null)
     const { error } = await supabase.from('pets').delete().eq('id', params.id)
     if (error) {
-      setDeleteError('삭제에 실패했어요. 다시 시도해주세요.')
+      setDeleteError(t('errDeleteFailed'))
       setShowDeleteModal(false)
       return
     }
@@ -110,7 +143,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
-  if (!pet) return <div className="px-4 py-6 text-gray-400">불러오는 중...</div>
+  if (!pet) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
 
@@ -118,7 +151,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     <div className="px-4 py-6 space-y-5">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -128,18 +161,15 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           onClick={() => { setEditing(e => !e); setSaveError(null) }}
           className={editing ? 'text-sm text-gray-400' : 'text-sm text-primary-600 font-semibold'}
         >
-          {editing ? '취소' : '수정'}
+          {editing ? tc('cancel') : t('edit')}
         </button>
       </div>
 
       {/* 프로필 카드 */}
       {!editing ? (
         <div className="card flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
-            {pet.photo_url
-              ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full rounded-full object-cover" />
-              : (pet.species === 'cat' ? '🐱' : '🐶')}
-          </div>
+          <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
+            className="w-16 h-16 bg-primary-100" emojiClassName="text-3xl" />
           <div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-gray-900">{pet.name}</span>
@@ -149,12 +179,31 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             </div>
             <p className="text-sm text-gray-500 mt-0.5">{pet.breed?.name_ko} · {age.displayText} · {pet.gender}</p>
             {pet.weight_kg && <p className="text-sm text-gray-400 mt-0.5">{pet.weight_kg}kg</p>}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {pet.birth_day && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 font-medium">
+                  {t('birthday')} {t('birthdayValue', { month: pet.birth_month, day: pet.birth_day })}
+                  {(() => {
+                    const next = nextAnniversary(pet.birth_month, pet.birth_day)
+                    return next ? ` · ${ddayBadge(next).text}` : ''
+                  })()}
+                </span>
+              )}
+              {(() => {
+                const days = daysTogether(pet.adopted_on)
+                return days != null ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 font-medium">
+                    {t('together', { days })}
+                  </span>
+                ) : null
+              })()}
+            </div>
           </div>
         </div>
       ) : (
         <div className="card space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t('photo')}</label>
             <ImagePicker
               bucket="pet-photos"
               value={photoUrl}
@@ -165,53 +214,67 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">이름</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('name')}</label>
             <input className="input" value={form.name} onChange={e => set('name', e.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{pet.species === 'cat' ? '묘종' : '견종'}</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{pet.species === 'cat' ? t('breedCat') : t('breedDog')}</label>
             <select className="input" value={form.breed_id} onChange={e => set('breed_id', e.target.value)}>
               {(allBreeds ?? []).filter(b => b.species === pet.species).map(b => (
                 <option key={b.id} value={b.id}>{b.name_ko}</option>
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">태어난 년도</label>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
               <input className="input" type="number" value={form.birth_year}
                 onChange={e => set('birth_year', e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">태어난 월</label>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
               <select className="input" value={form.birth_month} onChange={e => set('birth_month', e.target.value)}>
                 {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i+1} value={i+1}>{i+1}월</option>
+                  <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+              <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+                <option value="">{t('daySelect')}</option>
+                {Array.from({ length: 31 }, (_, i) => (
+                  <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
                 ))}
               </select>
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">성별</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>
+            <input className="input" type="date" max={todayKST()}
+              value={form.adopted_on} onChange={e => set('adopted_on', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('gender')}</label>
             <div className="grid grid-cols-2 gap-2">
               {['수컷', '암컷'].map(g => (
                 <button key={g} type="button" onClick={() => set('gender', g)}
                   className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                     form.gender === g ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
                   }`}>
-                  {g === '수컷' ? '♂ 수컷' : '♀ 암컷'}
+                  {g === '수컷' ? t('genderMale') : t('genderFemale')}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">몸무게 (kg)</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('weight')}</label>
             <input className="input" type="number" step="0.1" value={form.weight_kg}
               onChange={e => set('weight_kg', e.target.value)} />
           </div>
           {saveError && <p className="text-sm text-red-500">{saveError}</p>}
           <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
-            {saving ? '저장 중...' : '저장하기'}
+            {saving ? tc('saving') : t('saveProfile')}
           </button>
         </div>
       )}
@@ -219,8 +282,10 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 내 아이 기록 (조회 모드에서만) */}
       {!editing && (
         <>
-          <WeightSection petId={params.id} />
-          <CareSection petId={params.id} />
+          <div ref={weightRef}>
+            <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
+          </div>
+          <PetMembers petId={params.id} petName={pet.name} />
         </>
       )}
 
@@ -229,22 +294,22 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         <p className="text-sm text-red-500 text-center">{deleteError}</p>
       )}
 
-      {/* 삭제 버튼 */}
-      {!editing && (
+      {/* 삭제 버튼 — 소유자(등록자)만. 구성원은 '공동 관리에서 나가기' 사용 */}
+      {!editing && pet.user_id === uid && (
         <button
           onClick={() => setShowDeleteModal(true)}
           className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
         >
-          반려동물 삭제
+          {t('deletePet')}
         </button>
       )}
 
       {/* 삭제 확인 모달 */}
       {showDeleteModal && (
         <ConfirmModal
-          title={`${pet.name} 삭제`}
-          description="삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?"
-          confirmLabel="삭제"
+          title={t('deleteModalTitle', { name: pet.name })}
+          description={t('deleteModalDesc')}
+          confirmLabel={tc('delete')}
           destructive
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteModal(false)}

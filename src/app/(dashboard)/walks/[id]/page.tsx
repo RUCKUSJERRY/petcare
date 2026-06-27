@@ -1,0 +1,232 @@
+'use client'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { createClient } from '@/lib/supabase/client'
+import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { ShareButton } from '@/components/ui/ShareButton'
+import { WalkSocial } from '../_components/WalkSocial'
+import { WalkPhotoCard } from '../_components/WalkPhotoCard'
+import type { Walk } from '@/types'
+
+type WalkRow = Walk & {
+  pet?: { name: string } | null
+  author?: { display_name: string } | null
+}
+
+export default function WalkDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const supabase = createClient()
+  const t = useTranslations('walks')
+  const tc = useTranslations('common')
+  const qc = useQueryClient()
+  const [uid, setUid] = useState<string | null>(null)
+  const [showDelete, setShowDelete] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const fittedRef = useRef(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
+  }, [supabase])
+
+  const { data: walk, refetch } = useQuery({
+    queryKey: ['walk', params.id],
+    queryFn: async () => {
+      // profiles 임베드는 이 프로젝트에서 불안정 → 산책 본문만 받고 작성자/펫은 수동 조회
+      const { data } = await supabase
+        .from('walks')
+        .select('*')
+        .eq('id', params.id)
+        .maybeSingle()
+      if (!data) return null
+      const w = data as WalkRow
+      if (w.pet_id) {
+        const { data: pet } = await supabase.from('pets').select('name').eq('id', w.pet_id).maybeSingle()
+        w.pet = (pet as { name: string } | null) ?? null
+      }
+      const { data: prof } = await supabase
+        .from('profiles').select('display_name').eq('id', w.user_id).maybeSingle()
+      w.author = (prof as { display_name: string } | null) ?? null
+      return w
+    },
+  })
+
+  const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
+    const map = new maps.Map(el, { center: new maps.LatLng(37.5665, 126.978), level: 4 })
+    ;(el as any).__map = map
+    ;(el as any).__maps = maps
+  }, [])
+
+  // 경로가 로드되면 폴리라인 + 시작/끝 마커 + 영역 맞춤
+  useEffect(() => {
+    const el = mapRef.current as any
+    if (!el?.__map || !walk || fittedRef.current) return
+    const maps = el.__maps
+    const map = el.__map
+    const path: [number, number][] = Array.isArray(walk.path) ? walk.path : []
+    if (path.length === 0) return
+    const latlngs = path.map(p => new maps.LatLng(p[0], p[1]))
+    new maps.Polyline({ path: latlngs, strokeWeight: 6, strokeColor: '#16a34a', strokeOpacity: 0.9 }).setMap(map)
+    new maps.Marker({ position: latlngs[0], map }) // 시작
+    if (latlngs.length > 1) new maps.Marker({ position: latlngs[latlngs.length - 1], map }) // 끝
+    const bounds = new maps.LatLngBounds()
+    latlngs.forEach((ll: any) => bounds.extend(ll))
+    map.setBounds(bounds)
+    fittedRef.current = true
+  }, [walk, mapRef, mapStatus])
+
+  const isOwner = !!walk && walk.user_id === uid
+
+  const toggleShare = async () => {
+    if (!walk) return
+    setBusy(true)
+    await supabase.from('walks').update({ is_public: !walk.is_public }).eq('id', walk.id)
+    setBusy(false)
+    refetch()
+    qc.invalidateQueries({ queryKey: ['walks'] })
+  }
+
+  const handleDelete = async () => {
+    if (!walk) return
+    await supabase.from('walks').delete().eq('id', walk.id)
+    qc.invalidateQueries({ queryKey: ['walks'] })
+    router.replace('/walks')
+  }
+
+  const notice = kakaoNotice(mapStatus)
+
+  // 주의: walk 로딩 중에도 지도 컨테이너는 항상 렌더링해야 한다.
+  // (로딩 중 early-return 하면 useKakaoMap이 컨테이너를 찾지 못해 지도가 회색으로 남는 버그)
+  return (
+    <div className="px-4 py-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || t('walkFallback')}</h1>
+        {walk?.is_public ? (
+          <ShareButton
+            path={`/walks/${walk.id}`}
+            title={walk.title || t('shareTitle')}
+            text={t('shareText')}
+            iconOnly
+            className="text-gray-400 hover:text-primary-600 w-6 h-6 flex items-center justify-center"
+          />
+        ) : (
+          <div className="w-6" />
+        )}
+      </div>
+
+      {/* 경로 지도 — 항상 마운트 (조건부 렌더 시 카카오맵 초기화 실패로 회색 표시) */}
+      <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
+        <div ref={mapRef} className="absolute inset-0" />
+        {notice && (
+          <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-xs text-gray-500">
+            {notice}
+          </div>
+        )}
+      </div>
+
+      {!walk ? (
+        <div className="text-gray-400 text-center py-6">{t('loading')}</div>
+      ) : (
+      <>
+      {/* 통계 */}
+      <div className="card grid grid-cols-3 gap-2 text-center">
+        <div>
+          <div className="text-xl font-bold text-primary-600 tabular-nums">{formatDistance(walk.distance_m)}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('distance')}</div>
+        </div>
+        <div>
+          <div className="text-xl font-bold text-gray-900 tabular-nums">{formatDuration(walk.duration_s)}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('time')}</div>
+        </div>
+        <div>
+          <div className="text-xl font-bold text-gray-900 tabular-nums">{formatPace(walk.distance_m, walk.duration_s)}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('avgPace')}</div>
+        </div>
+      </div>
+
+      {/* 메타 */}
+      <div className="card space-y-1.5 text-sm">
+        <div className="flex justify-between"><span className="text-gray-400">{t('date')}</span>
+          <span className="text-gray-700">{new Date(walk.started_at).toLocaleDateString('ko-KR')}</span></div>
+        <div className="flex justify-between"><span className="text-gray-400">{t('startEnd')}</span>
+          <span className="text-gray-700 tabular-nums">
+            {new Date(walk.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            {' ~ '}
+            {new Date(walk.ended_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+          </span></div>
+        {walk.pet?.name && (
+          <div className="flex justify-between"><span className="text-gray-400">{t('withPet')}</span>
+            <span className="text-gray-700">{walk.pet.name}</span></div>
+        )}
+        {!isOwner && walk.author?.display_name && (
+          <div className="flex justify-between"><span className="text-gray-400">{t('sharedBy')}</span>
+            <span className="text-gray-700">{walk.author.display_name}</span></div>
+        )}
+        {walk.note && (
+          <div className="pt-1 text-gray-600 whitespace-pre-wrap border-t border-gray-50">{walk.note}</div>
+        )}
+      </div>
+
+      {/* 산책 사진 + 공유 카드 만들기 */}
+      {walk.photo_url && (
+        <div className="card space-y-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={walk.photo_url} alt={t('photoAlt')} className="w-full rounded-xl border border-gray-100" />
+          <WalkPhotoCard imageUrl={walk.photo_url} />
+        </div>
+      )}
+
+      {/* 소유자 액션 */}
+      {isOwner && (
+        <div className="space-y-2">
+          <button
+            onClick={toggleShare}
+            disabled={busy}
+            className={walk.is_public
+              ? 'w-full py-3 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 text-sm font-medium'
+              : 'btn-primary w-full py-3 text-sm'}
+          >
+            {walk.is_public ? t('unshare') : t('shareRoute')}
+          </button>
+          <button
+            onClick={() => setShowDelete(true)}
+            className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+          >
+            {t('deleteWalk')}
+          </button>
+        </div>
+      )}
+
+      {/* 공유된 산책: 좋아요 + 댓글 (커뮤니티 게시판처럼) */}
+      {walk.is_public && (
+        <>
+          <hr className="border-gray-100" />
+          <WalkSocial walkId={walk.id} initialLikeCount={walk.like_count ?? 0} />
+        </>
+      )}
+
+      {showDelete && (
+        <ConfirmModal
+          title={t('deleteWalk')}
+          description={t('deleteConfirm')}
+          confirmLabel={tc('delete')}
+          destructive
+          onConfirm={handleDelete}
+          onCancel={() => setShowDelete(false)}
+        />
+      )}
+      </>
+      )}
+    </div>
+  )
+}

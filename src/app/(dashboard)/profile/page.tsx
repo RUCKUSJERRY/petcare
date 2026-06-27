@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
@@ -10,17 +11,30 @@ import { LogoutButton } from '@/components/ui/LogoutButton'
 import { PushToggle } from '@/components/ui/PushToggle'
 import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
+import Link from 'next/link'
+import { usePlan } from '@/hooks/usePlan'
 
 export default function ProfilePage() {
   const router = useRouter()
+  const t = useTranslations('profile')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { isPremium } = usePlan()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+
+  const { data: isAdmin } = useQuery<boolean>({
+    queryKey: ['is-admin'],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('is_admin')
+      return !!data
+    },
+  })
 
   const { data: profile } = useQuery({
     queryKey: ['my-profile'],
@@ -49,7 +63,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     const name = displayName.trim()
     if (!name) {
-      setError('닉네임을 입력해주세요')
+      setError(t('nameRequired'))
       return
     }
     setSaving(true)
@@ -61,7 +75,7 @@ export default function ProfilePage() {
       .eq('id', user!.id)
     setSaving(false)
     if (updErr) {
-      setError('저장에 실패했어요. 다시 시도해주세요.')
+      setError(t('saveFailed'))
       return
     }
     // 사진을 바꾼/지운 경우 기존 커밋 파일 정리(고아 방지)
@@ -80,12 +94,12 @@ export default function ProfilePage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label="뒤로">
+        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-gray-900">프로필 편집</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
         <div className="ml-auto">
           <LogoutButton />
         </div>
@@ -93,7 +107,7 @@ export default function ProfilePage() {
 
       <div className="space-y-5">
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">프로필 사진</label>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t('photo')}</label>
           <ImagePicker
             bucket="avatars"
             value={avatarUrl}
@@ -104,24 +118,52 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">닉네임</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('nickname')}</label>
           <input
             className="input"
-            placeholder="커뮤니티에 표시될 이름"
+            placeholder={t('nicknamePlaceholder')}
             maxLength={20}
             value={displayName}
             onChange={e => setDisplayName(e.target.value)}
           />
           <p className="text-xs text-gray-400 mt-1">
-            커뮤니티 글·댓글에 이 이름이 표시돼요
+            {t('nicknameHint')}
           </p>
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
-          {saving ? '저장 중...' : done ? '저장됐어요 ✓' : '저장하기'}
+          {saving ? tc('saving') : done ? t('saved') : t('saveButton')}
         </button>
+
+        {/* 프리미엄 진입점 */}
+        <Link
+          href="/premium"
+          className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-2xl shrink-0" aria-hidden>👑</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-900">{t('premium')}</div>
+            <div className="text-xs text-gray-400">{isPremium ? t('premiumActive') : t('premiumHint')}</div>
+          </div>
+          <span className="text-gray-300 shrink-0" aria-hidden>›</span>
+        </Link>
+
+        {/* 관리자 진입점 (관리자에게만 노출) */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 hover:bg-gray-50 transition-colors"
+          >
+            <span className="text-2xl shrink-0" aria-hidden>🛠️</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900">{t('admin')}</div>
+              <div className="text-xs text-gray-400">{t('adminHint')}</div>
+            </div>
+            <span className="text-gray-300 shrink-0" aria-hidden>›</span>
+          </Link>
+        )}
 
         {/* 알림 설정 */}
         <div className="border-t border-gray-100 pt-4">
@@ -133,7 +175,7 @@ export default function ProfilePage() {
           onClick={() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))}
           className="text-sm text-gray-500 hover:text-primary-600"
         >
-          사용 안내 다시 보기
+          {t('viewOnboarding')}
         </button>
       </div>
     </div>

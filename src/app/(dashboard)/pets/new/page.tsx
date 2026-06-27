@@ -2,12 +2,16 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import type { Breed, Species } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { todayKST } from '@/lib/utils'
 
 export default function NewPetPage() {
+  const t = useTranslations('petForm')
+  const tc = useTranslations('common')
   const router = useRouter()
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -17,7 +21,7 @@ export default function NewPetPage() {
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [species, setSpecies] = useState<Species>('dog')
   const [form, setForm] = useState({
-    name: '', breed_id: '', birth_year: '', birth_month: '', gender: '', weight_kg: '',
+    name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
 
   const { data: allBreeds } = useQuery({
@@ -28,19 +32,25 @@ export default function NewPetPage() {
     },
   })
   const breeds = (allBreeds ?? []).filter(b => b.species === species)
-  const breedLabel = species === 'dog' ? '견종' : '묘종'
+  const breedLabel = species === 'dog' ? t('breedDog') : t('breedCat')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
     setError(null)
+    // 성별은 버튼 그룹이라 네이티브 required 검증이 걸리지 않는다 → 직접 확인
+    const name = form.name.trim()
+    if (!name) { setError(t('errNameRequired')); return }
+    if (!form.gender) { setError(t('errGenderRequired')); return }
+    setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { error: insErr } = await supabase.from('pets').insert({
       user_id: user!.id,
-      name: form.name,
+      name,
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),
       birth_month: parseInt(form.birth_month),
+      birth_day: form.birth_day ? parseInt(form.birth_day) : null,
+      adopted_on: form.adopted_on || null,
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
@@ -48,7 +58,7 @@ export default function NewPetPage() {
     })
     setSaving(false)
     if (insErr) {
-      setError('등록에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(t('errCreateFailed'))
       return
     }
     queryClient.invalidateQueries({ queryKey: ['my-pets'] })
@@ -65,15 +75,15 @@ export default function NewPetPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-gray-900">반려동물 등록</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">종류 *</label>
-          <div className="grid grid-cols-2 gap-2">
-            {([['dog', '🐶 강아지'], ['cat', '🐱 고양이']] as const).map(([sp, label]) => (
-              <button key={sp} type="button"
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('speciesLabel')}</label>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('speciesAria')}>
+            {([['dog', t('speciesDog')], ['cat', t('speciesCat')]] as const).map(([sp, label]) => (
+              <button key={sp} type="button" role="radio" aria-checked={species === sp}
                 onClick={() => { setSpecies(sp); set('breed_id', '') }}
                 className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                   species === sp
@@ -87,7 +97,7 @@ export default function NewPetPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t('photo')}</label>
           <ImagePicker
             bucket="pet-photos"
             value={photoUrl}
@@ -99,64 +109,80 @@ export default function NewPetPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">이름 *</label>
-          <input className="input" placeholder="예: 콩이" value={form.name}
-            onChange={e => set('name', e.target.value)} required />
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('name')}</label>
+          <input className="input" placeholder={t('namePlaceholder')} value={form.name}
+            onChange={e => set('name', e.target.value)} required aria-required maxLength={20} />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">{breedLabel} *</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('breedLabel', { breed: breedLabel })}</label>
           <select className="input" value={form.breed_id}
-            onChange={e => set('breed_id', e.target.value)} required>
-            <option value="">{breedLabel} 선택</option>
+            onChange={e => set('breed_id', e.target.value)} required aria-required>
+            <option value="">{t('breedSelect', { breed: breedLabel })}</option>
             {breeds.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">태어난 년도 *</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
             <input className="input" type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
-              value={form.birth_year} onChange={e => set('birth_year', e.target.value)} required />
+              value={form.birth_year} onChange={e => set('birth_year', e.target.value)} required aria-required />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">태어난 월 *</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
             <select className="input" value={form.birth_month}
-              onChange={e => set('birth_month', e.target.value)} required>
-              <option value="">월 선택</option>
+              onChange={e => set('birth_month', e.target.value)} required aria-required>
+              <option value="">{t('monthSelect')}</option>
               {Array.from({ length: 12 }, (_, i) => (
-                <option key={i+1} value={i+1}>{i+1}월</option>
+                <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+            <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+              <option value="">{t('daySelect')}</option>
+              {Array.from({ length: 31 }, (_, i) => (
+                <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
               ))}
             </select>
           </div>
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">성별 *</label>
-          <div className="grid grid-cols-2 gap-2">
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>
+          <input className="input" type="date" max={todayKST()}
+            value={form.adopted_on} onChange={e => set('adopted_on', e.target.value)} />
+          <p className="text-xs text-gray-400 mt-1">{t('adoptedHint')}</p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('gender')}</label>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('genderAria')} aria-required>
             {['수컷', '암컷'].map(g => (
-              <button key={g} type="button"
+              <button key={g} type="button" role="radio" aria-checked={form.gender === g}
                 onClick={() => set('gender', g)}
                 className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                   form.gender === g
                     ? 'bg-primary-500 text-white border-primary-500'
                     : 'bg-white text-gray-600 border-gray-200'
                 }`}>
-                {g === '수컷' ? '♂ 수컷' : '♀ 암컷'}
+                {g === '수컷' ? t('genderMale') : t('genderFemale')}
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">몸무게 (kg)</label>
-          <input className="input" type="number" placeholder="예: 3.5" step="0.1" min="0"
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('weight')}</label>
+          <input className="input" type="number" placeholder={t('weightPlaceholder')} step="0.1" min="0"
             value={form.weight_kg} onChange={e => set('weight_kg', e.target.value)} />
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         <button type="submit" disabled={saving} className="btn-primary w-full py-3 mt-2">
-          {saving ? '저장 중...' : '등록 완료'}
+          {saving ? tc('saving') : t('submit')}
         </button>
       </form>
     </div>

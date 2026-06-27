@@ -1,8 +1,11 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { categoryColor, timeAgo } from '@/lib/utils'
 import type { PostCategory, PostListItem } from '@/types'
 import { SearchBar } from './_components/SearchBar'
+import { FilterScroller } from '@/components/ui/FilterScroller'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 const PAGE_SIZE = 20
@@ -31,6 +34,7 @@ export default async function CommunityPage({
   searchParams: { category?: string; page?: string; mine?: string; sort?: string; q?: string }
 }) {
   const supabase = await createServerSupabaseClient()
+  const t = await getTranslations('community')
   const { data: { user } } = await supabase.auth.getUser()
 
   const page = Math.max(1, parseInt(searchParams.page ?? '1') || 1)
@@ -54,7 +58,12 @@ export default async function CommunityPage({
 
   if (activeCategory) query = query.eq('category', activeCategory)
   if (mine && user) query = query.eq('user_id', user.id)
-  if (q) query = query.or(`title.ilike.%${q}%,content.ilike.%${q}%`)
+  if (q) {
+    // PostgREST .or() 필터에서 구조 문자(쉼표/괄호/역슬래시)와 LIKE 와일드카드(%,_)는
+    // 검색을 깨뜨리거나 의도치 않은 조건 주입을 일으킬 수 있어 제거/무력화한다.
+    const safeQ = q.replace(/[,()\\]/g, ' ').replace(/[%_]/g, '').trim()
+    if (safeQ) query = query.or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
+  }
 
   query = query.range(offset, offset + PAGE_SIZE - 1)
 
@@ -73,9 +82,9 @@ export default async function CommunityPage({
       {/* 헤더 */}
       <div className="sticky top-0 bg-gray-50/90 backdrop-blur z-10 px-4 pt-6 pb-3">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-gray-900">커뮤니티</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
           <Link href="/community/new" className="btn-primary text-sm py-1.5 px-3">
-            글쓰기
+            {t('write')}
           </Link>
         </div>
 
@@ -85,9 +94,9 @@ export default async function CommunityPage({
         </div>
 
         {/* 카테고리 필터 */}
-        <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
+        <FilterScroller className="pb-1">
           {/* 칩은 상호배타(라디오)로 동작: 전체/카테고리/내 글 중 하나만 선택 */}
-          <FilterChip label="전체" href={buildUrl({ sort, q })} active={!activeCategory && !mine} />
+          <FilterChip label={t('filterAll')} href={buildUrl({ sort, q })} active={!activeCategory && !mine} />
           {CATEGORIES.map(c => (
             <FilterChip
               key={c}
@@ -98,30 +107,27 @@ export default async function CommunityPage({
           ))}
           {user && (
             <FilterChip
-              label="내 글"
+              label={t('filterMine')}
               href={buildUrl({ mine: true, sort, q })}
               active={mine}
             />
           )}
-        </div>
+        </FilterScroller>
 
         {/* 정렬 토글 */}
         <div className="flex gap-3 mt-2 text-sm">
-          <SortLink label="최신순" href={buildUrl({ category: activeCategory, mine, q, sort: 'latest' })} active={sort === 'latest'} />
-          <SortLink label="인기순" href={buildUrl({ category: activeCategory, mine, q, sort: 'popular' })} active={sort === 'popular'} />
+          <SortLink label={t('sortLatest')} href={buildUrl({ category: activeCategory, mine, q, sort: 'latest' })} active={sort === 'latest'} />
+          <SortLink label={t('sortPopular')} href={buildUrl({ category: activeCategory, mine, q, sort: 'popular' })} active={sort === 'popular'} />
         </div>
       </div>
 
       {/* 목록 */}
       <div className="px-4 space-y-3 mt-1">
         {posts.length === 0 ? (
-          <div className="card text-center py-12 text-gray-400">
-            {q
-              ? `'${q}' 검색 결과가 없어요.`
-              : mine
-              ? '아직 작성한 글이 없어요.'
-              : '아직 글이 없어요. 첫 글을 남겨보세요! 🐾'}
-          </div>
+          <EmptyState
+            icon="💬"
+            title={q ? t('emptySearch', { q }) : mine ? t('emptyMine') : t('empty')}
+          />
         ) : (
           posts.map(post => (
             <Link key={post.id} href={`/community/${post.id}`} className="block">
@@ -151,7 +157,7 @@ export default async function CommunityPage({
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-gray-400 pt-1">
-                  <span>{post.author_name ?? '익명의 보호자'}</span>
+                  <span>{post.author_name ?? t('anonymous')}</span>
                   <span>{timeAgo(post.created_at)}</span>
                   <span className="ml-auto flex items-center gap-3">
                     <span>❤️ {post.like_count}</span>
@@ -172,16 +178,16 @@ export default async function CommunityPage({
               href={buildUrl({ category: activeCategory, mine, sort, q, page: page - 1 })}
               className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
             >
-              ← 이전
+              {t('prev')}
             </Link>
           )}
-          <span className="text-sm text-gray-400">{page}페이지</span>
+          <span className="text-sm text-gray-400">{t('pageLabel', { page })}</span>
           {hasNext && (
             <Link
               href={buildUrl({ category: activeCategory, mine, sort, q, page: page + 1 })}
               className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
             >
-              다음 →
+              {t('next')}
             </Link>
           )}
         </div>

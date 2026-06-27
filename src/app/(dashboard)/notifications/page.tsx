@@ -3,22 +3,25 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { timeAgo } from '@/lib/utils'
 import type { NotificationItem } from '@/types'
 
-const typeText: Record<string, string> = {
-  comment: '님이 댓글을 남겼어요',
-  reply: '님이 답글을 남겼어요',
-  like: '님이 회원님의 글을 좋아해요',
-}
 const typeIcon: Record<string, string> = { comment: '💬', reply: '↩️', like: '❤️' }
 
 export default function NotificationsPage() {
   const supabase = createClient()
   const qc = useQueryClient()
   const router = useRouter()
+  const t = useTranslations('notifications')
+  const typeText: Record<string, string> = {
+    comment: t('typeComment'),
+    reply: t('typeReply'),
+    like: t('typeLike'),
+  }
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -54,10 +57,10 @@ export default function NotificationsPage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader title="알림" fallbackHref="/dashboard" />
+        <PageHeader title={t('title')} fallbackHref="/dashboard" />
         {unread > 0 && (
           <button onClick={markAllRead} className="text-sm text-primary-600 font-semibold shrink-0">
-            모두 읽음
+            {t('markAllRead')}
           </button>
         )}
       </div>
@@ -65,10 +68,7 @@ export default function NotificationsPage() {
       {isLoading ? (
         <CardSkeletonList count={5} />
       ) : items.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">🔔</div>
-          아직 알림이 없어요
-        </div>
+        <EmptyState icon="🔔" title={t('empty')} />
       ) : (
         <div className="space-y-2">
           {items.map(n => (
@@ -82,7 +82,7 @@ export default function NotificationsPage() {
               <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                 {n.actor_avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={n.actor_avatar} alt="" className="w-full h-full object-cover" />
+                  <img src={n.actor_avatar} alt={n.actor_name ?? t('anonymous')} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-base">{typeIcon[n.type]}</span>
                 )}
@@ -90,7 +90,7 @@ export default function NotificationsPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-800">
                   <span aria-hidden className="mr-1">{typeIcon[n.type]}</span>
-                  <span className="font-semibold">{n.actor_name ?? '익명의 보호자'}</span>
+                  <span className="font-semibold">{n.actor_name ?? t('anonymous')}</span>
                   {typeText[n.type]}
                 </p>
                 {n.post_title && (

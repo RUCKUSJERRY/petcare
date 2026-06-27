@@ -6,20 +6,37 @@ import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { NotificationBell } from './NotificationBell'
+import { PetAvatar } from './PetAvatar'
 
 export function AppHeader() {
+  const t = useTranslations('header')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const pathname = usePathname()
+  const petsActive = pathname.startsWith('/pets')
+  const profileActive = pathname.startsWith('/profile')
 
   const { data: pets } = useMyPets()
+  // 아이가 1마리뿐일 때의 자동 선택을 마운트당 1회만 수행 (수동 해제는 존중)
+  const autoSelected = useRef(false)
 
-  // 자가 복구: 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
+  // 자가 복구 + 1마리 자동 선택
   useEffect(() => {
-    if (pets && selectedPetId && !pets.some(p => p.id === selectedPetId)) {
+    if (!pets) return
+    // 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
+    if (selectedPetId && !pets.some(p => p.id === selectedPetId)) {
       setSelectedPetId(null)
+      return
+    }
+    // 아이가 1마리뿐이면 자동 선택 — 매번 칩을 탭하지 않아도 원탭 기록·스캔·체중이 바로 동작
+    if (!selectedPetId && !autoSelected.current && pets.length === 1) {
+      autoSelected.current = true
+      setSelectedPetId(pets[0].id)
     }
   }, [pets, selectedPetId, setSelectedPetId])
 
@@ -59,6 +76,21 @@ export function AppHeader() {
   return (
     <div className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-2.5">
+        {/* 내 아이 관리 진입 (칩 선택 좌측) */}
+        <Link
+          href="/pets"
+          aria-label={t('myPetsAria')}
+          aria-current={petsActive ? 'page' : undefined}
+          className={cn(
+            'shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-base transition-colors',
+            petsActive
+              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
+              : 'border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          🐾
+        </Link>
+
         {/* 펫 칩 목록 (없으면 빈 공간으로 우측 버튼 정렬 유지) */}
         <div data-tour="pets" className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-none min-w-0">
           {hasPets ? (
@@ -73,16 +105,13 @@ export function AppHeader() {
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
                 )}
               >
-                {pet.photo_url ? (
-                  <img src={pet.photo_url} className="w-4 h-4 rounded-full object-cover" alt="" />
-                ) : (
-                  <span className="text-sm leading-none">{pet.species === 'cat' ? '🐱' : '🐶'}</span>
-                )}
+                <PetAvatar photoUrl={pet.photo_url} species={pet.species}
+                  className="w-4 h-4" emojiClassName="text-sm leading-none" />
                 <span>{pet.name}</span>
               </button>
             ))
           ) : (
-            <Link href="/dashboard" className="text-sm font-bold text-primary-600">🐾 펫케어</Link>
+            <Link href="/pets/new" className="text-sm font-medium text-primary-600">{t('registerPet')}</Link>
           )}
         </div>
 
@@ -92,8 +121,14 @@ export function AppHeader() {
         {/* 프로필 버튼 */}
         <Link
           href="/profile"
-          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 shrink-0 transition-colors"
-          aria-label="프로필"
+          aria-current={profileActive ? 'page' : undefined}
+          className={cn(
+            'w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-colors',
+            profileActive
+              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
+              : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+          )}
+          aria-label={t('profile')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

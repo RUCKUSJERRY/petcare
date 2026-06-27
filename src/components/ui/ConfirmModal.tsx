@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 
 /**
  * 접근성을 갖춘 확인 모달.
@@ -12,8 +13,8 @@ import { useEffect, useRef } from 'react'
 export function ConfirmModal({
   title,
   description,
-  confirmLabel = '확인',
-  cancelLabel = '취소',
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   busy = false,
   onConfirm,
@@ -28,6 +29,9 @@ export function ConfirmModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
+  const t = useTranslations('common')
+  const confirmText = confirmLabel ?? t('confirm')
+  const cancelText = cancelLabel ?? t('cancel')
   const dialogRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
 
@@ -97,7 +101,7 @@ export function ConfirmModal({
             disabled={busy}
             className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium disabled:opacity-60"
           >
-            {cancelLabel}
+            {cancelText}
           </button>
           <button
             onClick={onConfirm}
@@ -106,7 +110,7 @@ export function ConfirmModal({
               destructive ? 'bg-red-500' : 'bg-primary-500'
             }`}
           >
-            {confirmLabel}
+            {confirmText}
           </button>
         </div>
       </div>

@@ -24,12 +24,27 @@ export interface Pet {
   species: Species
   birth_year: number
   birth_month: number
+  birth_day: number | null      // 생일 '일' (선택) — 생일 D-day 계산용
+  adopted_on: string | null     // 입양일 YYYY-MM-DD (선택) — 함께한 날·입양 기념일
   gender: Gender
   weight_kg: number | null
+  target_weight_kg: number | null
   photo_url: string | null
   created_at: string
   // join
   breed?: Breed
+}
+
+export type PetMemberRole = 'owner' | 'member'
+
+/** 반려동물 공동 관리 구성원 */
+export interface PetMember {
+  pet_id: string
+  user_id: string
+  role: PetMemberRole
+  created_at: string
+  // join
+  profile?: Pick<Profile, 'display_name' | 'avatar_url'>
 }
 
 export type FoodCategory = '육류' | '채소' | '과일' | '유제품' | '기타'
@@ -117,6 +132,8 @@ export interface Profile {
   id: string
   display_name: string
   avatar_url: string | null
+  plan: 'free' | 'premium'
+  premium_until: string | null
   created_at: string
 }
 
@@ -128,6 +145,7 @@ export interface Post {
   content: string
   breed_id: string | null
   image_url: string | null
+  image_urls: string[] | null
   like_count: number
   created_at: string
   updated_at: string
@@ -173,6 +191,60 @@ export interface NotificationItem {
   post_title: string | null
 }
 
+// ─── 실종 반려동물 ───────────────────────────────────────────
+
+export type LostPetStatus = 'active' | 'found'
+
+export interface LostPet {
+  id: string
+  user_id: string
+  name: string | null
+  species: Species
+  breed_id: string | null
+  gender: Gender | null
+  photo_url: string | null
+  photo_urls: string[] | null
+  lost_at: string        // YYYY-MM-DD
+  lat: number
+  lng: number
+  area_text: string | null
+  description: string | null
+  contact: string | null
+  contact_public: boolean
+  status: LostPetStatus
+  created_at: string
+  updated_at: string
+  // join
+  breed?: Pick<Breed, 'name_ko'>
+}
+
+export interface LostPetSighting {
+  id: string
+  lost_pet_id: string
+  user_id: string
+  content: string
+  lat: number | null
+  lng: number | null
+  created_at: string
+  author?: Pick<Profile, 'display_name' | 'avatar_url'>
+}
+
+// ─── 지도 즐겨찾기 ───────────────────────────────────────────
+
+export interface MapFavorite {
+  id: string
+  user_id: string
+  place_id: string
+  place_name: string
+  category: string | null
+  address: string | null
+  phone: string | null
+  lat: number
+  lng: number
+  place_url: string | null
+  created_at: string
+}
+
 // ─── 내 아이 기록 ────────────────────────────────────────────
 
 export interface WeightLog {
@@ -184,28 +256,83 @@ export interface WeightLog {
   created_at: string
 }
 
-export type CareCategory = '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진' | '기타'
+/** 통합 기록 카테고리 (구글 캘린더형 단일 모델) */
+export type RecordCategory =
+  | '접종' | '심장사상충' | '구충' | '외부기생충' | '건강검진' | '진료'
+  | '미용' | '양치' | '발톱' | '목욕' | '귀청소'
+  | '식사' | '간식' | '소변' | '대변' | '물' | '투약' | '증상'
+  | '기타'
 
-/** 건강 관리 기록 (접종·심장사상충약·구충 등 주기적 관리 항목) */
-export interface CareRecord {
+/** 통합 기록 (records 테이블) — 캘린더/목록은 이 공통 컬럼만 사용 */
+export interface PetRecord {
   id: string
   pet_id: string
-  category: CareCategory
-  vaccine_name: string    // 항목명 (예: 종합백신 DHPPL, 하트가드)
-  vaccinated_on: string   // 시행일 YYYY-MM-DD
+  category: RecordCategory
+  title: string
+  event_on: string             // 시행/진료/발생일 YYYY-MM-DD
+  event_at: string | null      // 생활기록 시각(ISO) — 타임라인 정렬용. 일정 기록은 null
+  place_name: string | null
+  place_lat: number | null
+  place_lng: number | null
+  cost: number | null
+  memo: string | null
+  photo_url: string | null             // 대표(첫) 사진 — 목록 썸네일 호환
+  photo_urls: string[] | null          // 사진 여러 장
+  recur_rule: string | null            // 반복 규칙(JSON 직렬화). null = 1회성
   next_due_on: string | null
-  clinic: string | null
-  note: string | null
   created_at: string
 }
 
-/** @deprecated CareRecord 사용 */
-export type VaccinationRecord = CareRecord
+/** 카테고리별 상세 (상세 진입 시에만 조회) */
+export interface MedicalDetail { record_id: string; reason: string | null; treatment: string | null; medication: string | null }
+export interface GroomingDetail { record_id: string; method: string | null; vendor: string | null; groom_type: string | null }
+export interface MealDetail { record_id: string; food_kind: string | null; mix: string | null; amount: string | null }
 
 /** 대시보드 D-day 알림용 경량 타입 */
 export interface CareAlert {
   pet_id: string
-  category: CareCategory
-  vaccine_name: string
+  category: RecordCategory
+  title: string
   next_due_on: string
+  /** 빠른 완료 처리용 — 가장 최근 기록의 id와 반복 규칙 */
+  record_id?: string
+  recur_rule?: string | null
+}
+
+// ─── 산책 기록 ───────────────────────────────────────────────
+
+/** 경로 좌표 한 점 [위도, 경도] */
+export type WalkPoint = [number, number]
+
+/** 산책 기록 */
+export interface Walk {
+  id: string
+  user_id: string
+  pet_id: string | null
+  title: string | null
+  started_at: string
+  ended_at: string
+  duration_s: number
+  distance_m: number
+  path: WalkPoint[]
+  is_public: boolean
+  area_text: string | null
+  note: string | null
+  photo_url: string | null
+  like_count: number
+  created_at: string
+  // join (공유 피드용)
+  pet_name?: string | null
+  author_name?: string | null
+}
+
+/** 산책 댓글 */
+export interface WalkComment {
+  id: string
+  walk_id: string
+  user_id: string
+  content: string
+  created_at: string
+  // join
+  author?: Pick<Profile, 'display_name' | 'avatar_url'>
 }

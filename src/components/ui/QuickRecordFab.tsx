@@ -1,0 +1,159 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
+import { useMyPets } from '@/hooks/useMyPets'
+import { useSelectedPet } from '@/contexts/SelectedPetContext'
+import { cn } from '@/lib/utils'
+import { PetAvatar } from './PetAvatar'
+import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
+
+// FAB를 숨길 화면 (자체 하단 컨트롤이 있거나 몰입형 화면)
+const HIDDEN_PREFIXES = ['/map', '/walks/track']
+
+/**
+ * 어느 화면에서든 떠 있는 '＋ 기록' 플로팅 버튼 + '오늘의 기록' 바텀시트.
+ * - 탭하면 시트가 올라오고, 원탭 칩(식사·배변·투약 등)으로 바로 기록한다.
+ * - 아이가 여러 마리면 시트 상단에서 대상 아이를 고를 수 있다.
+ *   (아이가 1마리면 헤더에서 자동 선택되어 바로 기록 가능)
+ * - 상세 입력(체중·직접·스캔)·오늘 기록 전체 보기로도 연결된다.
+ */
+export function QuickRecordFab() {
+  const t = useTranslations('quickRecord')
+  const tc = useTranslations('common')
+  const pathname = usePathname()
+  const { data: pets } = useMyPets()
+  const { selectedPetId, setSelectedPetId } = useSelectedPet()
+  const qc = useQueryClient()
+  const [open, setOpen] = useState(false)
+
+  // 시트가 열려 있는 동안 배경 스크롤 잠금 + Esc 닫기
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open])
+
+  const hidden = HIDDEN_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
+  const petList = pets ?? []
+  // 등록된 아이가 없으면 기록할 대상이 없으므로 노출하지 않는다.
+  if (hidden || petList.length === 0) return null
+
+  const activeId = selectedPetId && petList.some(p => p.id === selectedPetId) ? selectedPetId : null
+
+  const linkCls =
+    'flex items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg py-2 text-xs font-medium hover:bg-gray-100 transition-colors'
+
+  return (
+    <>
+      {/* 플로팅 버튼 — 콘텐츠(max-w-lg) 우측 끝, 하단탭 위에 정렬 */}
+      <div className="fixed inset-x-0 bottom-[4.75rem] z-40 pointer-events-none">
+        <div className="max-w-lg mx-auto px-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label={t('open')}
+            className="pointer-events-auto w-14 h-14 rounded-full bg-primary-500 text-white shadow-lg shadow-primary-500/30 flex items-center justify-center hover:bg-primary-600 active:scale-95 transition-all"
+          >
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* 바텀시트 */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('title')}
+            className="bg-white w-full max-w-lg rounded-t-2xl p-4 pb-6 space-y-3 shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mx-auto w-10 h-1 rounded-full bg-gray-200" />
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-gray-900">{t('title')}</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label={tc('close')}
+                className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 대상 아이 선택 (2마리 이상일 때) */}
+            {petList.length > 1 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-1.5">{t('pickPet')}</p>
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+                  {petList.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPetId(p.id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 border transition-colors',
+                        activeId === p.id
+                          ? 'bg-primary-500 text-white border-primary-500'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
+                      )}
+                    >
+                      <PetAvatar photoUrl={p.photo_url} species={p.species}
+                        className="w-4 h-4" emojiClassName="text-sm leading-none" />
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 원탭 생활기록 */}
+            <QuickLogBar
+              petId={activeId}
+              onLogged={() => qc.invalidateQueries({ queryKey: ['today-timeline', activeId] })}
+            />
+
+            {/* 상세 입력 — 대상 아이가 정해졌을 때만 */}
+            {activeId && (
+              <div className="grid grid-cols-3 gap-2 pt-0.5">
+                <Link href={`/pets/${activeId}?add=weight`} onClick={() => setOpen(false)} className={linkCls}>
+                  <span aria-hidden>⚖️</span> {t('weight')}
+                </Link>
+                <Link href={`/schedule?pet=${activeId}&add=1`} onClick={() => setOpen(false)} className={linkCls}>
+                  <span aria-hidden>📝</span> {t('manual')}
+                </Link>
+                <Link href={`/schedule?pet=${activeId}&scan=1`} onClick={() => setOpen(false)} className={linkCls}>
+                  <span aria-hidden>📷</span> {t('scan')}
+                </Link>
+              </div>
+            )}
+
+            <Link
+              href={activeId ? `/schedule?pet=${activeId}&view=today` : '/schedule?view=today'}
+              onClick={() => setOpen(false)}
+              className="block text-center text-sm text-primary-600 font-semibold pt-1"
+            >
+              {t('viewToday')} ›
+            </Link>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

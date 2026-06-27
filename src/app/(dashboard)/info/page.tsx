@@ -1,36 +1,21 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 
 const sections = [
-  {
-    href: '/foods',
-    icon: '🥩',
-    title: '음식 가이드',
-    desc: '우리 아이가 먹어도 되는 음식, 위험한 음식',
-    accent: 'bg-red-50',
-  },
-  {
-    href: '/health',
-    icon: '🏥',
-    title: '건강 가이드',
-    desc: '나이에 맞는 검진·백신·질환 정보',
-    accent: 'bg-blue-50',
-  },
-  {
-    href: '/walk',
-    icon: '🎾',
-    title: '활동 가이드',
-    desc: '종·나이별 적정 운동량과 산책·놀이 팁',
-    accent: 'bg-green-50',
-  },
-]
+  { href: '/foods', icon: '🥩', titleKey: 'foods', descKey: 'foodsDesc', accent: 'bg-red-50' },
+  { href: '/health', icon: '🏥', titleKey: 'health', descKey: 'healthDesc', accent: 'bg-blue-50' },
+  { href: '/walk', icon: '🎾', titleKey: 'walk', descKey: 'walkDesc', accent: 'bg-green-50' },
+  { href: '/care', icon: '🧼', titleKey: 'care', descKey: 'careDesc', accent: 'bg-amber-50' },
+] as const
 
-export default function InfoPage() {
+export default async function InfoPage() {
+  const t = await getTranslations('info')
   return (
     <div className="px-4 py-6 space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">정보</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
         <p className="text-sm text-gray-500 mt-1">
-          우리 아이 맞춤 음식·건강·활동 정보를 확인하세요
+          {t('subtitle')}
         </p>
       </div>
 
@@ -42,8 +27,8 @@ export default function InfoPage() {
                 {s.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-gray-900">{s.title}</div>
-                <div className="text-sm text-gray-500 mt-0.5">{s.desc}</div>
+                <div className="font-semibold text-gray-900">{t(s.titleKey)}</div>
+                <div className="text-sm text-gray-500 mt-0.5">{t(s.descKey)}</div>
               </div>
               <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

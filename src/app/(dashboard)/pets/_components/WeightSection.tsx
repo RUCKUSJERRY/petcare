@@ -3,20 +3,28 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { todayKST } from '@/lib/utils'
 import type { WeightLog } from '@/types'
 
-export function WeightSection({ petId }: { petId: string }) {
+export function WeightSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
+  const t = useTranslations('weight')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(defaultOpen)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [form, setForm] = useState({
     weight_kg: '',
-    measured_on: new Date().toISOString().slice(0, 10),
+    measured_on: todayKST(),
   })
+
+  const [editingGoal, setEditingGoal] = useState(false)
+  const [goalInput, setGoalInput] = useState('')
+  const [goalSaving, setGoalSaving] = useState(false)
 
   const { data: logs = [] } = useQuery({
     queryKey: ['weight_logs', petId],
@@ -30,9 +38,32 @@ export function WeightSection({ petId }: { petId: string }) {
     },
   })
 
+  // 목표 체중 (pets.target_weight_kg)
+  const { data: targetWeight = null } = useQuery({
+    queryKey: ['pet_target', petId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pets')
+        .select('target_weight_kg')
+        .eq('id', petId)
+        .single()
+      return (data?.target_weight_kg ?? null) as number | null
+    },
+  })
+
+  const saveGoal = async (value: number | null) => {
+    setGoalSaving(true); setError(null)
+    const { error: updErr } = await supabase.from('pets').update({ target_weight_kg: value }).eq('id', petId)
+    setGoalSaving(false)
+    if (updErr) { setError(t('errGoalFailed')); return }
+    setEditingGoal(false)
+    qc.invalidateQueries({ queryKey: ['pet_target', petId] })
+    qc.invalidateQueries({ queryKey: ['my-pets'] })
+  }
+
   const add = async () => {
     const w = parseFloat(form.weight_kg)
-    if (!w || w <= 0) { setError('체중을 올바르게 입력해주세요'); return }
+    if (!w || w <= 0) { setError(t('errInvalidWeight')); return }
     setSaving(true); setError(null)
     const { error: insErr } = await supabase.from('weight_logs').insert({
       pet_id: petId,
@@ -40,14 +71,16 @@ export function WeightSection({ petId }: { petId: string }) {
       measured_on: form.measured_on,
     })
     setSaving(false)
-    if (insErr) { setError('저장에 실패했어요'); return }
-    setForm({ weight_kg: '', measured_on: new Date().toISOString().slice(0, 10) })
+    if (insErr) { setError(t('errSaveFailed')); return }
+    setForm({ weight_kg: '', measured_on: todayKST() })
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
   }
 
   const remove = async (id: string) => {
-    await supabase.from('weight_logs').delete().eq('id', id)
+    setError(null)
+    const { error: delErr } = await supabase.from('weight_logs').delete().eq('id', id)
+    if (delErr) { setError(t('errDeleteFailed')); return }
     setConfirmDeleteId(null)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
   }
@@ -55,6 +88,8 @@ export function WeightSection({ petId }: { petId: string }) {
   const latest = logs.length ? logs[logs.length - 1] : null
   const prev = logs.length > 1 ? logs[logs.length - 2] : null
   const diff = latest && prev ? +(latest.weight_kg - prev.weight_kg).toFixed(2) : null
+  // 목표까지 남은 양 (+면 감량, -면 증량 필요)
+  const toGoal = latest && targetWeight ? +(latest.weight_kg - targetWeight).toFixed(2) : null
 
   const reversedLogs = [...logs].reverse()
   const visibleLogs = showAll ? reversedLogs : reversedLogs.slice(0, 5)
@@ -62,14 +97,16 @@ export function WeightSection({ petId }: { petId: string }) {
   return (
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">체중 기록</h2>
+        <h2 className="font-bold text-gray-900">{t('title')}</h2>
         <button
           onClick={() => setAdding(a => !a)}
           className="text-sm text-primary-600 font-semibold"
         >
-          {adding ? '취소' : '+ 기록'}
+          {adding ? tc('cancel') : t('addRecord')}
         </button>
       </div>
+
+      {error && !adding && <p className="text-sm text-red-500">{error}</p>}
 
       {/* 최근 체중 + 변화 */}
       {latest && (
@@ -80,12 +117,47 @@ export function WeightSection({ petId }: { petId: string }) {
               {diff > 0 ? '▲' : '▼'} {Math.abs(diff)}kg
             </span>
           )}
-          <span className="text-xs text-gray-400 ml-auto">최근 측정 {latest.measured_on}</span>
+          <span className="text-xs text-gray-400 ml-auto">{t('latestMeasured', { date: latest.measured_on })}</span>
         </div>
       )}
 
+      {/* 목표 체중 */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-gray-400">{t('goalLabel')}</span>
+        {editingGoal ? (
+          <div className="flex items-center gap-1.5 ml-auto">
+            <input
+              className="input py-1 w-24 text-sm"
+              type="number" step="0.1" min="0"
+              placeholder={t('goalPlaceholder')}
+              value={goalInput}
+              onChange={e => setGoalInput(e.target.value)}
+              autoFocus
+            />
+            <button
+              onClick={() => { const v = parseFloat(goalInput); saveGoal(v > 0 ? v : null) }}
+              disabled={goalSaving}
+              className="text-xs text-primary-600 font-semibold"
+            >{tc('save')}</button>
+            <button onClick={() => setEditingGoal(false)} className="text-xs text-gray-400">{tc('cancel')}</button>
+          </div>
+        ) : targetWeight ? (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="font-semibold text-gray-700">{targetWeight}kg</span>
+            {toGoal !== null && (
+              <span className={`text-xs font-medium ${Math.abs(toGoal) < 0.05 ? 'text-green-600' : toGoal > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                {Math.abs(toGoal) < 0.05 ? t('goalReached') : t('goalRemain', { kg: Math.abs(toGoal), dir: toGoal > 0 ? t('goalLose') : t('goalGain') })}
+              </span>
+            )}
+            <button onClick={() => { setGoalInput(String(targetWeight)); setEditingGoal(true) }} className="text-xs text-gray-400">{tc('edit')}</button>
+          </div>
+        ) : (
+          <button onClick={() => { setGoalInput(''); setEditingGoal(true) }} className="ml-auto text-xs text-primary-600 font-medium">{t('goalSet')}</button>
+        )}
+      </div>
+
       {/* 추이 그래프 */}
-      {logs.length >= 2 && <WeightChart logs={logs} />}
+      {logs.length >= 2 && <WeightChart logs={logs} goal={targetWeight} />}
 
       {/* 추가 폼 */}
       {adding && (
@@ -96,7 +168,7 @@ export function WeightSection({ petId }: { petId: string }) {
               type="number"
               step="0.1"
               min="0"
-              placeholder="체중(kg)"
+              placeholder={t('weightPlaceholder')}
               value={form.weight_kg}
               onChange={e => setForm(f => ({ ...f, weight_kg: e.target.value }))}
             />
@@ -104,20 +176,20 @@ export function WeightSection({ petId }: { petId: string }) {
               className="input"
               type="date"
               value={form.measured_on}
-              max={new Date().toISOString().slice(0, 10)}
+              max={todayKST()}
               onChange={e => setForm(f => ({ ...f, measured_on: e.target.value }))}
             />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button onClick={add} disabled={saving} className="btn-primary w-full py-2 text-sm">
-            {saving ? '저장 중...' : '저장'}
+            {saving ? tc('saving') : tc('save')}
           </button>
         </div>
       )}
 
       {/* 목록 */}
       {logs.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-3">아직 기록이 없어요</p>
+        <p className="text-sm text-gray-400 text-center py-3">{t('empty')}</p>
       ) : (
         <div className="space-y-1">
           {visibleLogs.map(log => (
@@ -126,18 +198,18 @@ export function WeightSection({ petId }: { petId: string }) {
               <span className="font-medium text-gray-800">{log.weight_kg}kg</span>
               {confirmDeleteId === log.id ? (
                 <div className="ml-auto flex items-center gap-2">
-                  <span className="text-xs text-gray-500">삭제할까요?</span>
+                  <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
                   <button
                     onClick={() => remove(log.id)}
                     className="text-xs text-red-500 font-semibold"
                   >
-                    삭제
+                    {tc('delete')}
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(null)}
                     className="text-xs text-gray-400"
                   >
-                    취소
+                    {tc('cancel')}
                   </button>
                 </div>
               ) : (
@@ -145,7 +217,7 @@ export function WeightSection({ petId }: { petId: string }) {
                   onClick={() => setConfirmDeleteId(log.id)}
                   className="ml-auto text-xs text-gray-300 hover:text-red-500"
                 >
-                  삭제
+                  {tc('delete')}
                 </button>
               )}
             </div>
@@ -155,7 +227,7 @@ export function WeightSection({ petId }: { petId: string }) {
               onClick={() => setShowAll(v => !v)}
               className="w-full text-xs text-primary-600 font-medium pt-1 hover:underline"
             >
-              {showAll ? '접기' : `이전 기록 ${logs.length - 5}건 더 보기`}
+              {showAll ? t('collapse') : t('showMore', { count: logs.length - 5 })}
             </button>
           )}
         </div>
@@ -164,8 +236,8 @@ export function WeightSection({ petId }: { petId: string }) {
   )
 }
 
-/** 의존성 없는 SVG 체중 추이 차트 (y축 라벨·영역·기준선·최근값 강조) */
-function WeightChart({ logs }: { logs: WeightLog[] }) {
+/** 의존성 없는 SVG 체중 추이 차트 (y축 라벨·영역·기준선·목표선·최근값 강조) */
+function WeightChart({ logs, goal = null }: { logs: WeightLog[]; goal?: number | null }) {
   const W = 300, H = 120
   const padL = 34, padR = 10, padT = 12, padB = 20 // 좌측 y라벨/하단 날짜 여백
   const innerW = W - padL - padR
@@ -174,10 +246,13 @@ function WeightChart({ logs }: { logs: WeightLog[] }) {
   const weights = logs.map(l => l.weight_kg)
   const rawMin = Math.min(...weights)
   const rawMax = Math.max(...weights)
+  // 목표선이 데이터 범위 밖이면 보이도록 범위에 포함
+  const lo = goal != null ? Math.min(rawMin, goal) : rawMin
+  const hi = goal != null ? Math.max(rawMax, goal) : rawMax
   // 위아래 약간의 여백을 둬 선이 가장자리에 붙지 않게
-  const span = rawMax - rawMin || 1
-  const min = rawMin - span * 0.15
-  const max = rawMax + span * 0.15
+  const span = hi - lo || 1
+  const min = lo - span * 0.15
+  const max = hi + span * 0.15
   const range = max - min || 1
 
   const x = (i: number) => padL + (logs.length === 1 ? innerW / 2 : (i / (logs.length - 1)) * innerW)
@@ -209,6 +284,14 @@ function WeightChart({ logs }: { logs: WeightLog[] }) {
           </g>
         )
       })}
+
+      {/* 목표 체중선 (점선) */}
+      {goal != null && (
+        <g>
+          <line x1={padL} y1={y(goal)} x2={W - padR} y2={y(goal)} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" />
+          <text x={W - padR} y={Math.max(y(goal) - 3, padT + 8)} textAnchor="end" fontSize="9" fontWeight="600" fill="#d97706">목표 {goal}kg</text>
+        </g>
+      )}
 
       {/* 영역 + 선 */}
       <path d={area} fill="url(#wfill)" />
