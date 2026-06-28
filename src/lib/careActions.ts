@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RecordCategory } from '@/types'
 import { nextOccurrence, parseRule, parseYMD, ymd } from './recurrence'
+import { todayKST } from './utils'
 
 /** 빠른 완료 처리에 필요한 최소 정보 */
 export type CompletableCareItem = {
@@ -21,7 +22,9 @@ export async function completeCareToday(
   supabase: SupabaseClient,
   item: CompletableCareItem,
 ): Promise<{ error: string | null }> {
-  const today = ymd(new Date())
+  // 기록 날짜는 모두 KST 달력 기준이므로, 단말 시간대(해외·오설정)와 무관하게
+  // 일관된 '오늘'을 쓰도록 todayKST()를 사용한다. (앱 전반의 날짜 처리와 동일)
+  const today = todayKST()
   const rule = parseRule(item.recur_rule ?? null)
   const next = rule ? nextOccurrence(rule, parseYMD(today), parseYMD(today)) : null
   const { error } = await supabase.from('records').insert({

@@ -104,9 +104,16 @@ export async function chargeBilling(billingKey: string, p: ChargeParams): Promis
   }
 }
 
-/** 결제 시작일 기준 1개월 뒤 만료일. */
+/** 결제 시작일 기준 1개월 뒤 만료일.
+ *  말일 처리: 1/31 → 2/31(없음)이 3/2~3로 넘어가는 setMonth 오버플로를 막기 위해
+ *  먼저 1일로 옮겨 달을 더한 뒤, 원래 '일'을 그 달의 말일로 클램프한다.
+ *  (예: 1/31 +1개월 → 2/28(윤년 2/29) — 단순 setMonth가 만드는 3/2~3 오차 제거) */
 export function addOneMonth(from: Date): Date {
   const d = new Date(from)
+  const day = d.getDate()
+  d.setDate(1)
   d.setMonth(d.getMonth() + 1)
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+  d.setDate(Math.min(day, lastDay))
   return d
 }
