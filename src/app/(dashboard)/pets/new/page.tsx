@@ -43,8 +43,13 @@ export default function NewPetPage() {
     if (!form.gender) { setError(t('errGenderRequired')); return }
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setSaving(false)
+      setError(tc('loginRequired'))
+      return
+    }
     const { error: insErr } = await supabase.from('pets').insert({
-      user_id: user!.id,
+      user_id: user.id,
       name,
       breed_id: form.breed_id,
       birth_year: parseInt(form.birth_year),

@@ -23,7 +23,8 @@
     "delete": "삭제",
     "close": "닫기",
     "more": "더보기",
-    "edit": "수정"
+    "edit": "수정",
+    "loginRequired": "세션이 만료됐어요. 다시 로그인해 주세요."
   },
   "quickRecord": {
     "open": "기록하기",
