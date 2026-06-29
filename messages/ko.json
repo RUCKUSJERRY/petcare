@@ -6,6 +6,15 @@
     "schedule": "일정",
     "community": "커뮤니티"
   },
+  "sectionTabs": {
+    "aria": "섹션 이동",
+    "foods": "음식",
+    "health": "건강",
+    "activity": "활동",
+    "map": "지도",
+    "lost": "실종",
+    "walks": "산책"
+  },
   "common": {
     "cancel": "취소",
     "confirm": "확인",

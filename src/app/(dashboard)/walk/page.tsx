@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchWalkGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
@@ -72,6 +73,8 @@ export default function WalkPage() {
   return (
     <div className="px-4 py-6 space-y-6">
       <PageHeader title={t('title')} />
+
+      <SectionTabs section="info" />
 
       {isLoading ? (
         <CardSkeletonList count={3} />

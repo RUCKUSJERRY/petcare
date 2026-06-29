@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
@@ -57,6 +58,8 @@ export default function LostListPage() {
         <PageHeader title={t('reportTitle')} fallbackHref="/map" />
         <Link href="/lost/new" className="btn-primary text-sm py-1.5 px-3 shrink-0">{t('reportButton')}</Link>
       </div>
+
+      <SectionTabs section="map" />
 
       {/* 지도 */}
       {kakaoNotice(mapStatus) ? (

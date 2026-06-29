@@ -9,6 +9,7 @@ import { useMyPets } from '@/hooks/useMyPets'
 import { calcPetAge } from '@/lib/utils'
 import { foodGuidesForSpecies, type FoodGuideTopic } from '@/lib/foodGuideData'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { FeedCalculator } from '../care/_components/FeedCalculator'
@@ -190,6 +191,8 @@ export default function FoodsPage() {
           </span>
         )}
       </div>
+
+      <SectionTabs section="info" />
 
       {/* 펫이 없거나 1마리일 때만 종 탭 직접 노출 */}
       {showSpeciesTabs && (

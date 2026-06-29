@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchHealthGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
@@ -53,6 +54,8 @@ export default function HealthPage() {
   return (
     <div className="px-4 py-6 space-y-6">
       <PageHeader title={t('title')} />
+
+      <SectionTabs section="info" />
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3">
         {t('disclaimer')}

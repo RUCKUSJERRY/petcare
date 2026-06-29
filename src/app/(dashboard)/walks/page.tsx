@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn, formatDistance, formatDuration, formatPace, timeAgo } from '@/lib/utils'
@@ -133,6 +134,8 @@ function WalksContent() {
   return (
     <div className="px-4 py-6 space-y-4">
       <PageHeader title={t('title')} fallbackHref="/dashboard" />
+
+      <SectionTabs section="map" />
 
       <Link href="/walks/track" className="btn-primary w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2">
         🐾 {t('startWalk')}
