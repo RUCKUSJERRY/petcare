@@ -893,7 +893,11 @@
     "heading": "이런 상품은 어때요?",
     "adLabel": "광고",
     "dismiss": "닫기",
-    "disclosure": "제휴 링크가 포함되어 있으며, 구매 시 일정액의 수수료를 제공받을 수 있습니다."
+    "disclosure": "제휴 링크가 포함되어 있으며, 구매 시 일정액의 수수료를 제공받을 수 있습니다.",
+    "smartHeading": "맞춤 추천",
+    "smartReasonCare": "{category} 일정 {dday} · 미리 준비하세요",
+    "smartReasonMeal": "매일 식사 기록 중 · 사료 미리 챙기세요",
+    "smartToday": "오늘"
   },
   "ads": {
     "title": "광고",
@@ -1000,7 +1004,13 @@
     "newUsers": "신규(7일/30일)",
     "mrr": "최근 30일 매출",
     "arppu": "결제자 1인당(ARPPU)",
-    "arpu": "사용자 1인당(ARPU)"
+    "arpu": "사용자 1인당(ARPU)",
+    "retention": "리텐션",
+    "activeUsers": "활성 사용자 (1·7·30일)",
+    "stickiness": "끈적임 (DAU/MAU)",
+    "recordingRate": "7일 기록 지속률",
+    "recordsPerActive": "활성자당 기록 수(7일)",
+    "retentionHint": "기록 작성을 활동 신호로 본 추정치입니다. 활성 사용자는 해당 기간에 기록을 남긴 반려동물 소유자 기준."
   },
   "quickLog": {
     "sectionTitle": "오늘의 기록",

@@ -26,6 +26,12 @@ interface Stats {
   arppu: number
   arpu: number
   churnRate: number
+  activeUsers1d: number
+  activeUsers7d: number
+  activeUsers30d: number
+  stickiness: number
+  recordingRate7d: number
+  recordsPerActive7d: number
 }
 
 export default function AdminPage() {
@@ -192,6 +198,22 @@ export default function AdminPage() {
           <StatCard label={t('arppu')} value={stats ? won(stats.arppu) : '—'} />
           <StatCard label={t('arpu')} value={stats ? won(stats.arpu) : '—'} />
         </div>
+      </section>
+
+      {/* 리텐션 (기록 활동 기반) */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-gray-900">{t('retention')}</h2>
+        <div className="grid grid-cols-2 gap-2">
+          <StatCard
+            label={t('activeUsers')}
+            value={stats ? `${stats.activeUsers1d} / ${stats.activeUsers7d} / ${stats.activeUsers30d}` : '—'}
+            accent
+          />
+          <StatCard label={t('stickiness')} value={stats ? `${stats.stickiness}%` : '—'} />
+          <StatCard label={t('recordingRate')} value={stats ? `${stats.recordingRate7d}%` : '—'} />
+          <StatCard label={t('recordsPerActive')} value={stats ? `${stats.recordsPerActive7d}` : '—'} />
+        </div>
+        <p className="text-[11px] text-gray-400">{t('retentionHint')}</p>
       </section>
 
       {/* 통계 */}

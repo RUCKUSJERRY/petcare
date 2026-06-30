@@ -1,12 +1,14 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { timeAgo, categoryColor, todayKST, addDays } from '@/lib/utils'
+import { timeAgo, categoryColor, todayKST, addDays, daysUntil } from '@/lib/utils'
 import { PRODUCT_CATEGORIES } from '@/lib/records'
 import { activeNextDue } from '@/lib/recurrence'
+import { getSmartRecommendations, type CareDueItem } from '@/lib/affiliate'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
-import type { CareAlert, Pet, PostListItem, RecordCategory } from '@/types'
+import type { CareAlert, Pet, PostListItem, RecordCategory, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
+import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -52,6 +54,36 @@ export default async function DashboardPage() {
       .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))
   }
 
+  // 기록 기반 맞춤 제휴 추천 — 임박한 케어 일정 + 꾸준한 식사 기록을 신호로 사용
+  const speciesById = new Map((pets ?? []).map((p: Pet) => [p.id, p.species]))
+  const dueSoon: CareDueItem[] = vaccAlerts.flatMap(a => {
+    const species = speciesById.get(a.pet_id)
+    if (!species) return []
+    const d = daysUntil(a.next_due_on, todayStr)
+    return d <= 14 ? [{ species, category: a.category, daysUntil: d }] : []
+  })
+
+  let mealLogs7d = 0
+  if (petIds.length > 0) {
+    const { count } = await supabase
+      .from('records')
+      .select('id', { count: 'exact', head: true })
+      .in('pet_id', petIds)
+      .eq('category', '식사')
+      .gte('event_on', addDays(todayStr, -7))
+    mealLogs7d = count ?? 0
+  }
+  // 사료 추천 종은 보유 반려동물 중 다수 종
+  const speciesTally = (pets ?? []).reduce(
+    (acc: Record<Species, number>, p: Pet) => { acc[p.species] = (acc[p.species] ?? 0) + 1; return acc },
+    { dog: 0, cat: 0 } as Record<Species, number>,
+  )
+  const mealSpecies: Species = speciesTally.cat > speciesTally.dog ? 'cat' : 'dog'
+  const smartRecs = getSmartRecommendations({
+    dueSoon,
+    meal: petIds.length > 0 ? { species: mealSpecies, logs7d: mealLogs7d } : undefined,
+  })
+
   // 최근 커뮤니티 글 (위젯용)
   const { data: recentPostsData } = await supabase
     .from('post_list')
@@ -68,61 +100,20 @@ export default async function DashboardPage() {
       {/* 프리미엄 업셀 (무료 사용자만, 닫기 가능) */}
       <PremiumUpsellCard />
 
-      {/* 지도 (실종·동물병원·애견카페/식당) */}
-      <Link href="/map" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
-        <span className="text-xl" aria-hidden>🗺️</span>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900">{t('mapTitle')}</p>
-          <p className="text-xs text-gray-400">{t('mapDesc')}</p>
-        </div>
-        <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
+      {/* 기록 기반 맞춤 제휴 추천 (임박 일정·식사 루틴) */}
+      <SmartAffiliateCard recs={smartRecs} />
 
-      {/* 산책 기록 (러닝앱처럼 경로·거리·시간 기록 + 좋은 경로 공유) */}
-      <Link href="/walks" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
-        <span className="text-xl" aria-hidden>🦮</span>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900">{t('walksTitle')}</p>
-          <p className="text-xs text-gray-400">{t('walksDesc')}</p>
-        </div>
-        <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
-
-      {/* 건강 일정 전체 보기 (펫이 있을 때 항상 노출) */}
-      {pets && pets.length > 0 && (
-        <Link
-          href="/schedule"
-          data-tour="schedule"
-          className="card flex items-center gap-3 hover:shadow-md transition-shadow"
-        >
-          <span className="text-xl" aria-hidden>🗓️</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">{t('scheduleTitle')}</p>
-            <p className="text-xs text-gray-400">{t('scheduleDesc')}</p>
-          </div>
-          <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-      )}
-
-      {/* 케어 비용(지출) 통계 — 펫이 있을 때 */}
-      {pets && pets.length > 0 && (
-        <Link href="/costs" className="card flex items-center gap-3 hover:shadow-md transition-shadow">
-          <span className="text-xl" aria-hidden>🧾</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">{t('costsTitle')}</p>
-            <p className="text-xs text-gray-400">{t('costsDesc')}</p>
-          </div>
-          <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-      )}
+      {/* 바로가기 — 단일 목적 페이지를 한 줄에 압축해 스크롤·중복을 줄임 */}
+      <div className="grid grid-cols-2 gap-3">
+        {pets && pets.length > 0 && (
+          <QuickTile href="/schedule" icon="🗓️" label={t('scheduleTitle')} dataTour="schedule" />
+        )}
+        {pets && pets.length > 0 && (
+          <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
+        )}
+        <QuickTile href="/walks" icon="🦮" label={t('walksTitle')} />
+        <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
+      </div>
 
       {/* 최근 커뮤니티 글 */}
       {recentPosts.length > 0 && (
@@ -156,5 +147,26 @@ export default async function DashboardPage() {
         </div>
       )}
     </div>
+  )
+}
+
+/** 홈 바로가기 타일 — 아이콘 + 라벨의 작은 카드 (세로 스택 대신 그리드로 압축) */
+function QuickTile({
+  href, icon, label, dataTour,
+}: {
+  href: string
+  icon: string
+  label: string
+  dataTour?: string
+}) {
+  return (
+    <Link
+      href={href}
+      data-tour={dataTour}
+      className="card flex items-center gap-2.5 py-3.5 hover:shadow-md transition-shadow"
+    >
+      <span className="text-xl shrink-0" aria-hidden>{icon}</span>
+      <span className="text-sm font-semibold text-gray-900 truncate">{label}</span>
+    </Link>
   )
 }

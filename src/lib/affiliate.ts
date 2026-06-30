@@ -11,12 +11,12 @@ import type { Species } from '@/types'
  * 미설정 시에는 상품의 기본 link(검색/랜딩)를 그대로 사용한다.
  */
 
-export type AffiliateContext = 'feed' | 'foods' | 'walk' | 'health' | 'care' | 'ad'
+export type AffiliateContext = 'feed' | 'foods' | 'walk' | 'health' | 'care' | 'ad' | 'smart'
 
 type ProductCategory = 'food' | 'supplement' | 'walk' | 'health' | 'care'
 
 /** 맥락 → 노출할 상품 카테고리 */
-const CONTEXT_CATEGORIES: Record<Exclude<AffiliateContext, 'ad'>, ProductCategory[]> = {
+const CONTEXT_CATEGORIES: Record<Exclude<AffiliateContext, 'ad' | 'smart'>, ProductCategory[]> = {
   feed: ['food'],
   foods: ['food', 'supplement'],
   walk: ['walk'],
@@ -68,7 +68,7 @@ const CATALOG: AffiliateProduct[] = [
 
 /** 종/맥락에 맞는 추천 상품을 반환한다. */
 export function getAffiliateProducts(species: Species, context: AffiliateContext): AffiliateProduct[] {
-  if (context === 'ad') return []
+  if (context === 'ad' || context === 'smart') return []
   const cats = CONTEXT_CATEGORIES[context]
   return CATALOG.filter(p => cats.includes(p.category) && (!p.species || p.species === species))
 }
@@ -78,6 +78,92 @@ export function getAdCreativeProduct(species?: Species): AffiliateProduct {
   const pool = species ? CATALOG.filter(p => !p.species || p.species === species) : CATALOG
   const list = pool.length > 0 ? pool : CATALOG
   return list[Math.floor(Math.random() * list.length)]
+}
+
+/* ── 기록 기반 스마트 추천 ─────────────────────────────────────────────
+ * 사용자의 실제 케어 기록을 신호로, "지금 필요한" 소모품을 맥락과 함께 추천한다.
+ *  - 임박한 케어 일정(양치·미용·건강검진 등) → 해당 소모품을 미리 준비하도록
+ *  - 꾸준한 식사 기록 → 사료가 떨어지기 전 재구매를 챙기도록
+ * 단순 카테고리 노출과 달리 "왜 추천하는지(trigger)"를 함께 제공해 클릭률을 높인다. */
+
+/** 추천이 뜬 이유. 표시 문구(i18n)는 화면단에서 trigger로 구성한다. */
+export type SmartTrigger =
+  | { type: 'careDue'; category: string; daysUntil: number }
+  | { type: 'mealRoutine' }
+
+export interface SmartRec {
+  product: AffiliateProduct
+  trigger: SmartTrigger
+}
+
+export interface CareDueItem {
+  species: Species
+  /** 기록 카테고리(예: 양치, 미용, 건강검진) */
+  category: string
+  /** 예정일까지 남은 일수 (D-day=0, 지난 건 음수) */
+  daysUntil: number
+}
+
+export interface SmartRecInput {
+  /** 임박한 케어 일정 목록 */
+  dueSoon: CareDueItem[]
+  /** 식사 기록 빈도(최근 7일) — 사료 재구매 신호 */
+  meal?: { species: Species; logs7d: number }
+}
+
+/** 케어 일정 카테고리 → 추천할 상품(카테고리 + id 힌트) 매핑.
+ *  처방이 필요한 항목(접종·심장사상충 등)은 커머스 추천 대상에서 제외한다. */
+const CARE_PRODUCT_MAP: Record<string, { cat: ProductCategory; hint?: string }> = {
+  양치: { cat: 'health', hint: 'dental' },
+  건강검진: { cat: 'health', hint: 'checkup' },
+  미용: { cat: 'care', hint: 'grooming' },
+  목욕: { cat: 'care', hint: 'grooming' },
+  발톱: { cat: 'care', hint: 'grooming' },
+  귀청소: { cat: 'care', hint: 'grooming' },
+}
+
+/** (상품 카테고리, 종)에 맞는 상품 하나를 고른다. id 힌트가 있으면 우선 매칭. */
+function pickProduct(cat: ProductCategory, species: Species, hint?: string): AffiliateProduct | undefined {
+  const matches = CATALOG.filter(p => p.category === cat && (!p.species || p.species === species))
+  if (hint) {
+    const byHint = matches.find(p => p.id.includes(hint))
+    if (byHint) return byHint
+  }
+  return matches[0]
+}
+
+/** 식사 루틴을 "꾸준함"으로 보는 최소 기록 수(최근 7일). */
+export const MEAL_ROUTINE_MIN = 3
+
+/**
+ * 기록을 바탕으로 맞춤 제휴 추천을 만든다(최대 3개, 상품 중복 제거).
+ * 순수 함수 — 입력만으로 결과가 결정되어 테스트가 쉽다.
+ */
+export function getSmartRecommendations(input: SmartRecInput): SmartRec[] {
+  const recs: SmartRec[] = []
+  const used = new Set<string>()
+  const push = (product: AffiliateProduct | undefined, trigger: SmartTrigger) => {
+    if (!product || used.has(product.id) || recs.length >= 3) return
+    used.add(product.id)
+    recs.push({ product, trigger })
+  }
+
+  // 1) 임박한 케어 일정 → 가까운 순으로 소모품 추천
+  const sorted = [...input.dueSoon].sort((a, b) => a.daysUntil - b.daysUntil)
+  for (const d of sorted) {
+    const map = CARE_PRODUCT_MAP[d.category]
+    if (!map) continue
+    push(pickProduct(map.cat, d.species, map.hint), {
+      type: 'careDue', category: d.category, daysUntil: d.daysUntil,
+    })
+  }
+
+  // 2) 꾸준한 식사 기록 → 사료 재구매 루틴
+  if (input.meal && input.meal.logs7d >= MEAL_ROUTINE_MIN) {
+    push(pickProduct('food', input.meal.species), { type: 'mealRoutine' })
+  }
+
+  return recs
 }
 
 /** 제휴 태그가 설정돼 있으면 링크에 부착한다. */
