@@ -66,6 +66,32 @@ export async function GET() {
   const churnRate = (subsActive + subsCanceled) > 0
     ? Math.round((subsCanceled / (subsActive + subsCanceled)) * 1000) / 10 : 0
 
+  // ── 리텐션 지표 ────────────────────────────────────────────
+  // 기록 생성(records.created_at)을 "활동" 신호로 사용, 반려동물 소유자 기준 활성 사용자 집계.
+  // 최신순으로 가져오므로 limit에 걸려도 1·7일 지표는 정확하고, 30일은 과소집계될 수 있다(시드 규모에선 무관).
+  const since1 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: recentRecs } = await admin
+    .from('records')
+    .select('created_at, pet:pets(user_id)')
+    .gte('created_at', since30)
+    .order('created_at', { ascending: false })
+    .limit(10000)
+  type ActRow = { created_at: string; pet: { user_id: string } | null }
+  const acts = (recentRecs ?? []) as unknown as ActRow[]
+  const activeSince = (iso: string) => {
+    const s = new Set<string>()
+    for (const a of acts) if (a.created_at >= iso && a.pet?.user_id) s.add(a.pet.user_id)
+    return s.size
+  }
+  const activeUsers1d = activeSince(since1)
+  const activeUsers7d = activeSince(since7)
+  const activeUsers30d = activeSince(since30)
+  const records7d = acts.filter(a => a.created_at >= since7).length
+  // 끈적임(stickiness) = DAU/MAU, 7일 기록 지속률 = 7일 활성/전체, 활성자 1인당 기록 수
+  const stickiness = activeUsers30d > 0 ? Math.round((activeUsers1d / activeUsers30d) * 1000) / 10 : 0
+  const recordingRate7d = totalUsers > 0 ? Math.round((activeUsers7d / totalUsers) * 1000) / 10 : 0
+  const recordsPerActive7d = activeUsers7d > 0 ? Math.round((records7d / activeUsers7d) * 10) / 10 : 0
+
   // 제휴 인기 상품 Top
   const { data: clicks } = await admin.from('affiliate_clicks').select('product_id').limit(10000)
   const byProduct = new Map<string, number>()
@@ -85,5 +111,8 @@ export async function GET() {
     totalUsers, newUsers7d, newUsers30d,
     premiumUsers, conversionRate,
     revenue30d, payingUsers30d, arppu, arpu, churnRate,
+    // 리텐션 지표
+    activeUsers1d, activeUsers7d, activeUsers30d,
+    stickiness, recordingRate7d, recordsPerActive7d,
   })
 }

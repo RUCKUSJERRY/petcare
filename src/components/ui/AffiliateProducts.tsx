@@ -10,7 +10,7 @@ import {
 import type { Species } from '@/types'
 
 /** 클릭을 best-effort 로 적재한다 (실패해도 사용자 흐름은 막지 않음). */
-async function trackClick(productId: string, context: AffiliateContext) {
+export async function trackAffiliateClick(productId: string, context: AffiliateContext) {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -42,7 +42,7 @@ export function AffiliateProducts({
   if (products.length === 0) return null
 
   const onClick = (id: string, link: string) => {
-    trackClick(id, context)
+    trackAffiliateClick(id, context)
     window.open(buildAffiliateUrl(link), '_blank', 'noopener,noreferrer')
   }
 

@@ -69,10 +69,15 @@ export default function ProfilePage() {
     setSaving(true)
     setError(null)
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setSaving(false)
+      setError(tc('loginRequired'))
+      return
+    }
     const { error: updErr } = await supabase
       .from('profiles')
       .update({ display_name: name, avatar_url: avatarUrl })
-      .eq('id', user!.id)
+      .eq('id', user.id)
     setSaving(false)
     if (updErr) {
       setError(t('saveFailed'))
