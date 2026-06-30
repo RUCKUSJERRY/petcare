@@ -55,6 +55,8 @@ export async function DELETE(req: Request) {
   }
   if (!endpoint) return NextResponse.json({ error: 'endpoint required' }, { status: 400 })
 
-  await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', user.id)
+  // 삭제 실패를 ok로 숨기면 클라이언트는 해제됐다고 믿지만 row가 남아 추후 푸시 자원을 낭비한다.
+  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', user.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
