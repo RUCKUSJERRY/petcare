@@ -2,12 +2,13 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
 import { careCategoryIcon, todayKST, isoToLocalTime, nowLocalTime, localDateTimeToIso } from '@/lib/utils'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
+import { FilterScroller } from '@/components/ui/FilterScroller'
 import { RecordDateTime } from './RecordDateTime'
 import { deleteImageByUrl } from '@/lib/upload'
 import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE, DAILY_LOG_SET, defaultRecordTitle } from '@/lib/records'
@@ -26,24 +27,30 @@ const DETAIL_TABLES = ['record_medical', 'record_grooming', 'record_meal'] as co
  * 카테고리에 따라 상세 입력 필드가 바뀌고, 반복주기는 선택사항이다.
  * 아이 상세(petId 고정)와 일정 화면(allowPetSelect) 모두에서 재사용.
  */
-export function RecordForm({
+/** 외부(모달 헤더)에서 저장을 트리거할 수 있도록 노출하는 핸들 */
+export type RecordFormHandle = { submit: () => void }
+
+export const RecordForm = forwardRef<RecordFormHandle, {
+  petId?: string | null
+  allowPetSelect?: boolean
+  record?: PetRecord
+  defaultCategory?: RecordCategory
+  /** 모달 등 외부 헤더가 따로 있을 때: 내부 헤더·카드 틀·하단 저장버튼을 숨긴다 */
+  embedded?: boolean
+  /** 저장 진행 상태를 외부(헤더 버튼)에 알린다 */
+  onSavingChange?: (saving: boolean) => void
+  onDone: () => void
+  onCancel: () => void
+}>(function RecordForm({
   petId: fixedPetId,
   allowPetSelect = false,
   record,
   defaultCategory = '진료',
   embedded = false,
+  onSavingChange,
   onDone,
   onCancel,
-}: {
-  petId?: string | null
-  allowPetSelect?: boolean
-  record?: PetRecord
-  defaultCategory?: RecordCategory
-  /** 모달 등 외부 헤더가 따로 있을 때: 내부 헤더·카드 틀을 숨긴다 */
-  embedded?: boolean
-  onDone: () => void
-  onCancel: () => void
-}) {
+}, ref) {
   const t = useTranslations('records')
   const tc = useTranslations('common')
   const supabase = createClient()
@@ -132,10 +139,14 @@ export function RecordForm({
 
   const isDailyLog = DAILY_LOG_SET.has(category)
 
+  // 저장 상태 갱신을 외부(헤더 저장 버튼)에도 반영
+  const setSavingState = (v: boolean) => { setSaving(v); onSavingChange?.(v) }
+
   const submit = async () => {
+    if (saving) return // 중복 저장 방지(헤더/하단 버튼 동시 트리거 대비)
     if (!effectivePetId) { setError(t('errNoPet')); return }
     if (!recurOn && manualDue && manualDue < eventOn) { setError(t('errDueAfter')); return }
-    setSaving(true); setError(null)
+    setSavingState(true); setError(null)
     // 제목은 선택 — 비우면 카테고리명을 제목으로(생활기록을 빠르게 남기기 위함)
     const finalTitle = title.trim() || defaultRecordTitle(category)
     // 생활기록은 시간순 타임라인용 시각(event_at)을 날짜+시:분으로 저장(편집 가능).
@@ -163,10 +174,10 @@ export function RecordForm({
     let recordId = record?.id
     if (editing && recordId) {
       const { error: e } = await supabase.from('records').update(common).eq('id', recordId)
-      if (e) { setSaving(false); setError(t('errSaveFailed')); return }
+      if (e) { setSavingState(false); setError(t('errSaveFailed')); return }
     } else {
       const { data, error: e } = await supabase.from('records').insert(common).select('id').single()
-      if (e || !data) { setSaving(false); setError(t('errSaveFailed')); return }
+      if (e || !data) { setSavingState(false); setError(t('errSaveFailed')); return }
       recordId = data.id as string
     }
 
@@ -184,11 +195,13 @@ export function RecordForm({
     // 편집 중 제거된 기존 사진 정리(고아 방지)
     if (editing) existingPhotos.filter(u => !photoUrls.includes(u)).forEach(deleteImageByUrl)
 
-    setSaving(false)
+    setSavingState(false)
     qc.invalidateQueries({ queryKey: ['records', effectivePetId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     onDone()
   }
+
+  useImperativeHandle(ref, () => ({ submit }))
 
   const cancel = () => {
     // 새로 올린(미저장) 사진 정리
@@ -219,17 +232,17 @@ export function RecordForm({
         </div>
       )}
 
-      {/* 카테고리 */}
-      <div className="flex gap-1.5 flex-wrap">
+      {/* 카테고리 — 좌우 드래그(가로 스크롤)로 선택해 세로 공간 절약 */}
+      <FilterScroller>
         {RECORD_CATEGORIES.map(c => (
           <button key={c} type="button" onClick={() => { setCategory(c); setDetail({}) }}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
               category === c ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
             }`}>
             {careCategoryIcon(c)} {c}
           </button>
         ))}
-      </div>
+      </FilterScroller>
 
       {/* 제목 */}
       <div>
@@ -374,9 +387,12 @@ export function RecordForm({
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
-      <button onClick={submit} disabled={saving} className="btn-primary w-full py-2 text-sm">
-        {saving ? tc('saving') : editing ? tc('edit') : tc('save')}
-      </button>
+      {/* 임베디드(모달)일 땐 저장 버튼을 모달 헤더에 둔다 → 하단 버튼 숨김 */}
+      {!embedded && (
+        <button onClick={submit} disabled={saving} className="btn-primary w-full py-2 text-sm">
+          {saving ? tc('saving') : editing ? tc('edit') : tc('save')}
+        </button>
+      )}
     </div>
   )
-}
+})

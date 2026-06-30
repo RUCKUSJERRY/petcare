@@ -2,11 +2,11 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { careCategoryIcon } from '@/lib/utils'
 import { deleteImageByUrl } from '@/lib/upload'
-import { RecordForm } from './RecordForm'
+import { RecordForm, type RecordFormHandle } from './RecordForm'
 import type { PetRecord } from '@/types'
 
 /**
@@ -25,6 +25,8 @@ export function RecordDetailModal({
   const supabase = createClient()
   const qc = useQueryClient()
   const [confirmDel, setConfirmDel] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const formRef = useRef<RecordFormHandle>(null)
 
   const { data: record } = useQuery({
     queryKey: ['record', recordId],
@@ -61,17 +63,20 @@ export function RecordDetailModal({
   return (
     <div className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h2 className="font-bold text-gray-900 flex items-center gap-1.5 min-w-0">
-            {record ? (
-              <>
-                <span aria-hidden>{careCategoryIcon(record.category)}</span>
-                <span className="truncate">{record.category}</span>
-              </>
-            ) : t('editTitle')}
-          </h2>
+        {/* 헤더: 닫기 · (제목) · 삭제 · 저장 */}
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={onClose} aria-label={tc('close')} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 shrink-0">✕</button>
+            <h2 className="font-bold text-gray-900 flex items-center gap-1.5 min-w-0">
+              {record ? (
+                <>
+                  <span aria-hidden>{careCategoryIcon(record.category)}</span>
+                  <span className="truncate">{record.category}</span>
+                </>
+              ) : t('editTitle')}
+            </h2>
+          </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* 삭제 (헤더) — 한 번 더 확인 */}
             {record && (confirmDel ? (
               <>
                 <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
@@ -79,13 +84,19 @@ export function RecordDetailModal({
                 <button onClick={() => setConfirmDel(false)} className="text-sm text-gray-400 px-1.5 py-1">{tc('cancel')}</button>
               </>
             ) : (
-              <button
-                onClick={() => setConfirmDel(true)}
-                aria-label={tc('delete')}
-                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
-              >🗑</button>
+              <>
+                <button
+                  onClick={() => setConfirmDel(true)}
+                  aria-label={tc('delete')}
+                  className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
+                >🗑</button>
+                <button
+                  onClick={() => formRef.current?.submit()}
+                  disabled={saving}
+                  className="btn-primary text-sm py-1.5 px-4"
+                >{saving ? tc('saving') : tc('save')}</button>
+              </>
             ))}
-            <button onClick={onClose} aria-label={tc('close')} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500">✕</button>
           </div>
         </div>
 
@@ -94,9 +105,11 @@ export function RecordDetailModal({
             <p className="text-sm text-gray-400 text-center py-8">{tc('saving')}</p>
           ) : (
             <RecordForm
+              ref={formRef}
               petId={record.pet_id}
               record={record}
               embedded
+              onSavingChange={setSaving}
               onDone={() => { afterChange(); onClose() }}
               onCancel={onClose}
             />
