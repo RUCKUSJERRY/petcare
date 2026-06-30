@@ -225,6 +225,47 @@ export function addDays(dateStr: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/**
+ * 'YYYY-MM-DD' 날짜와 'HH:MM' 시각을 deltaMinutes 만큼 이동한 결과를 반환.
+ * 분이 0~59 / 시가 0~23 범위를 넘으면 날짜로 올림·내림한다
+ * (예: 00:10 에서 -20분 → 전날 23:50, 23:50 에서 +20분 → 다음날 00:10).
+ * 로컬 달력 기준(기록의 event_at 표시·저장과 동일한 기준).
+ */
+export function shiftDateTime(
+  dateStr: string, timeStr: string, deltaMinutes: number,
+): { date: string; time: string } {
+  const [y, mo, da] = dateStr.split('-').map(Number)
+  const [h, mi] = timeStr.split(':').map(Number)
+  const d = new Date(y, mo - 1, da, h, mi + deltaMinutes, 0, 0)
+  return {
+    date: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`,
+    time: `${pad2(d.getHours())}:${pad2(d.getMinutes())}`,
+  }
+}
+
+/** ISO 타임스탬프 → 로컬 'HH:MM' (없으면 null). */
+export function isoToLocalTime(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/** 로컬 'YYYY-MM-DD' + 'HH:MM' → ISO 타임스탬프(UTC) 문자열. */
+export function localDateTimeToIso(dateStr: string, timeStr: string): string {
+  const [y, mo, da] = dateStr.split('-').map(Number)
+  const [h, mi] = timeStr.split(':').map(Number)
+  return new Date(y, mo - 1, da, h, mi, 0, 0).toISOString()
+}
+
+/** 현재 시각을 로컬 'HH:MM' 으로 반환. */
+export function nowLocalTime(): string {
+  const d = new Date()
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
 /** 건강 관리 카테고리별 권장 재시행 주기(개월). null = 권장 주기 없음 */
 export function careDefaultIntervalMonths(category: string): number | null {
   return ({

@@ -5,9 +5,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
-import { careCategoryIcon, todayKST } from '@/lib/utils'
+import { careCategoryIcon, todayKST, isoToLocalTime, nowLocalTime, localDateTimeToIso } from '@/lib/utils'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
+import { RecordDateTime } from './RecordDateTime'
 import { deleteImageByUrl } from '@/lib/upload'
 import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE, DAILY_LOG_SET, defaultRecordTitle } from '@/lib/records'
 import {
@@ -30,6 +31,7 @@ export function RecordForm({
   allowPetSelect = false,
   record,
   defaultCategory = '진료',
+  embedded = false,
   onDone,
   onCancel,
 }: {
@@ -37,6 +39,8 @@ export function RecordForm({
   allowPetSelect?: boolean
   record?: PetRecord
   defaultCategory?: RecordCategory
+  /** 모달 등 외부 헤더가 따로 있을 때: 내부 헤더·카드 틀을 숨긴다 */
+  embedded?: boolean
   onDone: () => void
   onCancel: () => void
 }) {
@@ -51,6 +55,8 @@ export function RecordForm({
   const [category, setCategory] = useState<RecordCategory>(record?.category || defaultCategory)
   const [title, setTitle] = useState(record?.title || '')
   const [eventOn, setEventOn] = useState(record?.event_on || today())
+  // 생활기록의 시각(HH:MM). 편집 시 기존 event_at에서, 신규는 현재 시각.
+  const [eventTime, setEventTime] = useState<string>(isoToLocalTime(record?.event_at) ?? nowLocalTime())
   const [place, setPlace] = useState<PlaceValue>({
     name: record?.place_name || '', lat: record?.place_lat ?? null, lng: record?.place_lng ?? null,
   })
@@ -132,16 +138,11 @@ export function RecordForm({
     setSaving(true); setError(null)
     // 제목은 선택 — 비우면 카테고리명을 제목으로(생활기록을 빠르게 남기기 위함)
     const finalTitle = title.trim() || defaultRecordTitle(category)
-    // 생활기록은 시간순 타임라인용 시각을 기록(기록일 + 현재 시:분). 편집 시 기존 값 유지.
-    let eventAt: string | null = record?.event_at ?? null
-    if (isDailyLog && !eventAt) {
-      const now = new Date()
-      const d = parseYMD(eventOn)
-      d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0)
-      eventAt = d.toISOString()
-    } else if (!isDailyLog) {
-      eventAt = record?.event_at ?? null
-    }
+    // 생활기록은 시간순 타임라인용 시각(event_at)을 날짜+시:분으로 저장(편집 가능).
+    // 일정성 기록은 시각 개념이 없어 기존 값을 유지한다.
+    const eventAt: string | null = isDailyLog
+      ? localDateTimeToIso(eventOn, eventTime)
+      : (record?.event_at ?? null)
     const common = {
       pet_id: effectivePetId,
       category,
@@ -196,11 +197,13 @@ export function RecordForm({
   }
 
   return (
-    <div className="card space-y-2.5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-900">{editing ? t('editTitle') : t('addTitle')}</h2>
-        <button onClick={cancel} className="text-sm text-gray-400">{tc('cancel')}</button>
-      </div>
+    <div className={embedded ? 'space-y-2.5' : 'card space-y-2.5'}>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-gray-900">{editing ? t('editTitle') : t('addTitle')}</h2>
+          <button onClick={cancel} className="text-sm text-gray-400">{tc('cancel')}</button>
+        </div>
+      )}
 
       {/* 아이 선택 (일정 화면) */}
       {allowPetSelect && pets.length > 1 && (
@@ -235,17 +238,17 @@ export function RecordForm({
           value={title} onChange={e => setTitle(e.target.value)} />
       </div>
 
-      {/* 날짜 + 비용 */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-xs text-gray-500 block mb-0.5">{t('date')}</label>
-          <input className="input" type="date" value={eventOn} onChange={e => setEventOn(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
-          <input className="input" type="number" inputMode="numeric" min={0} placeholder={t('costPlaceholder')}
-            value={cost} onChange={e => setCost(e.target.value)} />
-        </div>
+      {/* 날짜·시간 (생활기록은 시:분 + 빠른 ±버튼) */}
+      <RecordDateTime
+        date={eventOn} time={eventTime} withTime={isDailyLog}
+        onChange={(d, tm) => { setEventOn(d); if (tm) setEventTime(tm) }}
+      />
+
+      {/* 비용 */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
+        <input className="input" type="number" inputMode="numeric" min={0} placeholder={t('costPlaceholder')}
+          value={cost} onChange={e => setCost(e.target.value)} />
       </div>
 
       {/* 장소 (카카오 검색) */}

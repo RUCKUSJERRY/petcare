@@ -19,7 +19,37 @@ import {
   nextAnniversary,
   daysTogether,
   todayKST,
+  shiftDateTime,
+  isoToLocalTime,
+  localDateTimeToIso,
 } from './utils'
+
+describe('shiftDateTime', () => {
+  it('분 단위로 시각을 이동한다', () => {
+    expect(shiftDateTime('2026-06-30', '19:33', 1)).toEqual({ date: '2026-06-30', time: '19:34' })
+    expect(shiftDateTime('2026-06-30', '19:33', -10)).toEqual({ date: '2026-06-30', time: '19:23' })
+    expect(shiftDateTime('2026-06-30', '19:33', 60)).toEqual({ date: '2026-06-30', time: '20:33' })
+  })
+  it('자정을 넘으면 날짜로 올림/내림한다', () => {
+    expect(shiftDateTime('2026-06-30', '23:50', 20)).toEqual({ date: '2026-07-01', time: '00:10' })
+    expect(shiftDateTime('2026-06-30', '00:10', -20)).toEqual({ date: '2026-06-29', time: '23:50' })
+  })
+  it('월·연 경계도 올바르게 넘어간다', () => {
+    expect(shiftDateTime('2026-12-31', '23:00', 120)).toEqual({ date: '2027-01-01', time: '01:00' })
+  })
+})
+
+describe('isoToLocalTime / localDateTimeToIso', () => {
+  it('로컬 날짜·시각 ↔ ISO 왕복이 일관된다', () => {
+    const iso = localDateTimeToIso('2026-06-30', '19:33')
+    expect(isoToLocalTime(iso)).toBe('19:33')
+  })
+  it('빈 값/잘못된 값은 null', () => {
+    expect(isoToLocalTime(null)).toBeNull()
+    expect(isoToLocalTime('')).toBeNull()
+    expect(isoToLocalTime('not-a-date')).toBeNull()
+  })
+})
 
 describe('calcPetAge', () => {
   beforeEach(() => {

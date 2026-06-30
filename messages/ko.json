@@ -828,6 +828,7 @@
     "category": "카테고리",
     "selectPet": "아이 선택",
     "date": "날짜",
+    "dateTime": "날짜 · 시간",
     "cost": "비용 (원)",
     "costPlaceholder": "예: 45000",
     "memo": "메모",
