@@ -17,6 +17,7 @@ export default function NewPetPage() {
   const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [species, setSpecies] = useState<Species>('dog')
@@ -37,10 +38,16 @@ export default function NewPetPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    // 성별은 버튼 그룹이라 네이티브 required 검증이 걸리지 않는다 → 직접 확인
+    // 필드별 인라인 검증 — 폼이 길어 하단 배너 하나만으로는 어느 항목이 문제인지 알기 어렵다.
+    const errs = validate()
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      const first = FIELD_ORDER.find(k => errs[k])
+      if (first) document.getElementById(`field-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setFieldErrors({})
     const name = form.name.trim()
-    if (!name) { setError(t('errNameRequired')); return }
-    if (!form.gender) { setError(t('errGenderRequired')); return }
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -70,7 +77,27 @@ export default function NewPetPage() {
     router.push('/dashboard')
   }
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }))
+    // 사용자가 값을 고치면 해당 필드 오류를 즉시 해제한다.
+    const ek = k === 'breed_id' ? 'breed' : k
+    if (fieldErrors[ek]) setFieldErrors(prev => ({ ...prev, [ek]: '' }))
+  }
+
+  const FIELD_ORDER = ['name', 'breed', 'birth_year', 'birth_month', 'gender'] as const
+  const validate = (): Record<string, string> => {
+    const errs: Record<string, string> = {}
+    if (!form.name.trim()) errs.name = t('errNameRequired')
+    if (!form.breed_id) errs.breed = t('errBreedRequired')
+    if (!form.birth_year) errs.birth_year = t('errBirthYearRequired')
+    if (!form.birth_month) errs.birth_month = t('errBirthMonthRequired')
+    if (!form.gender) errs.gender = t('errGenderRequired')
+    return errs
+  }
+  // 오류 시 붉은 테두리 + 필드 하단 메시지 (input 전역 클래스 뒤에 붙여 우선 적용)
+  const errBorder = (k: string) => (fieldErrors[k] ? ' !border-red-400' : '')
+  const FieldError = ({ k }: { k: string }) =>
+    fieldErrors[k] ? <p className="text-xs text-red-500 mt-1">{fieldErrors[k]}</p> : null
 
   return (
     <div className="px-4 py-6">
@@ -113,46 +140,52 @@ export default function NewPetPage() {
           {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
         </div>
 
-        <div>
+        <div id="field-name">
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('name')}</label>
-          <input className="input" placeholder={t('namePlaceholder')} value={form.name}
-            onChange={e => set('name', e.target.value)} required aria-required maxLength={20} />
+          <input className={`input${errBorder('name')}`} placeholder={t('namePlaceholder')} value={form.name}
+            onChange={e => set('name', e.target.value)} aria-invalid={!!fieldErrors.name} maxLength={20} />
+          <FieldError k="name" />
         </div>
 
-        <div>
+        <div id="field-breed">
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('breedLabel', { breed: breedLabel })}</label>
-          <select className="input" value={form.breed_id}
-            onChange={e => set('breed_id', e.target.value)} required aria-required>
+          <select className={`input${errBorder('breed')}`} value={form.breed_id}
+            onChange={e => set('breed_id', e.target.value)} aria-invalid={!!fieldErrors.breed}>
             <option value="">{t('breedSelect', { breed: breedLabel })}</option>
             {breeds.map(b => <option key={b.id} value={b.id}>{b.name_ko}</option>)}
           </select>
+          <FieldError k="breed" />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
-            <input className="input" type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
-              value={form.birth_year} onChange={e => set('birth_year', e.target.value)} required aria-required />
+        <div>
+          <div className="grid grid-cols-3 gap-3">
+            <div id="field-birth_year">
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
+              <input className={`input${errBorder('birth_year')}`} type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
+                value={form.birth_year} onChange={e => set('birth_year', e.target.value)} aria-invalid={!!fieldErrors.birth_year} />
+            </div>
+            <div id="field-birth_month">
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
+              <select className={`input${errBorder('birth_month')}`} value={form.birth_month}
+                onChange={e => set('birth_month', e.target.value)} aria-invalid={!!fieldErrors.birth_month}>
+                <option value="">{t('monthSelect')}</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+              <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+                <option value="">{t('daySelect')}</option>
+                {Array.from({ length: 31 }, (_, i) => (
+                  <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
-            <select className="input" value={form.birth_month}
-              onChange={e => set('birth_month', e.target.value)} required aria-required>
-              <option value="">{t('monthSelect')}</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
-            <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
-              <option value="">{t('daySelect')}</option>
-              {Array.from({ length: 31 }, (_, i) => (
-                <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
-              ))}
-            </select>
-          </div>
+          <FieldError k="birth_year" />
+          <FieldError k="birth_month" />
         </div>
 
         <div>
@@ -162,21 +195,22 @@ export default function NewPetPage() {
           <p className="text-xs text-gray-400 mt-1">{t('adoptedHint')}</p>
         </div>
 
-        <div>
+        <div id="field-gender">
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('gender')}</label>
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('genderAria')} aria-required>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('genderAria')}>
             {['수컷', '암컷'].map(g => (
               <button key={g} type="button" role="radio" aria-checked={form.gender === g}
                 onClick={() => set('gender', g)}
                 className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                   form.gender === g
                     ? 'bg-primary-500 text-white border-primary-500'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    : `bg-white text-gray-600 ${fieldErrors.gender ? 'border-red-400' : 'border-gray-200'}`
                 }`}>
                 {g === '수컷' ? t('genderMale') : t('genderFemale')}
               </button>
             ))}
           </div>
+          <FieldError k="gender" />
         </div>
 
         <div>

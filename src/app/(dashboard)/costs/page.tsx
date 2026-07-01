@@ -89,7 +89,7 @@ export default function CostsPage() {
           title={t('empty')}
           hint={t('emptyHint')}
           action={
-            <Link href="/schedule" className="inline-block text-sm text-primary-600 font-semibold">
+            <Link href="/schedule?add=1" className="inline-block text-sm text-primary-600 font-semibold">
               {t('goRecord')}
             </Link>
           }

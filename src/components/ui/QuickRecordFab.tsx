@@ -102,24 +102,28 @@ export function QuickRecordFab() {
             {petList.length > 1 && (
               <div>
                 <p className="text-xs text-gray-400 mb-1.5">{t('pickPet')}</p>
-                <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
-                  {petList.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setSelectedPetId(p.id)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 border transition-colors',
-                        activeId === p.id
-                          ? 'bg-primary-500 text-white border-primary-500'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
-                      )}
-                    >
-                      <PetAvatar photoUrl={p.photo_url} species={p.species}
-                        className="w-4 h-4" emojiClassName="text-sm leading-none" />
-                      {p.name}
-                    </button>
-                  ))}
+                {/* 아이가 많으면 가로 스크롤 — 우측 페이드로 더 있음을 암시(QuickLogBar와 동일 패턴) */}
+                <div className="relative">
+                  <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+                    {petList.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSelectedPetId(p.id)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 border transition-colors',
+                          activeId === p.id
+                            ? 'bg-primary-500 text-white border-primary-500'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
+                        )}
+                      >
+                        <PetAvatar photoUrl={p.photo_url} species={p.species}
+                          className="w-4 h-4" emojiClassName="text-sm leading-none" />
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l from-white to-transparent" />
                 </div>
               </div>
             )}
