@@ -65,7 +65,10 @@ export async function POST(req: Request) {
     }, { onConflict: 'user_id' })
     if (subErr) throw new Error(subErr.message)
 
-    await admin.from('payments').insert({
+    // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
+    // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
+    // (정기결제 갱신 경로 /api/billing/renew 와 동일한 가시화 원칙)
+    const { error: payErr } = await admin.from('payments').insert({
       user_id: user.id,
       order_id: charge.orderId,
       payment_key: charge.paymentKey,
@@ -75,9 +78,17 @@ export async function POST(req: Request) {
       kind: 'initial',
     })
 
-    await admin.from('profiles')
+    // 프리미엄 권한의 실제 기준은 profiles.plan/premium_until 이므로 이 갱신이 가장 중요하다.
+    const { error: profErr } = await admin.from('profiles')
       .update({ plan: 'premium', premium_until: periodEnd.toISOString() })
       .eq('id', user.id)
+
+    if (payErr || profErr) {
+      console.error('[billing/issue] charged but DB update failed', user.id, {
+        orderId: charge.orderId, paymentKey: charge.paymentKey,
+        payErr: payErr?.message, profErr: profErr?.message,
+      })
+    }
 
     return NextResponse.json({ ok: true, premiumUntil: periodEnd.toISOString() })
   } catch (err) {

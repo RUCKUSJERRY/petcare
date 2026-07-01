@@ -279,7 +279,7 @@ export default function SchedulePage() {
       {!q && (
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
-            {([['today', t('viewToday')], ['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
+            {([['calendar', t('viewCalendar')], ['today', t('viewToday')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
               <button key={v} onClick={() => setView(v)}
                 className={cn('flex-1 py-1.5 rounded-md text-sm font-medium transition-colors',
                   view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500')}>
