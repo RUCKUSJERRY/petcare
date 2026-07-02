@@ -1,11 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { timeAgo, categoryColor, todayKST, addDays, daysUntil } from '@/lib/utils'
-import { PRODUCT_CATEGORIES } from '@/lib/records'
-import { activeNextDue } from '@/lib/recurrence'
+import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { getSmartRecommendations, type CareDueItem } from '@/lib/affiliate'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
-import type { CareAlert, Pet, PostListItem, RecordCategory, Species } from '@/types'
+import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
@@ -16,41 +15,34 @@ export default async function DashboardPage() {
   const tCommon = await getTranslations('common')
   await supabase.auth.getUser()
 
-  // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 (공동 관리 아이 포함)
-  const { data: pets } = await supabase
-    .from('pets')
-    .select('*, breed:breeds(*)')
-    .order('created_at')
-
-  // 30일 이내 예정 + 지난 건강 관리 알림 (접종·심장사상충·구충 등 모든 카테고리)
-  const petIds = (pets ?? []).map((p: Pet) => p.id)
   const todayStr = todayKST()
   const soon = addDays(todayStr, 30)
 
+  // 반려동물 목록과 최근 커뮤니티 글은 서로 독립적이라 병렬로 조회한다.
+  // (멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 — 공동 관리 아이 포함)
+  const [petsRes, recentPostsRes] = await Promise.all([
+    supabase.from('pets').select('*, breed:breeds(*)').order('created_at'),
+    supabase.from('post_list').select('*').order('created_at', { ascending: false }).limit(3),
+  ])
+  const pets = petsRes.data
+  const petIds = (pets ?? []).map((p: Pet) => p.id)
+
+  // 30일 이내 예정 + 지난 건강 관리 알림 (접종·심장사상충·구충 등 모든 카테고리)
+  // 라인별 최신 기록 → 다음 예정일 산출은 일정 화면과 동일한 공용 로직(computeUpcoming)을 쓴다.
   let vaccAlerts: CareAlert[] = []
   if (petIds.length > 0) {
-    // 같은 항목 라인(아이·카테고리[·제품명])은 "가장 최근 기록"만 유효한 일정으로 본다.
-    // 제품성 카테고리(접종·구충 등)만 제목까지 구분하고, 그 외는 카테고리 단위로 최신 1건.
     const { data } = await supabase
       .from('records')
       .select('id, pet_id, category, title, event_on, next_due_on, recur_rule')
       .in('pet_id', petIds)
       .order('event_on', { ascending: false })
 
-    type Row = { id: string; pet_id: string; category: RecordCategory; title: string; event_on: string; next_due_on: string | null; recur_rule: string | null }
-    const latestByLine = new Map<string, Row>()
-    for (const r of (data ?? []) as Row[]) {
-      const key = PRODUCT_CATEGORIES.has(r.category)
-        ? `${r.pet_id}|${r.category}|${r.title}`
-        : `${r.pet_id}|${r.category}`
-      if (!latestByLine.has(key)) latestByLine.set(key, r)
-    }
-    vaccAlerts = Array.from(latestByLine.values())
-      .map((r): CareAlert | null => {
-        const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on, todayStr)
-        return due ? { pet_id: r.pet_id, category: r.category, title: r.title, next_due_on: due, record_id: r.id, recur_rule: r.recur_rule } : null
-      })
-      .filter((a): a is CareAlert => a != null && a.next_due_on <= soon)
+    vaccAlerts = computeUpcoming((data ?? []) as ScheduleRow[], todayStr)
+      .filter(u => u.next_due_on <= soon)
+      .map((u): CareAlert => ({
+        pet_id: u.pet_id, category: u.category, title: u.title,
+        next_due_on: u.next_due_on, record_id: u.record_id, recur_rule: u.recur_rule,
+      }))
       .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))
   }
 
@@ -84,13 +76,8 @@ export default async function DashboardPage() {
     meal: petIds.length > 0 ? { species: mealSpecies, logs7d: mealLogs7d } : undefined,
   })
 
-  // 최근 커뮤니티 글 (위젯용)
-  const { data: recentPostsData } = await supabase
-    .from('post_list')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(3)
-  const recentPosts = (recentPostsData ?? []) as PostListItem[]
+  // 최근 커뮤니티 글 (위젯용) — 위에서 병렬로 미리 조회함
+  const recentPosts = (recentPostsRes.data ?? []) as PostListItem[]
 
   return (
     <div className="px-4 py-6 space-y-6">

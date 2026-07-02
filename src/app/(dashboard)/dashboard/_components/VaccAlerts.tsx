@@ -44,11 +44,11 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
           {selectedPetId ? t('otherTitle') : t('allTitle')}
         </span>
       </div>
-      {shown.slice(0, 4).map((v, i) => {
+      {shown.slice(0, 4).map(v => {
         const pet = pets.find(p => p.id === v.pet_id)
         const badge = ddayBadge(v.next_due_on)
         return (
-          <div key={i} className="flex items-center gap-2 text-sm">
+          <div key={v.record_id ?? `${v.pet_id}|${v.category}|${v.title}`} className="flex items-center gap-2 text-sm">
             <span aria-hidden>{careCategoryIcon(v.category)}</span>
             <span className="text-gray-700 truncate flex-1">
               {pet?.name} · {v.title}

@@ -8,8 +8,7 @@ import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
-import { PRODUCT_CATEGORIES } from '@/lib/records'
-import { activeNextDue } from '@/lib/recurrence'
+import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { RecordForm } from '../pets/_components/RecordForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
 import { RecordsScanModal } from '../pets/_components/RecordsScanModal'
@@ -116,23 +115,11 @@ export default function SchedulePage() {
       const all = (rows ?? []) as Row[]
       const today = todayKST()
 
-      // 예정: 항목 라인별 "최신 기록"만 (제품성 카테고리만 title까지 키에 포함)
-      const latest = new Map<string, Row>()
-      for (const r of all) {
-        const key = PRODUCT_CATEGORIES.has(r.category)
-          ? `${r.pet_id}|${r.category}|${r.title}`
-          : `${r.pet_id}|${r.category}`
-        if (!latest.has(key)) latest.set(key, r)
-      }
-      const upcoming: ScheduleItem[] = []
-      for (const r of Array.from(latest.values())) {
-        const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on, today)
-        if (!due) continue
-        upcoming.push({
-          id: r.id, pet_id: r.pet_id, ...meta(r.pet_id),
-          category: r.category, title: r.title, last_on: r.event_on, next_due_on: due,
-        })
-      }
+      // 예정: 라인별 최신 기록 → 다음 예정일 산출 (홈과 동일한 공용 로직)
+      const upcoming: ScheduleItem[] = computeUpcoming(all as ScheduleRow[], today).map(u => ({
+        id: u.record_id, pet_id: u.pet_id, ...meta(u.pet_id),
+        category: u.category, title: u.title, last_on: u.last_on, next_due_on: u.next_due_on,
+      }))
 
       const history: HistoryItem[] = all.map(r => ({
         id: r.id, pet_id: r.pet_id, ...meta(r.pet_id),
