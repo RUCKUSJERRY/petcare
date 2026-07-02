@@ -25,6 +25,7 @@ export function RecordDetailModal({
   const supabase = createClient()
   const qc = useQueryClient()
   const [confirmDel, setConfirmDel] = useState(false)
+  const [delError, setDelError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const formRef = useRef<RecordFormHandle>(null)
 
@@ -53,7 +54,10 @@ export function RecordDetailModal({
 
   const remove = async () => {
     if (!record) return
-    await supabase.from('records').delete().eq('id', record.id)
+    // 삭제 실패(RLS 등)를 확인하지 않고 이미지를 지우면, 기록은 남고 사진만 사라져
+    // 영구적으로 깨진 이미지가 된다. 삭제가 성공한 뒤에만 이미지를 정리한다.
+    const { error } = await supabase.from('records').delete().eq('id', record.id)
+    if (error) { setDelError(t('errDeleteFailed')); return }
     const imgs = record.photo_urls?.length ? record.photo_urls : (record.photo_url ? [record.photo_url] : [])
     imgs.forEach(deleteImageByUrl)
     afterChange()
@@ -79,7 +83,7 @@ export function RecordDetailModal({
           <div className="flex items-center gap-2 shrink-0">
             {record && (confirmDel ? (
               <>
-                <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
+                <span className="text-xs text-gray-500">{delError ?? t('deleteConfirm')}</span>
                 <button onClick={remove} className="text-sm text-red-500 font-semibold px-2 py-1">{tc('delete')}</button>
                 <button onClick={() => setConfirmDel(false)} className="text-sm text-gray-400 px-1.5 py-1">{tc('cancel')}</button>
               </>

@@ -32,6 +32,7 @@ export function CommentSection({
 
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -78,12 +79,13 @@ export function CommentSection({
 
   const submitReply = async (parentId: string) => {
     const content = replyText.trim()
-    if (!content) return
-    setError(null)
+    if (!content || sendingReply) return // 중복 등록 방지(더블클릭·Enter+클릭)
+    setSendingReply(true); setError(null)
     if (await addComment(content, parentId)) {
       setReplyText('')
       setReplyTo(null)
     }
+    setSendingReply(false)
   }
 
   const saveEdit = async (id: string) => {
@@ -209,12 +211,12 @@ export function CommentSection({
                 value={replyText}
                 maxLength={1000}
                 onChange={e => setReplyText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') submitReply(c.id) }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) submitReply(c.id) }}
                 autoFocus
               />
               <button
                 onClick={() => submitReply(c.id)}
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || sendingReply}
                 className="btn-primary px-3 text-sm shrink-0"
               >
                 {t('submit')}

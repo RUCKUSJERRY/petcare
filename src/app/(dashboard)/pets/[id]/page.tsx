@@ -89,6 +89,13 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   }, [pet, addTarget])
 
   const handleSave = async () => {
+    // 신규 등록 폼과 동일하게 필수값을 검증한다.
+    // (검증이 없으면 이름 공란 저장·출생연도 공란 → parseInt('')=NaN 으로 저장 실패)
+    if (!form.name.trim()) { setSaveError(t('errNameRequired')); return }
+    const by = parseInt(form.birth_year, 10)
+    if (!Number.isFinite(by) || by < 1990 || by > new Date().getFullYear()) {
+      setSaveError(t('errBirthYearRequired')); return
+    }
     setSaving(true)
     setSaveError(null)
     const { error } = await supabase.from('pets').update({

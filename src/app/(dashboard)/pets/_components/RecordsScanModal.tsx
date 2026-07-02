@@ -153,13 +153,16 @@ export function RecordsScanModal({
     setRows(rs => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
 
   const save = async () => {
-    const picked = rows.filter(r => r.include)
-    if (picked.length === 0) { setError(t('errSelectRecords')); return }
+    if (!rows.some(r => r.include)) { setError(t('errSelectRecords')); return }
     setSaving(true); setError(null)
 
-    // 통합 records 테이블에 저장 (진료면 record_medical 상세도 함께)
-    let failed = false
-    for (const r of picked) {
+    // 통합 records 테이블에 저장 (진료면 record_medical 상세도 함께).
+    // 이미 저장된 행은 재시도 시 중복 삽입되지 않도록 성공 인덱스를 추적한다.
+    const saved = new Set<number>()
+    let partial = false
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]
+      if (!r.include) continue
       const isMed = r.type === 'medical'
       const title = (isMed ? (r.diagnosis || r.name || r.reason) : (r.name || r.category)).trim()
       const common = {
@@ -174,21 +177,38 @@ export function RecordsScanModal({
         photo_urls: photoUrl ? [photoUrl] : null,
       }
       const { data, error: e } = await supabase.from('records').insert(common).select('id').single()
-      if (e || !data) { failed = true; continue }
+      if (e || !data) { partial = true; continue }
+      // records 는 저장됨 → 재시도 중복 방지를 위해 성공으로 표시(상세 실패는 경고만).
+      saved.add(i)
       if (isMed) {
-        await supabase.from('record_medical').insert({
+        const { error: me } = await supabase.from('record_medical').insert({
           record_id: data.id,
           reason: r.reason.trim() || null,
           treatment: r.treatment.trim() || null,
           medication: r.medication.trim() || null,
         })
+        if (me) partial = true
       }
     }
     setSaving(false)
-    if (failed) { setError(t('errSavePartial')); return }
 
-    qc.invalidateQueries({ queryKey: ['records', petId] })
-    qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    if (saved.size > 0) {
+      // QuickLogBar 와 동일한 전체 무효화 세트 — 홈 타임라인·피드·오늘 기록도 즉시 갱신.
+      qc.invalidateQueries({ queryKey: ['records', petId] })
+      qc.invalidateQueries({ queryKey: ['care-schedule'] })
+      qc.invalidateQueries({ queryKey: ['today-log', petId] })
+      qc.invalidateQueries({ queryKey: ['today-timeline', petId] })
+      qc.invalidateQueries({ queryKey: ['today-timeline', null] })
+      qc.invalidateQueries({ queryKey: ['record-feed', petId] })
+      qc.invalidateQueries({ queryKey: ['record-feed', null] })
+    }
+
+    if (partial) {
+      // 성공한 행은 목록에서 제거해, 다시 저장을 눌러도 중복 삽입되지 않게 한다.
+      setRows(rs => rs.filter((_, i) => !saved.has(i)))
+      setError(t('errSavePartial'))
+      return
+    }
     onClose()
   }
 

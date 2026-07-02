@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * 링크 공유 버튼.
@@ -27,7 +27,10 @@ export function ShareButton({
 }) {
   const t = useTranslations('ui')
   const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shareLabel = label ?? t('share')
+
+  useEffect(() => () => { if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current) }, [])
 
   const share = async () => {
     const url = typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : path
@@ -43,7 +46,8 @@ export function ShareButton({
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 1800)
     } catch {
       // 클립보드도 막힌 환경: 프롬프트로 링크 노출
       window.prompt(t('shareCopyPrompt'), url)

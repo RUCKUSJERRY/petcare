@@ -302,6 +302,7 @@ export default function FoodsPage() {
       <section className="space-y-2 pt-2">
         <h2 className="text-sm font-semibold text-gray-700">{t('feedGuideTitle')}</h2>
         <FeedCalculator
+          key={calcPet?.id ?? species}
           species={species}
           defaultWeight={calcPet?.weight_kg ?? null}
           defaultFactor={toFeedFactor(calcAge?.lifeStage)}

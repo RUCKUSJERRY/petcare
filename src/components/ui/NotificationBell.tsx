@@ -151,14 +151,14 @@ export function NotificationBell() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={n.actor_avatar} alt={n.actor_name ?? t('notifAnonymous')} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-sm">{typeIcon[n.type]}</span>
+                      <span className="text-sm">{typeIcon[n.type] ?? '🔔'}</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-800 leading-snug">
-                      <span aria-hidden className="mr-1">{typeIcon[n.type]}</span>
+                      <span aria-hidden className="mr-1">{typeIcon[n.type] ?? '🔔'}</span>
                       <span className="font-semibold">{n.actor_name ?? t('notifAnonymous')}</span>
-                      {t(typeTextKey[n.type])}
+                      {typeTextKey[n.type] ? t(typeTextKey[n.type]) : ''}
                     </p>
                     {n.post_title && (
                       <p className="text-xs text-gray-400 truncate mt-0.5">“{n.post_title}”</p>

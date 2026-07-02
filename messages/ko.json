@@ -269,6 +269,7 @@
   },
   "walks": {
     "title": "산책하기",
+    "notFound": "산책 기록을 찾을 수 없어요. 삭제되었거나 접근 권한이 없어요.",
     "startWalk": "산책 시작하기",
     "tabMine": "내 산책",
     "tabShared": "공유 경로",
@@ -794,6 +795,8 @@
   "petDetail": {
     "errSaveFailed": "저장에 실패했어요. 다시 시도해주세요.",
     "errDeleteFailed": "삭제에 실패했어요. 다시 시도해주세요.",
+    "errNameRequired": "이름을 입력해주세요.",
+    "errBirthYearRequired": "출생연도를 올바르게 입력해주세요.",
     "loading": "불러오는 중...",
     "back": "뒤로",
     "edit": "수정",
@@ -828,6 +831,7 @@
     "addRecord": "+ 기록",
     "addTitle": "기록 추가",
     "editTitle": "기록 수정",
+    "errDeleteFailed": "삭제에 실패했어요. 다시 시도해주세요.",
     "category": "카테고리",
     "selectPet": "아이 선택",
     "date": "날짜",

@@ -34,7 +34,7 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
     supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
   }, [supabase])
 
-  const { data: walk, refetch } = useQuery({
+  const { data: walk, refetch, isLoading } = useQuery({
     queryKey: ['walk', params.id],
     queryFn: async () => {
       // profiles 임베드는 이 프로젝트에서 불안정 → 산책 본문만 받고 작성자/펫은 수동 조회
@@ -135,7 +135,7 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {!walk ? (
-        <div className="text-gray-400 text-center py-6">{t('loading')}</div>
+        <div className="text-gray-400 text-center py-6">{isLoading ? t('loading') : t('notFound')}</div>
       ) : (
       <>
       {/* 통계 */}
@@ -162,7 +162,7 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           <span className="text-gray-700 tabular-nums">
             {new Date(walk.started_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
             {' ~ '}
-            {new Date(walk.ended_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            {walk.ended_at ? new Date(walk.ended_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '—'}
           </span></div>
         {walk.pet?.name && (
           <div className="flex justify-between"><span className="text-gray-400">{t('withPet')}</span>

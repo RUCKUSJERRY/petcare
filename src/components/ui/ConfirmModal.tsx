@@ -34,6 +34,13 @@ export function ConfirmModal({
   const cancelText = cancelLabel ?? t('cancel')
   const dialogRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
+  // busy/onCancel 를 effect 의존성에 넣으면, 확인 클릭으로 busy 가 바뀔 때 effect 가 재실행되며
+  // 정리 단계의 prevFocused.focus() 가 아직 열려 있는 모달 밖으로 포커스를 옮겨 트랩이 깨진다.
+  // → effect 는 마운트 시 1회만 돌리고, 최신 값은 ref 로 읽는다.
+  const busyRef = useRef(busy)
+  busyRef.current = busy
+  const onCancelRef = useRef(onCancel)
+  onCancelRef.current = onCancel
 
   useEffect(() => {
     const prevFocused = document.activeElement as HTMLElement | null
@@ -42,7 +49,7 @@ export function ConfirmModal({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (!busy) onCancel()
+        if (!busyRef.current) onCancelRef.current()
         return
       }
       if (e.key === 'Tab') {
@@ -72,7 +79,9 @@ export function ConfirmModal({
       document.body.style.overflow = prevOverflow
       prevFocused?.focus?.()
     }
-  }, [busy, onCancel])
+    // 마운트/언마운트 시 1회만 — busy·onCancel 은 ref 로 최신값을 읽는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div

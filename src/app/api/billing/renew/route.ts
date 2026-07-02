@@ -40,40 +40,61 @@ export async function GET(req: Request) {
 
   let charged = 0, failed = 0
   for (const s of subs) {
-    const orderId = `sub_renew_${s.user_id.replace(/-/g, '')}_${Date.now()}`
+    // 멱등키: orderId 를 결제 주기(current_period_end)에 고정한다. 같은 주기에 대한
+    // 재시도는 항상 동일한 orderId 가 되어 토스(중복승인 거절)와 payments.order_id UNIQUE
+    // 제약이 함께 이중청구를 막는다. (Date.now() 기반이면 매 시도가 새 주문이라 멱등성이 깨짐)
+    const periodStamp = new Date(s.current_period_end).toISOString().slice(0, 10).replace(/-/g, '')
+    const orderId = `sub_renew_${s.user_id.replace(/-/g, '')}_${periodStamp}`
+    let charge
     try {
-      const charge = await chargeBilling(s.billing_key, {
+      charge = await chargeBilling(s.billing_key, {
         customerKey: s.customer_key, amount: s.amount, orderId,
         orderName: '펫케어 프리미엄 (월 구독 갱신)',
       })
-      // 만료일이 과거여도 끊김 없이 이어지도록 기존 만료일 기준으로 1개월 연장
-      const base = new Date(s.current_period_end) > now ? new Date(s.current_period_end) : now
-      const newEnd = addOneMonth(base)
-      // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
-      // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
-      const { error: subErr } = await admin.from('subscriptions')
-        .update({ current_period_end: newEnd.toISOString() })
-        .eq('user_id', s.user_id)
-      const { error: payErr } = await admin.from('payments').insert({
-        user_id: s.user_id, order_id: charge.orderId, payment_key: charge.paymentKey,
-        amount: s.amount, status: charge.status, method: charge.method ?? null, kind: 'renewal',
-      })
-      const { error: profErr } = await admin.from('profiles')
-        .update({ plan: 'premium', premium_until: newEnd.toISOString() })
-        .eq('id', s.user_id)
-      if (subErr || payErr || profErr) {
-        console.error('[billing/renew] charged but DB update failed', s.user_id, {
-          orderId: charge.orderId, paymentKey: charge.paymentKey,
-          subErr: subErr?.message, payErr: payErr?.message, profErr: profErr?.message,
-        })
-      }
-      charged++
     } catch (err) {
-      const msg = err instanceof TossError ? `${err.code}:${err.message}` : String(err)
-      console.error('[billing/renew] charge failed', s.user_id, msg)
-      await admin.from('subscriptions').update({ status: 'past_due' }).eq('user_id', s.user_id)
-      failed++
+      // 이미 이 주기에 청구가 성공했으나 직전 실행에서 DB 반영만 실패한 경우:
+      // 토스가 동일 orderId 를 '이미 처리됨'으로 거절한다 → 중복청구가 아니라 복구 대상이다.
+      // 새로 청구하지 말고 기존 결제 이력을 재사용해 DB 정합만 맞춘다.
+      if (err instanceof TossError && err.code === 'ALREADY_PROCESSED_PAYMENT') {
+        const { data: prev } = await admin.from('payments')
+          .select('payment_key, status, method').eq('order_id', orderId).maybeSingle()
+        charge = {
+          orderId, paymentKey: prev?.payment_key ?? '',
+          status: prev?.status ?? 'DONE', method: prev?.method ?? undefined,
+          totalAmount: s.amount,
+        }
+      } else {
+        const msg = err instanceof TossError ? `${err.code}:${err.message}` : String(err)
+        console.error('[billing/renew] charge failed', s.user_id, msg)
+        await admin.from('subscriptions').update({ status: 'past_due' }).eq('user_id', s.user_id)
+        failed++
+        continue
+      }
     }
+
+    // 만료일이 과거여도 끊김 없이 이어지도록 기존 만료일 기준으로 1개월 연장
+    const base = new Date(s.current_period_end) > now ? new Date(s.current_period_end) : now
+    const newEnd = addOneMonth(base)
+    // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
+    // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
+    const { error: subErr } = await admin.from('subscriptions')
+      .update({ current_period_end: newEnd.toISOString() })
+      .eq('user_id', s.user_id)
+    // 멱등키(order_id)로 upsert — 재시도(복구) 시 중복 결제 이력이 쌓이지 않는다.
+    const { error: payErr } = await admin.from('payments').upsert({
+      user_id: s.user_id, order_id: charge.orderId, payment_key: charge.paymentKey,
+      amount: s.amount, status: charge.status, method: charge.method ?? null, kind: 'renewal',
+    }, { onConflict: 'order_id', ignoreDuplicates: true })
+    const { error: profErr } = await admin.from('profiles')
+      .update({ plan: 'premium', premium_until: newEnd.toISOString() })
+      .eq('id', s.user_id)
+    if (subErr || payErr || profErr) {
+      console.error('[billing/renew] charged but DB update failed', s.user_id, {
+        orderId: charge.orderId, paymentKey: charge.paymentKey,
+        subErr: subErr?.message, payErr: payErr?.message, profErr: profErr?.message,
+      })
+    }
+    charged++
   }
 
   const result = { due: subs.length, charged, failed }

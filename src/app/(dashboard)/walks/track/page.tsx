@@ -52,6 +52,9 @@ export default function WalkTrackPage() {
   const meMarkerRef = useRef<any>(null)
   const pathRef = useRef<WalkPoint[]>([])
   const distRef = useRef(0)
+  // 거리 계산 기준점(마지막으로 채택된 좌표). 일시정지 중에도 이 기준점은 갱신하되
+  // 거리·경로에는 반영하지 않아, 재개 시 정지 구간 이동거리가 한꺼번에 더해지는 걸 막는다.
+  const lastPosRef = useRef<WalkPoint | null>(null)
   const watchIdRef = useRef<number | null>(null)
   const startedAtRef = useRef<number>(0)   // 최초 시작 시각(벽시계)
   const endedAtRef = useRef<number>(0)     // 종료 시각(벽시계)
@@ -128,14 +131,17 @@ export default function WalkTrackPage() {
     const lat = pos.coords.latitude
     const lng = pos.coords.longitude
     const now = Date.now()
-    const last = pathRef.current[pathRef.current.length - 1]
-    if (last) {
-      const d = haversineMeters({ lat: last[0], lng: last[1] }, { lat, lng })
+    const base = lastPosRef.current
+    if (base) {
+      const d = haversineMeters({ lat: base[0], lng: base[1] }, { lat, lng })
       // 3m 미만 이동은 GPS 노이즈로 보고 무시 (거리 부풀림 방지)
       if (d < 3) return
       // 유의미한 움직임 → 자동 정지였다면 자동 재개
       if (autoPausedRef.current) doResume()
       lastMoveRef.current = now
+      // 기준점은 정지 여부와 무관하게 항상 현재 위치로 전진시킨다.
+      // (정지 중 이동한 거리가 재개 시점에 한꺼번에 distRef 에 더해지는 버그 방지)
+      lastPosRef.current = [lat, lng]
       // 수동 일시정지 중이면 거리/경로에 반영하지 않음 (마커만 갱신)
       if (segStartRef.current == null) {
         drawPoint(lat, lng)
@@ -145,6 +151,7 @@ export default function WalkTrackPage() {
       setDistance(distRef.current)
     } else {
       lastMoveRef.current = now
+      lastPosRef.current = [lat, lng]
     }
     pathRef.current.push([lat, lng])
     setPoints(pathRef.current.length)

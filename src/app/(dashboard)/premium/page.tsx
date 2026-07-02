@@ -68,11 +68,12 @@ export default function PremiumPage() {
         body: JSON.stringify({ authKey }),
       })
         .then(async res => {
-          if (res.ok) {
+          const j = await res.json().catch(() => ({}))
+          // 이미 활성 구독이면(중복 제출·재시도) 오류가 아니라 이미 프리미엄 상태다.
+          if (res.ok || j?.error === 'already_subscribed') {
             setFlash({ kind: 'success', msg: t('successMsg') })
             refresh()
           } else {
-            const j = await res.json().catch(() => ({}))
             setFlash({ kind: 'error', msg: j?.message || t('failMsg') })
           }
         })

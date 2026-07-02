@@ -36,6 +36,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'service_role_not_configured' }, { status: 500 })
   }
 
+  // 이미 활성 구독이 있으면 첫 달 결제를 다시 청구하지 않는다.
+  // (중복 제출·응답 유실 후 재시도로 인한 이중청구와, premium_until 이 더 짧게 덮어써지는 것을 방지)
+  const { data: existingSub } = await admin.from('subscriptions')
+    .select('status, current_period_end').eq('user_id', user.id).maybeSingle()
+  if (
+    existingSub && existingSub.status === 'active' &&
+    existingSub.current_period_end && new Date(existingSub.current_period_end) > new Date()
+  ) {
+    return NextResponse.json(
+      { error: 'already_subscribed', premiumUntil: existingSub.current_period_end },
+      { status: 409 }
+    )
+  }
+
   // 가격은 운영설정(app_settings) 기준 — 클라이언트 입력을 신뢰하지 않는다.
   const amount = await getPremiumPriceServer(admin)
 
