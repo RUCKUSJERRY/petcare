@@ -1,15 +1,19 @@
 import type { RecordCategory } from '@/types'
 
-/** 전체 카테고리 (그룹 순서대로) */
-export const RECORD_CATEGORIES: RecordCategory[] = [
-  '진료', '접종', '심장사상충', '구충', '외부기생충', '건강검진',
-  '미용', '양치', '발톱', '목욕', '귀청소',
-  '식사', '간식', '물', '소변', '대변', '투약', '증상', '기타',
+/** 카테고리 그룹 — 입력 폼·오늘의 기록 바가 '생활관리 / 건강관리' 로 묶어서 표시하는 단일 출처.
+ *  (증상은 진료로 대체되어 제외, 소변·대변은 배변으로 통합. 소변/대변/증상은 과거 데이터
+ *   호환을 위해 CATEGORY_CONFIG·타입·아이콘에는 남기되 신규 선택지에서만 제외한다.) */
+export const CATEGORY_GROUPS: { key: 'life' | 'health'; label: string; categories: RecordCategory[] }[] = [
+  { key: 'life', label: '생활관리', categories: ['식사', '간식', '물', '배변', '양치', '귀청소', '목욕', '발톱', '미용', '투약', '기타'] },
+  { key: 'health', label: '건강관리', categories: ['심장사상충', '접종', '진료', '건강검진', '구충', '외부기생충'] },
 ]
 
-/** 원탭으로 "지금" 남기는 생활기록 카테고리(오늘의 기록 바 순서). 육아앱식 빠른 로깅 대상. */
+/** 전체 카테고리 (그룹 순서대로 평탄화) — 신규 기록 입력 선택지 */
+export const RECORD_CATEGORIES: RecordCategory[] = CATEGORY_GROUPS.flatMap(g => g.categories)
+
+/** 원탭으로 "지금" 남기는 생활기록 카테고리. 시간순 타임라인으로 다루는(예정/반복이 아닌) 대상. */
 export const DAILY_LOG_CATEGORIES: RecordCategory[] = [
-  '식사', '간식', '물', '소변', '대변', '투약', '증상',
+  '식사', '간식', '물', '배변', '투약',
 ]
 
 /** 생활기록 여부 — 일정(예정/반복) 대신 시간순 타임라인으로 다루는 카테고리 */
@@ -47,6 +51,9 @@ export type CategoryConfig = {
   /** 공통 title 입력의 라벨/플레이스홀더 */
   titleLabel: string
   titlePlaceholder: string
+  /** title 을 자유 입력 대신 정해진 보기에서 고르게 할 때의 선택지(예: 배변 → 소변/대변/둘다).
+   *  상세 테이블 없이 title 컬럼에 그대로 저장한다. */
+  titleOptions?: string[]
   /** 상세 테이블의 입력 필드(없으면 빈 배열) */
   fields: DetailField[]
 }
@@ -95,9 +102,11 @@ export const CATEGORY_CONFIG: Record<RecordCategory, CategoryConfig> = {
     ],
   },
   물: { titleLabel: '메모', titlePlaceholder: '예: 평소량 / 적게 마심 (선택)', fields: [] },
+  배변: { titleLabel: '배변 종류', titleOptions: ['소변', '대변', '둘다'], titlePlaceholder: '', fields: [] },
+  투약: { titleLabel: '약 이름', titlePlaceholder: '예: 심장약, 관절영양제 (선택)', fields: [] },
+  기타: { titleLabel: '항목명', titlePlaceholder: '항목명', fields: [] },
+  // ── 레거시(신규 선택지에서 제외, 과거 데이터 호환용) ──
   소변: { titleLabel: '상태 · 메모', titlePlaceholder: '예: 정상 / 자주 / 색 진함 (선택)', fields: [] },
   대변: { titleLabel: '상태 · 메모', titlePlaceholder: '예: 정상 / 무름 / 설사 / 혈변 (선택)', fields: [] },
-  투약: { titleLabel: '약 이름', titlePlaceholder: '예: 심장약, 관절영양제 (선택)', fields: [] },
   증상: { titleLabel: '증상', titlePlaceholder: '예: 구토 2회, 기침, 다리 절뚝 (선택)', fields: [] },
-  기타: { titleLabel: '항목명', titlePlaceholder: '항목명', fields: [] },
 }

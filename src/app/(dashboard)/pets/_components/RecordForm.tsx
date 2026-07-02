@@ -11,7 +11,7 @@ import { PlacePicker, type PlaceValue } from '@/components/ui/PlacePicker'
 import { FilterScroller } from '@/components/ui/FilterScroller'
 import { RecordDateTime } from './RecordDateTime'
 import { deleteImageByUrl } from '@/lib/upload'
-import { RECORD_CATEGORIES, CATEGORY_CONFIG, DETAIL_TABLE, DAILY_LOG_SET, defaultRecordTitle } from '@/lib/records'
+import { CATEGORY_GROUPS, CATEGORY_CONFIG, DETAIL_TABLE, DAILY_LOG_SET, defaultRecordTitle } from '@/lib/records'
 import {
   type RecurRule, type Weekday, type WeekOrdinal,
   WEEKDAY_LABELS, WEEK_ORDINAL_LABELS,
@@ -74,6 +74,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const [existingPhotos] = useState<string[]>(initialPhotos)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [detail, setDetail] = useState<Record<string, string>>({})
+  // 편집 시 상세 테이블 로드 완료 여부. 로드 전 저장하면 기존 상세가 빈 값으로 덮어써지므로 막는다.
+  const [detailLoaded, setDetailLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -120,15 +122,19 @@ export const RecordForm = forwardRef<RecordFormHandle, {
 
   // 편집 시 상세 테이블 값 로드
   useEffect(() => {
-    if (!record) return
+    // 신규 작성이거나 상세 테이블이 없는 카테고리는 로드할 것이 없으므로 바로 완료 처리
+    if (!record) { setDetailLoaded(true); return }
     const table = DETAIL_TABLE[record.category]
-    if (!table) return
+    if (!table) { setDetailLoaded(true); return }
     let cancelled = false
     supabase.from(table).select('*').eq('record_id', record.id).maybeSingle().then(({ data }) => {
-      if (cancelled || !data) return
-      const d: Record<string, string> = {}
-      Object.entries(data).forEach(([k, v]) => { if (k !== 'record_id') d[k] = (v as string) ?? '' })
-      setDetail(d)
+      if (cancelled) return
+      if (data) {
+        const d: Record<string, string> = {}
+        Object.entries(data).forEach(([k, v]) => { if (k !== 'record_id') d[k] = (v as string) ?? '' })
+        setDetail(d)
+      }
+      setDetailLoaded(true)
     })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,6 +143,16 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const toggleWeekday = (w: Weekday) =>
     setByweekday(ws => ws.includes(w) ? ws.filter(x => x !== w) : [...ws, w])
 
+  // 카테고리 전환 시 상세를 초기화하고, 제목이 '보기 선택형'(예: 배변→소변/대변/둘다)인 경우
+  // 기본 보기를 선택해 둔다. 반대로 선택형에서 벗어나면 이전에 채워진 보기값을 비운다.
+  const selectCategory = (c: RecordCategory) => {
+    const opts = CATEGORY_CONFIG[c].titleOptions
+    if (opts) { if (!opts.includes(title)) setTitle(opts[0]) }
+    else if (CATEGORY_CONFIG[category].titleOptions) setTitle('')
+    setCategory(c)
+    setDetail({})
+  }
+
   const isDailyLog = DAILY_LOG_SET.has(category)
 
   // 저장 상태 갱신을 외부(헤더 저장 버튼)에도 반영
@@ -144,6 +160,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
 
   const submit = async () => {
     if (saving) return // 중복 저장 방지(헤더/하단 버튼 동시 트리거 대비)
+    // 상세 로드 전 저장하면 진료/미용/식사 상세가 빈 값으로 덮어써진다 → 로드 완료까지 대기
+    if (!detailLoaded) return
     if (!effectivePetId) { setError(t('errNoPet')); return }
     if (!recurOn && manualDue && manualDue < eventOn) { setError(t('errDueAfter')); return }
     setSavingState(true); setError(null)
@@ -196,8 +214,14 @@ export const RecordForm = forwardRef<RecordFormHandle, {
     if (editing) existingPhotos.filter(u => !photoUrls.includes(u)).forEach(deleteImageByUrl)
 
     setSavingState(false)
+    // 홈 타임라인·피드·오늘 기록까지 즉시 갱신 (QuickLogBar 와 동일한 무효화 세트)
     qc.invalidateQueries({ queryKey: ['records', effectivePetId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    qc.invalidateQueries({ queryKey: ['today-log', effectivePetId] })
+    qc.invalidateQueries({ queryKey: ['today-timeline', effectivePetId] })
+    qc.invalidateQueries({ queryKey: ['today-timeline', null] })
+    qc.invalidateQueries({ queryKey: ['record-feed', effectivePetId] })
+    qc.invalidateQueries({ queryKey: ['record-feed', null] })
     onDone()
   }
 
@@ -232,23 +256,43 @@ export const RecordForm = forwardRef<RecordFormHandle, {
         </div>
       )}
 
-      {/* 카테고리 — 좌우 드래그(가로 스크롤)로 선택해 세로 공간 절약 */}
-      <FilterScroller>
-        {RECORD_CATEGORIES.map(c => (
-          <button key={c} type="button" onClick={() => { setCategory(c); setDetail({}) }}
-            className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-              category === c ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
-            }`}>
-            {careCategoryIcon(c)} {c}
-          </button>
+      {/* 카테고리 — 생활관리 / 건강관리 그룹별로, 좌우 드래그(가로 스크롤)로 선택 */}
+      <div className="space-y-1.5">
+        {CATEGORY_GROUPS.map(g => (
+          <div key={g.key}>
+            <p className="text-[11px] font-semibold text-gray-400 mb-1">{g.label}</p>
+            <FilterScroller>
+              {g.categories.map(c => (
+                <button key={c} type="button" onClick={() => selectCategory(c)}
+                  className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    category === c ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {careCategoryIcon(c)} {c}
+                </button>
+              ))}
+            </FilterScroller>
+          </div>
         ))}
-      </FilterScroller>
+      </div>
 
-      {/* 제목 */}
+      {/* 제목 — 배변처럼 정해진 보기가 있으면 칩 선택, 아니면 자유 입력 */}
       <div>
         <label className="text-xs text-gray-500 block mb-0.5">{config.titleLabel}</label>
-        <input className="input" placeholder={config.titlePlaceholder}
-          value={title} onChange={e => setTitle(e.target.value)} />
+        {config.titleOptions ? (
+          <div className="flex gap-1.5">
+            {config.titleOptions.map(opt => (
+              <button key={opt} type="button" onClick={() => setTitle(opt)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                  title === opt ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                }`}>
+                {opt}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <input className="input" placeholder={config.titlePlaceholder}
+            value={title} onChange={e => setTitle(e.target.value)} />
+        )}
       </div>
 
       {/* 날짜·시간 (생활기록은 시:분 + 빠른 ±버튼) */}

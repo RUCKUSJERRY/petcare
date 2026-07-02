@@ -314,12 +314,13 @@ export function careCategoryIcon(category: string): string {
     진료:       '🏥',
     식사:       '🍚',
     간식:       '🦴',
+    물:         '🥤',
+    배변:       '🚽',
+    투약:       '💊',
+    기타:       '📋',
     소변:       '💧',
     대변:       '💩',
-    물:         '🥤',
-    투약:       '💊',
     증상:       '🤒',
-    기타:       '📋',
   }[category] ?? '📋'
 }
 

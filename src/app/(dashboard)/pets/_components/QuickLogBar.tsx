@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { careCategoryIcon, todayKST } from '@/lib/utils'
-import { DAILY_LOG_CATEGORIES } from '@/lib/records'
+import { CATEGORY_GROUPS, CATEGORY_CONFIG } from '@/lib/records'
 import type { RecordCategory } from '@/types'
 
 type TodayLog = { id: string; category: string; event_at: string | null }
@@ -41,6 +41,8 @@ export function QuickLogBar({
   const [notice, setNotice] = useState(false)
   const [undoErr, setUndoErr] = useState(false)
   const [busy, setBusy] = useState<RecordCategory | null>(null)
+  // 배변처럼 세부 종류를 골라야 하는 카테고리를 탭하면, 즉시 저장 대신 보기를 펼친다.
+  const [subFor, setSubFor] = useState<RecordCategory | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
@@ -54,7 +56,6 @@ export function QuickLogBar({
         .select('id, category, event_at')
         .eq('pet_id', petId!)
         .eq('event_on', todayKST())
-        .in('category', DAILY_LOG_CATEGORIES)
         .order('event_at', { ascending: false })
       return (data ?? []) as TodayLog[]
     },
@@ -82,22 +83,34 @@ export function QuickLogBar({
     timer.current = setTimeout(() => setToast(null), 4000)
   }
 
-  const log = async (cat: RecordCategory) => {
+  const log = async (cat: RecordCategory, title?: string) => {
     if (!petId) { setNotice(true); return }
     setNotice(false)
+    setSubFor(null)
     setBusy(cat)
     const now = new Date()
+    const label = title ?? cat
     const { data, error } = await supabase
       .from('records')
-      .insert({ pet_id: petId, category: cat, title: cat, event_on: todayKST(), event_at: now.toISOString() })
+      .insert({ pet_id: petId, category: cat, title: label, event_on: todayKST(), event_at: now.toISOString() })
       .select('id')
       .single()
     setBusy(null)
     if (error || !data) return
     setUndoErr(false)
-    showToast(data.id as string, cat, hhmm(now.toISOString()))
+    showToast(data.id as string, label, hhmm(now.toISOString()))
     invalidate()
     onLogged?.()
+  }
+
+  // 탭 처리: 세부 보기(배변)가 있으면 펼치고, 없으면 지금 시각으로 즉시 기록한다.
+  const handleTap = (cat: RecordCategory) => {
+    if (!petId) { setNotice(true); return }
+    if (CATEGORY_CONFIG[cat].titleOptions) {
+      setSubFor(prev => (prev === cat ? null : cat))
+      return
+    }
+    log(cat)
   }
 
   const undo = async () => {
@@ -126,33 +139,64 @@ export function QuickLogBar({
 
   return (
     <div>
-      {/* 원탭 칩 — 가로 스크롤(커뮤니티 필터식). 좌우로 밀어 더 많은 항목 선택 */}
-      <div className="relative">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 snap-x">
-          {DAILY_LOG_CATEGORIES.map(cat => {
-            const s = stat.get(cat)
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => log(cat)}
-                disabled={busy === cat}
-                className={`relative w-[58px] shrink-0 snap-start flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 transition-colors disabled:opacity-60 ${chipBase}`}
-              >
-                {s && s.count > 0 && (
-                  <span className={`absolute top-0.5 right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[10px] font-bold leading-[15px] ${badgeCls}`}>
-                    {s.count}
-                  </span>
-                )}
-                <span className="text-lg leading-none" aria-hidden>{careCategoryIcon(cat)}</span>
-                <span className="text-[11px] font-medium">{cat}</span>
-              </button>
-            )
-          })}
-        </div>
-        {/* 오른쪽에 더 있다는 페이드 힌트 */}
-        <div className={`pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l ${fadeFrom} to-transparent`} />
+      {/* 원탭 칩 — 생활관리 / 건강관리 그룹별로, 일반 기록 폼과 같은 작은 가로 칩 스타일.
+          좌우로 밀어 더 많은 항목 선택(오른쪽 페이드로 암시). */}
+      <div className="space-y-1.5">
+        {CATEGORY_GROUPS.map(g => (
+          <div key={g.key}>
+            <p className={`text-[11px] font-semibold mb-1 ${onP ? 'text-white/70' : 'text-gray-400'}`}>{g.label}</p>
+            <div className="relative">
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 snap-x">
+                {g.categories.map(cat => {
+                  const s = stat.get(cat)
+                  const active = subFor === cat
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => handleTap(cat)}
+                      disabled={busy === cat}
+                      className={`relative shrink-0 snap-start whitespace-nowrap flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${
+                        active ? (onP ? 'bg-white text-primary-600' : 'bg-primary-500 text-white border border-primary-500') : chipBase
+                      }`}
+                    >
+                      <span aria-hidden>{careCategoryIcon(cat)}</span>
+                      <span>{cat}</span>
+                      {s && s.count > 0 && (
+                        <span className={`ml-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[10px] font-bold leading-[15px] ${badgeCls}`}>
+                          {s.count}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              {/* 오른쪽에 더 있다는 페이드 힌트 */}
+              <div className={`pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l ${fadeFrom} to-transparent`} />
+            </div>
+          </div>
+        ))}
       </div>
+
+      {/* 배변 등 세부 종류 선택 — 탭하면 소변/대변/둘다 중 골라 저장 */}
+      {subFor && CATEGORY_CONFIG[subFor].titleOptions && (
+        <div className={`mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-2 ${onP ? 'bg-white/15' : 'bg-gray-50 border border-gray-100'}`}>
+          <span className={`text-xs font-medium shrink-0 ${onP ? 'text-white/90' : 'text-gray-500'}`} aria-hidden>
+            {careCategoryIcon(subFor)} {subFor}
+          </span>
+          {CATEGORY_CONFIG[subFor].titleOptions!.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => log(subFor, opt)}
+              disabled={busy === subFor}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors disabled:opacity-60 ${onP ? 'bg-white text-primary-600' : 'bg-primary-500 text-white'}`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
 
       {notice && (
         <p className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('needPet')}</p>
