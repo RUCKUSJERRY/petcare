@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -296,6 +297,11 @@ export default function SchedulePage() {
                       📷 {t('addScan')}
                     </button>
                     <div className="my-1 border-t border-gray-100" />
+                    {/* 기록의 비용을 모아 보는 케어 비용 화면으로 진입 (선택 아이는 공용 컨텍스트로 유지) */}
+                    <Link role="menuitem" href="/costs" onClick={() => setMenuOpen(false)}
+                      className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      🧾 {t('costs')}
+                    </Link>
                     <button role="menuitem" onClick={exportRecords} disabled={exporting}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
                       📄 {exporting ? t('exporting') : t('exportRecords')}
