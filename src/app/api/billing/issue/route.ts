@@ -77,11 +77,11 @@ export async function POST(req: Request) {
       current_period_end: periodEnd.toISOString(),
       canceled_at: null,
     }, { onConflict: 'user_id' })
-    if (subErr) throw new Error(subErr.message)
-
     // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
-    // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
-    // (정기결제 갱신 경로 /api/billing/renew 와 동일한 가시화 원칙)
+    // 만든다. subscriptions 기록 실패라도 throw 하지 말 것 — throw 하면 아래 payments 기록
+    // 조차 남지 않아, 사용자가 재시도할 때 (중복 가드가 보는) subscriptions 행이 없어 그대로
+    // 통과 → 이중청구로 이어진다. 대신 renew 경로와 동일하게 로그로만 남겨 운영자가 수동
+    // 복구하게 한다. (돈은 빠졌는데 권한 미반영 가시화 원칙)
     const { error: payErr } = await admin.from('payments').insert({
       user_id: user.id,
       order_id: charge.orderId,
@@ -97,10 +97,10 @@ export async function POST(req: Request) {
       .update({ plan: 'premium', premium_until: periodEnd.toISOString() })
       .eq('id', user.id)
 
-    if (payErr || profErr) {
+    if (subErr || payErr || profErr) {
       console.error('[billing/issue] charged but DB update failed', user.id, {
         orderId: charge.orderId, paymentKey: charge.paymentKey,
-        payErr: payErr?.message, profErr: profErr?.message,
+        subErr: subErr?.message, payErr: payErr?.message, profErr: profErr?.message,
       })
     }
 

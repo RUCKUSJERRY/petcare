@@ -57,11 +57,14 @@ export async function notifyNewComment(commentId: string): Promise<void> {
 
   const { data: c } = await supabase
     .from('comments')
-    .select('post_id, parent_id, content')
+    .select('post_id, parent_id, content, user_id')
     .eq('id', commentId)
     .maybeSingle()
-  const comment = c as { post_id: string; parent_id: string | null; content: string } | null
+  const comment = c as { post_id: string; parent_id: string | null; content: string; user_id: string } | null
   if (!comment) return
+  // 호출자가 실제 이 댓글의 작성자일 때만 푸시한다. (임의 commentId 로 남에게
+  // 푸시를 반복 발송하는 스팸 방지 — 정상 흐름은 저장 직후 본인 댓글 id 로 호출)
+  if (comment.user_id !== user.id) return
 
   let recipientId: string | null = null
   let isReply = false
