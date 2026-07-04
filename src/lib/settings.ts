@@ -23,3 +23,11 @@ export async function getPremiumPriceServer(client: SupabaseClient): Promise<num
   const n = raw ? parseInt(raw.replace(/[^0-9]/g, ''), 10) : NaN
   return Number.isFinite(n) && n > 0 ? n : priceFromEnv()
 }
+
+/** 무료 사용자의 월 AI(OCR) 인식 무료 제공 횟수. 관리자가 app_settings 로 조정. */
+export const DEFAULT_FREE_OCR_MONTHLY = 5
+export async function getFreeOcrMonthlyServer(client: SupabaseClient): Promise<number> {
+  const raw = await getAppSetting(client, 'free_ocr_monthly')
+  const n = raw != null ? parseInt(raw.replace(/[^0-9]/g, ''), 10) : NaN
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_FREE_OCR_MONTHLY
+}

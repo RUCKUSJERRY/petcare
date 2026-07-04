@@ -125,16 +125,16 @@ export default function PremiumPage() {
 
   const benefits: { icon: string; key: string; ready: boolean }[] = [
     { icon: '🚫', key: 'noAds', ready: true },
-    { icon: '📊', key: 'reports', ready: false },
-    { icon: '🧾', key: 'ocr', ready: false },
+    { icon: '📊', key: 'reports', ready: true },
+    { icon: '🧾', key: 'ocr', ready: true },
     { icon: '👨‍👩‍👧', key: 'family', ready: false },
   ]
 
   // 무료 vs 프리미엄 비교 — 전환 의도를 명확히 하기 위한 표
   const compareRows: { key: string; free: string; premium: string; ready: boolean }[] = [
     { key: 'noAds', free: t('compareAdsFree'), premium: t('compareAdsPremium'), ready: true },
-    { key: 'ocr', free: t('compareOcrFree'), premium: t('compareOcrPremium'), ready: false },
-    { key: 'reports', free: t('compareReportsFree'), premium: t('compareReportsPremium'), ready: false },
+    { key: 'ocr', free: t('compareOcrFree'), premium: t('compareOcrPremium'), ready: true },
+    { key: 'reports', free: t('compareReportsFree'), premium: t('compareReportsPremium'), ready: true },
     { key: 'family', free: t('compareFamilyFree'), premium: t('compareFamilyPremium'), ready: false },
   ]
 

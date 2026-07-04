@@ -17,6 +17,7 @@ import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
 import { QuickLogBar } from '../pets/_components/QuickLogBar'
 import { TodayTimeline } from '../pets/_components/TodayTimeline'
 import { buildRecordsHtml, openPrintWindow, type ExportRecord } from '@/lib/exportRecords'
+import { usePlan } from '@/hooks/usePlan'
 import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 import { useTranslations } from 'next-intl'
 import type { RecordCategory } from '@/types'
@@ -53,6 +54,7 @@ export default function SchedulePage() {
   const tc = useTranslations('common')
   const tq = useTranslations('quickLog')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
+  const { isPremium } = usePlan()
   const [view, setView] = useState<View>('calendar')
   const [showAdd, setShowAdd] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -188,7 +190,8 @@ export default function SchedulePage() {
         }))
       }
       const heading = selectedName ? t('exportHeadingPet', { name: selectedName }) : t('exportHeadingAll')
-      const ok = openPrintWindow(buildRecordsHtml(heading, rows))
+      // 프리미엄은 워터마크 없는 제출용 문서, 무료는 워터마크 포함(유료 가치 차등)
+      const ok = openPrintWindow(buildRecordsHtml(heading, rows, { watermark: !isPremium }))
       if (!ok) alert(t('exportPopupBlocked'))
     } finally {
       setExporting(false)

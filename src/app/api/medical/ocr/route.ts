@@ -1,4 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { isUserPremiumServer } from '@/lib/plan'
+import { getFreeOcrMonthlyServer } from '@/lib/settings'
+import { todayKST } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -128,8 +131,37 @@ export async function POST(req: Request) {
       { status: 429 }
     )
   }
-  // 이번 호출 이후 남는 AI 인식 횟수(이번 호출 1건 차감)
-  const remaining = Math.max(0, OCR_HOURLY_LIMIT - used - 1)
+  // 이번 호출 이후 남는 AI 인식 횟수(이번 호출 1건 차감) — 기본은 시간당 한도 기준
+  let remaining = Math.max(0, OCR_HOURLY_LIMIT - used - 1)
+
+  // 무료 사용자는 월 무료 제공 횟수까지만 AI 인식. 초과 시 프리미엄 안내와 함께
+  // 클라이언트의 무료 인식(브라우저 Tesseract)으로 폴백한다. (기능을 막지 않고 등급화)
+  const premium = await isUserPremiumServer(supabase, user.id)
+  if (!premium) {
+    const monthLimit = await getFreeOcrMonthlyServer(supabase)
+    const monthStart = `${todayKST().slice(0, 8)}01T00:00:00+09:00` // 이달 1일 0시(KST)
+    const { count: monthCount } = await supabase
+      .from('ai_usage')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('kind', 'ocr')
+      .gte('created_at', monthStart)
+    const monthUsed = monthCount ?? 0
+    if (monthUsed >= monthLimit) {
+      return NextResponse.json(
+        {
+          error: 'free_limit_reached',
+          message: `이번 달 무료 AI 인식(${monthLimit}회)을 모두 썼어요. 프리미엄이면 무제한이에요. 지금은 무료 인식으로 대체할게요.`,
+          limit: monthLimit,
+          remaining: 0,
+          upsell: 'premium',
+        },
+        { status: 429 }
+      )
+    }
+    // 무료 사용자에겐 "이번 호출 이후 이달 남은 무료 횟수"를 안내값으로 쓴다(더 체감되는 기준).
+    remaining = Math.min(remaining, Math.max(0, monthLimit - monthUsed - 1))
+  }
 
   let imageUrl: string | undefined
   try {

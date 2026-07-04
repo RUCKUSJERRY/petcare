@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-07-02T08:10:08.257Z
+--  생성 시각: 2026-07-04T00:11:33.112Z
 -- =============================================================
 
 
@@ -1497,7 +1497,8 @@ insert into public.app_settings (key, value) values
   ('ads_enabled', 'true'),
   ('ad_cooldown_min', '3'),
   ('upsell_dismiss_min', '1440'),
-  ('banner_dismiss_min', '1440')
+  ('banner_dismiss_min', '1440'),
+  ('free_ocr_monthly', '5')
 on conflict (key) do nothing;
 
 -- ── 02.7_data/breed_food_rules.sql ──

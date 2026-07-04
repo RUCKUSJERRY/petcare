@@ -789,7 +789,7 @@
     "tesseractRunning": "🔍 무료 OCR로 인식 중… (잠시 걸릴 수 있어요)",
     "tesseractNotice": "AI 인식이 어려워 무료 OCR로 날짜·금액만 채웠어요. 항목을 확인·보정해주세요.",
     "ocrLimitReached": "AI 인식 한도를 모두 사용했어요(시간당 30회). 무료 인식으로 대체할게요.",
-    "ocrRemainingLow": "AI 인식 {n}회 남았어요 (시간당 30회). 한도 초과 시 무료 인식으로 대체돼요.",
+    "ocrRemainingLow": "AI 인식 {n}회 남았어요. 소진 후엔 무료 인식으로 대체돼요.",
     "pickCamera": "📷 촬영",
     "pickGallery": "🖼️ 갤러리"
   },
@@ -945,17 +945,17 @@
     "cancelConfirm": "구독을 해지할까요? 현재 결제 주기 끝까지는 계속 이용할 수 있어요.",
     "cancelDone": "구독이 해지됐어요. 남은 기간까지는 그대로 이용할 수 있어요.",
     "pastDue": "최근 자동 결제가 실패했어요. 결제수단을 다시 등록해주세요.",
-    "disclaimer": "테스트 결제 환경입니다. 실제 청구는 정식 오픈(가맹 계약) 후 적용됩니다. 광고 제거 외 혜택은 순차 제공될 예정이에요.",
+    "disclaimer": "테스트 결제 환경입니다. 실제 청구는 정식 오픈(가맹 계약) 후 적용됩니다. 가족 공유 확대는 순차 제공될 예정이에요.",
     "compareTitle": "무료와 무엇이 다른가요?",
     "compareFree": "무료",
     "comparePremium": "프리미엄",
     "compareSoon": "준비 중",
     "compareAdsFree": "표시",
     "compareAdsPremium": "제거",
-    "compareOcrFree": "시간당 30회",
+    "compareOcrFree": "월 5회 + 무료 인식",
     "compareOcrPremium": "무제한",
-    "compareReportsFree": "기본 통계",
-    "compareReportsPremium": "PDF 리포트",
+    "compareReportsFree": "워터마크 포함",
+    "compareReportsPremium": "워터마크 없이",
     "compareFamilyFree": "기본 인원",
     "compareFamilyPremium": "확대",
     "benefit": {
@@ -964,12 +964,12 @@
         "desc": "산책 시작 등에서 전면 광고가 표시되지 않아요"
       },
       "reports": {
-        "title": "고급 케어 리포트",
-        "desc": "비용·건강·체중 추세를 PDF로 정리"
+        "title": "제출용 PDF 리포트",
+        "desc": "병원·호텔·미용 제출용 기록을 워터마크 없이 발행"
       },
       "ocr": {
         "title": "무제한 영수증 스캔",
-        "desc": "AI 영수증·이력서 인식을 제한 없이"
+        "desc": "AI 영수증·이력서 인식을 제한 없이 (무료는 월 5회)"
       },
       "family": {
         "title": "가족 공유 확대",

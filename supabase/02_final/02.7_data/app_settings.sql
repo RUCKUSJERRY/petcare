@@ -4,5 +4,6 @@ insert into public.app_settings (key, value) values
   ('ads_enabled', 'true'),
   ('ad_cooldown_min', '3'),
   ('upsell_dismiss_min', '1440'),
-  ('banner_dismiss_min', '1440')
+  ('banner_dismiss_min', '1440'),
+  ('free_ocr_monthly', '5')
 on conflict (key) do nothing;

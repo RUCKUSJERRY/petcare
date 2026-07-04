@@ -19,10 +19,17 @@ const esc = (s: string) =>
 
 const won = (n: number) => n.toLocaleString('ko-KR') + '원'
 
-/** 기록 배열 → 인쇄용 HTML 문서 문자열 */
-export function buildRecordsHtml(heading: string, rows: ExportRecord[]): string {
+/** 기록 배열 → 인쇄용 HTML 문서 문자열.
+ *  opts.watermark=true 면(무료 사용자) 대각선 워터마크 + 하단 안내를 넣는다.
+ *  프리미엄은 워터마크 없는 깔끔한 문서로 발행(병원·호텔·미용 제출용 유료 가치). */
+export function buildRecordsHtml(
+  heading: string,
+  rows: ExportRecord[],
+  opts: { watermark?: boolean } = {},
+): string {
   const today = todayKST()
   const totalCost = rows.reduce((sum, r) => sum + (r.cost ?? 0), 0)
+  const watermark = opts.watermark === true
 
   const body = rows.length === 0
     ? `<p class="empty">내보낼 기록이 없습니다.</p>`
@@ -67,10 +74,16 @@ export function buildRecordsHtml(heading: string, rows: ExportRecord[]): string 
   .empty { color: #9ca3af; text-align: center; padding: 40px 0; }
   .actions { margin-bottom: 16px; }
   .btn { background: #2d8a42; color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
-  @media print { .actions { display: none; } body { padding: 0; } }
+  .wm { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background-image: repeating-linear-gradient(-45deg, transparent 0 120px, rgba(45,138,66,0.06) 120px 121px);
+        display: flex; align-items: center; justify-content: center; }
+  .wm span { font-size: 40px; font-weight: 800; color: rgba(45,138,66,0.10); transform: rotate(-24deg); white-space: nowrap; }
+  .foot { margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; }
+  @media print { .actions { display: none; } body { padding: 0; } .wm { position: fixed; } }
 </style>
 </head>
 <body>
+  ${watermark ? `<div class="wm"><span>펫케어 무료 · PETCARE</span></div>` : ''}
   <div class="actions"><button class="btn" onclick="window.print()">인쇄 / PDF 저장</button></div>
   <div class="head">
     <h1>🐾 ${esc(heading)}</h1>
@@ -78,6 +91,7 @@ export function buildRecordsHtml(heading: string, rows: ExportRecord[]): string 
   </div>
   <p class="count">총 ${rows.length}건</p>
   ${body}
+  ${watermark ? `<p class="foot">본 문서는 펫케어 무료 버전으로 발행되어 배경 워터마크가 포함됩니다. 프리미엄에서는 워터마크 없이 제출용으로 발행할 수 있어요.</p>` : ''}
   <script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
 </body>
 </html>`
