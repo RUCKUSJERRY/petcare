@@ -63,7 +63,7 @@ export function RecordDateTime({
         {QUICK_STEPS.map(q => (
           <button
             key={q.label} type="button" onClick={() => bump(q.delta)}
-            className="py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+            className="py-2.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 active:bg-gray-100"
           >
             {q.label}
           </button>

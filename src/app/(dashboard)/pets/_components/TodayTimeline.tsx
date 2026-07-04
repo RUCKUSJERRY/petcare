@@ -44,7 +44,7 @@ export function TodayTimeline({
   const supabase = createClient()
   const onP = tone === 'onPrimary'
 
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isPending } = useQuery({
     queryKey: ['today-timeline', petId],
     queryFn: async () => {
       let q = supabase
@@ -57,6 +57,13 @@ export function TodayTimeline({
       return (data ?? []) as unknown as Row[]
     },
   })
+
+  // 첫 로딩 중에는 빈 상태("오늘은 아직 기록이 없어요") 대신 조용히 비워둔다 —
+  // 캐시 미스마다 "기록 없음"이 번쩍여 사용자가 중복 기록하거나 저장 실패로 오인하는 것을 막는다.
+  if (isPending) {
+    if (onP) return <div className="h-6" aria-hidden />
+    return <div className="card h-24 animate-pulse bg-gray-50" aria-hidden />
+  }
 
   if (rows.length === 0) {
     // 홈 인라인(onPrimary)에서는 카드가 커지지 않게 한 줄 힌트만

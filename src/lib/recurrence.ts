@@ -44,7 +44,14 @@ export function parseRule(s: string | null | undefined): RecurRule | null {
   if (!s) return null
   try {
     const r = JSON.parse(s)
-    if (r && typeof r === 'object' && typeof r.freq === 'string' && typeof r.interval === 'number') return r as RecurRule
+    if (!r || typeof r !== 'object') return null
+    if (typeof r.freq !== 'string' || typeof r.interval !== 'number') return null
+    // interval 은 1 이상이어야 한다. 0/음수/NaN 이면 matches 의 나머지 연산이 NaN 이 되어
+    // 어떤 날짜에도 매칭되지 않고, nextOccurrence 가 상한까지 헛돌다 null → 일정이 사라진다.
+    if (!Number.isFinite(r.interval) || r.interval < 1) return null
+    // 주간 규칙은 요일이 하나 이상 선택돼야 유효하다(빈 배열이면 영구히 매칭 안 됨).
+    if (r.freq === 'week' && (!Array.isArray(r.byweekday) || r.byweekday.length === 0)) return null
+    return r as RecurRule
   } catch { /* noop */ }
   return null
 }
@@ -85,10 +92,18 @@ function matches(rule: RecurRule, base: Date, d: Date): boolean {
   }
 }
 
-/** base(시작일) 기준, after 이후(미포함)의 첫 발생일. 최대 800일 탐색. */
+/** base(시작일) 기준, after 이후(미포함)의 첫 발생일.
+ *  탐색 상한은 규칙 주기를 두 번 덮을 만큼 동적으로 잡는다 — 고정 800일이면
+ *  '3년마다'(≈1096일)·긴 간격 월간 규칙의 다음 발생일이 상한을 넘겨 null 로 사라졌다. */
 export function nextOccurrence(rule: RecurRule, base: Date, after: Date): Date | null {
   const d = new Date(Math.max(after.getTime(), base.getTime() - DAY))
-  for (let i = 0; i < 800; i++) {
+  const span =
+    rule.freq === 'year' ? 366 * (rule.interval * 2 + 1)
+    : rule.freq === 'month' ? 31 * (rule.interval * 2 + 2)
+    : rule.freq === 'week' ? 7 * (rule.interval * 2) + 14
+    : rule.interval * 2 + 2
+  const maxDays = Math.max(800, span)
+  for (let i = 0; i < maxDays; i++) {
     d.setDate(d.getDate() + 1)
     if (matches(rule, base, d)) return new Date(d)
   }

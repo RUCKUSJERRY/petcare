@@ -36,6 +36,8 @@ export default async function DashboardPage() {
       .select('id, pet_id, category, title, event_on, next_due_on, recur_rule')
       .in('pet_id', petIds)
       .order('event_on', { ascending: false })
+      // 같은 날짜 동점 시 '최신 기록' 선택을 결정적으로 — 일정 화면과 동일 규칙(computeUpcoming)
+      .order('created_at', { ascending: false })
 
     vaccAlerts = computeUpcoming((data ?? []) as ScheduleRow[], todayStr)
       .filter(u => u.next_due_on <= soon)

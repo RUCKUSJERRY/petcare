@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nextOccurrence, activeNextDue, describeRule, parseYMD, ymd, type RecurRule } from './recurrence'
+import { nextOccurrence, activeNextDue, describeRule, parseRule, parseYMD, ymd, type RecurRule } from './recurrence'
 
 const next = (rule: RecurRule, base: string, after: string) => {
   const d = nextOccurrence(rule, parseYMD(base), parseYMD(after))
@@ -31,6 +31,32 @@ describe('nextOccurrence', () => {
   it('매년', () => {
     const r: RecurRule = { freq: 'year', interval: 1 }
     expect(next(r, '2025-03-10', '2025-06-01')).toBe('2026-03-10')
+  })
+  it('3년마다 — 800일 상한을 넘는 다음 발생일도 놓치지 않는다', () => {
+    // 회귀: 고정 800일 탐색이면 ≈1096일 뒤의 발생일이 null 로 사라졌다.
+    const r: RecurRule = { freq: 'year', interval: 3 }
+    expect(next(r, '2025-03-10', '2025-03-10')).toBe('2028-03-10')
+  })
+  it('간격이 큰 월간 규칙(24개월마다)도 다음 발생일을 찾는다', () => {
+    const r: RecurRule = { freq: 'month', interval: 24, mode: 'dom' }
+    expect(next(r, '2025-01-15', '2025-01-15')).toBe('2027-01-15')
+  })
+})
+
+describe('parseRule (유효성)', () => {
+  it('정상 규칙은 파싱된다', () => {
+    expect(parseRule(JSON.stringify({ freq: 'day', interval: 2 }))).toEqual({ freq: 'day', interval: 2 })
+  })
+  it('interval<=0 은 거부 (일정이 영구히 사라지는 것 방지)', () => {
+    expect(parseRule(JSON.stringify({ freq: 'day', interval: 0 }))).toBeNull()
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: -1, mode: 'dom' }))).toBeNull()
+  })
+  it('요일이 비어 있는 주간 규칙은 거부', () => {
+    expect(parseRule(JSON.stringify({ freq: 'week', interval: 1, byweekday: [] }))).toBeNull()
+  })
+  it('빈 값·깨진 JSON 은 null', () => {
+    expect(parseRule(null)).toBeNull()
+    expect(parseRule('not json')).toBeNull()
   })
 })
 

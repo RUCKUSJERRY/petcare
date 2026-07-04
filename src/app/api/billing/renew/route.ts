@@ -66,15 +66,25 @@ export async function GET(req: Request) {
       } else {
         const msg = err instanceof TossError ? `${err.code}:${err.message}` : String(err)
         console.error('[billing/renew] charge failed', s.user_id, msg)
-        await admin.from('subscriptions').update({ status: 'past_due' }).eq('user_id', s.user_id)
+        // 토스가 코드와 함께 명시적으로 거절한 경우(카드 한도·정지·유효기간 만료 등 실제 실패)에만
+        // past_due 로 내린다. 네트워크/타임아웃/5xx 처럼 code 없는 일시적 오류는 구독을 active 로
+        // 두어 다음날 크론이 재시도하게 한다 — 토스 일시 장애로 유효한 카드가 대량 해지되어
+        // premium_until 경과로 조용히 만료되는 사고를 막는다. (active 이지만 premium_until 이
+        // 지나면 자연 만료되고, 다음 크론이 같은 주기를 재청구한다.)
+        const definiteDecline = err instanceof TossError && !!err.code
+        if (definiteDecline) {
+          await admin.from('subscriptions').update({ status: 'past_due' }).eq('user_id', s.user_id)
+        }
         failed++
         continue
       }
     }
 
-    // 만료일이 과거여도 끊김 없이 이어지도록 기존 만료일 기준으로 1개월 연장
-    const base = new Date(s.current_period_end) > now ? new Date(s.current_period_end) : now
-    const newEnd = addOneMonth(base)
+    // 기존 만료일 기준으로 1개월 연장 → 크론이 몇 시간·하루 늦게 돌아도 결제 주기(청구 기준일)가
+    // 밀리지 않는다(주기 드리프트 방지). 다만 장기 미청구 등으로 연장분이 여전히 과거면 최소
+    // '지금+1개월'로 잡아 프리미엄이 곧바로 유효하도록 한다.
+    let newEnd = addOneMonth(new Date(s.current_period_end))
+    if (newEnd <= now) newEnd = addOneMonth(now)
     // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
     // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
     const { error: subErr } = await admin.from('subscriptions')

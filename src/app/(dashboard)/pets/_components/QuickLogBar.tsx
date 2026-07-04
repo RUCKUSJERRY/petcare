@@ -156,7 +156,7 @@ export function QuickLogBar({
                       type="button"
                       onClick={() => handleTap(cat)}
                       disabled={busy === cat}
-                      className={`relative shrink-0 snap-start whitespace-nowrap flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${
+                      className={`relative shrink-0 snap-start whitespace-nowrap flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium transition-colors disabled:opacity-60 ${
                         active ? (onP ? 'bg-white text-primary-600' : 'bg-primary-500 text-white border border-primary-500') : chipBase
                       }`}
                     >

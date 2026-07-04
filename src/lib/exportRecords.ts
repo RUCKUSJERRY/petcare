@@ -74,16 +74,25 @@ export function buildRecordsHtml(
   .empty { color: #9ca3af; text-align: center; padding: 40px 0; }
   .actions { margin-bottom: 16px; }
   .btn { background: #2d8a42; color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
-  .wm { position: fixed; inset: 0; z-index: -1; pointer-events: none;
-        background-image: repeating-linear-gradient(-45deg, transparent 0 120px, rgba(45,138,66,0.06) 120px 121px);
-        display: flex; align-items: center; justify-content: center; }
-  .wm span { font-size: 40px; font-weight: 800; color: rgba(45,138,66,0.10); transform: rotate(-24deg); white-space: nowrap; }
+  /* 워터마크는 '배경'이 아니라 반복되는 텍스트(전경)로 그린다. 브라우저 인쇄 대화상자의
+     '배경 그래픽' 옵션이 기본 OFF 라, 배경 이미지/그라디언트로 그리면 PDF 저장 시 워터마크가
+     통째로 사라져 무료 사용자가 깨끗한 제출용 문서를 얻는다(유료 가치 무력화). 전경 텍스트는
+     해당 옵션과 무관하게 항상 인쇄되며, print-color-adjust:exact 로 색까지 강제한다. */
+  .wm { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .wm-tiles { position: absolute; top: -30%; left: -30%; right: -30%; bottom: -30%;
+        display: flex; flex-wrap: wrap; align-content: center; justify-content: center;
+        gap: 44px 30px; transform: rotate(-24deg); }
+  .wm-tiles span { font-size: 21px; font-weight: 800; color: rgba(45,138,66,0.17); white-space: nowrap; }
   .foot { margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; }
-  @media print { .actions { display: none; } body { padding: 0; } .wm { position: fixed; } }
+  @media print {
+    .actions { display: none; } body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .wm { position: fixed; }
+  }
 </style>
 </head>
 <body>
-  ${watermark ? `<div class="wm"><span>펫케어 무료 · PETCARE</span></div>` : ''}
+  ${watermark ? `<div class="wm"><div class="wm-tiles">${Array.from({ length: 72 }, () => '<span>펫케어 무료 · PETCARE</span>').join('')}</div></div>` : ''}
   <div class="actions"><button class="btn" onclick="window.print()">인쇄 / PDF 저장</button></div>
   <div class="head">
     <h1>🐾 ${esc(heading)}</h1>
@@ -91,7 +100,7 @@ export function buildRecordsHtml(
   </div>
   <p class="count">총 ${rows.length}건</p>
   ${body}
-  ${watermark ? `<p class="foot">본 문서는 펫케어 무료 버전으로 발행되어 배경 워터마크가 포함됩니다. 프리미엄에서는 워터마크 없이 제출용으로 발행할 수 있어요.</p>` : ''}
+  ${watermark ? `<p class="foot">본 문서는 펫케어 무료 버전으로 발행되어 워터마크가 포함됩니다. 프리미엄에서는 워터마크 없이 제출용으로 발행할 수 있어요.</p>` : ''}
   <script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
 </body>
 </html>`

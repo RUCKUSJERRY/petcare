@@ -200,13 +200,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'image_fetch_failed', message: '이미지를 불러오지 못했어요.' }, { status: 502 })
   }
 
-  // 실제 Gemini(유료/쿼터) 호출 직전에 레이트리밋 카운트 기록.
-  // 이미지 내려받기·크기검증 실패로 Gemini를 호출하지 않은 경우엔 카운트하지 않아
-  // 사용자의 시간당 한도를 헛되이 소모하지 않는다. (기록 실패해도 OCR 자체는 진행)
-  const { error: usageErr } = await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'ocr' })
-  if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
-
   const gemini = await tryGemini(base64, mimeType)
+
+  // 실제 비용이 발생한 경우에만 사용량을 기록한다.
+  //  - 성공 또는 'failed'(모델이 실행됐으나 인식 결과 없음): Gemini가 실행되어 과금 → 기록.
+  //  - 'rate_limited'(429): 쿼터로 요청이 거절되어 과금이 없음 → 기록하지 않는다.
+  // 이렇게 해야 서버측 쿼터 초과(429)로 무료 사용자의 월 한도·시간당 한도가 헛되이 깎이지 않는다.
+  // (이미지 내려받기·크기검증 실패는 위에서 이미 return 되어 여기 도달하지 않는다.)
+  const costIncurred = 'records' in gemini || gemini.error === 'failed'
+  if (costIncurred) {
+    const { error: usageErr } = await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'ocr' })
+    if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
+  }
+
   if ('records' in gemini) {
     return NextResponse.json({ ok: true, records: gemini.records, source: 'gemini', limit: OCR_HOURLY_LIMIT, remaining })
   }

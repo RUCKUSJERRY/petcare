@@ -109,6 +109,9 @@ export default function SchedulePage() {
         .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, place_name, memo')
         .in('pet_id', petIds)
         .order('event_on', { ascending: false })
+        // 같은 날짜(event_on) 동점 시 '최신 기록' 선택이 흔들리지 않도록 생성순으로 2차 정렬한다.
+        // (computeUpcoming 은 라인별 첫 행을 최신으로 보므로 결정적 순서가 필요하다.)
+        .order('created_at', { ascending: false })
 
       type Row = {
         id: string; pet_id: string; category: RecordCategory; title: string

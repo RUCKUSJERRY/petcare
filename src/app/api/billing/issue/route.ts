@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { addOneMonth, chargeBilling, customerKeyForUser, issueBillingKey, TossError, tossConfigured } from '@/lib/toss'
 import { getPremiumPriceServer } from '@/lib/settings'
+import { createHash } from 'crypto'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -58,7 +59,12 @@ export async function POST(req: Request) {
     const { billingKey, card } = await issueBillingKey(authKey, customerKey)
 
     // 2) 첫 달 청구
-    const orderId = `sub_init_${user.id.replace(/-/g, '')}_${Date.now()}`
+    // 멱등키: 같은 카드 등록 인증(authKey)에 대한 중복 제출·재시도는 동일한 orderId 가 되어
+    // 토스(중복승인 거절)와 payments.order_id UNIQUE 제약이 함께 이중청구를 막는다.
+    // (Date.now() 기반이면 더블클릭·응답유실 후 재시도마다 새 주문이 되어 멱등성이 깨져,
+    //  위 '이미 활성 구독' 가드를 통과하는 동시요청이 카드를 두 번 청구할 수 있다.)
+    const authFingerprint = createHash('sha256').update(authKey).digest('hex').slice(0, 16)
+    const orderId = `sub_init_${user.id.replace(/-/g, '')}_${authFingerprint}`
     const charge = await chargeBilling(billingKey, {
       customerKey, amount, orderId, orderName: '펫케어 프리미엄 (월 구독)',
       customerEmail: user.email,
@@ -107,6 +113,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, premiumUntil: periodEnd.toISOString() })
   } catch (err) {
     if (err instanceof TossError) {
+      // 같은 주문(멱등키)이 이미 승인된 경우 — 이중청구가 아니라 동시/중복 제출이다.
+      // 앞선 요청이 이미 프리미엄을 활성화했으므로 실패가 아닌 중복으로 안내한다.
+      if (err.code === 'ALREADY_PROCESSED_PAYMENT') {
+        return NextResponse.json(
+          { error: 'already_processing', message: '결제가 이미 처리됐어요. 잠시 후 새로고침해 주세요.' },
+          { status: 409 }
+        )
+      }
       console.error('[billing/issue] toss error', err.status, err.code, err.message)
       return NextResponse.json({ error: 'payment_failed', message: err.message }, { status: 400 })
     }

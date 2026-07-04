@@ -50,7 +50,7 @@ export function RecordFeed({
   const rootRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } = useInfiniteQuery({
     queryKey: ['record-feed', petId],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
@@ -92,6 +92,12 @@ export function RecordFeed({
     if (d === yest) return t('labelYesterday')
     const [, m, dd] = d.split('-').map(Number)
     return t('labelDate', { month: m, day: dd })
+  }
+
+  // 첫 로딩 중에는 빈 상태를 감추고 조용히 비워둔다 — 캐시 미스마다 "기록 없음"이 번쩍이지 않도록.
+  if (isPending) {
+    if (onP) return <div className="h-6" aria-hidden />
+    return <div className="card h-24 animate-pulse bg-gray-50" aria-hidden />
   }
 
   if (rows.length === 0) {
