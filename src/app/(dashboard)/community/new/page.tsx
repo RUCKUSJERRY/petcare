@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { Pet, PostCategory } from '@/types'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
@@ -41,6 +43,13 @@ export default function NewPostPage() {
   })
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  // 작성 중 뒤로가기/새로고침 시 입력 유실 방지 (저장 완료 후엔 dirty 아님)
+  const tc = useTranslations('common')
+  const dirty = !saving && (
+    !!form.title.trim() || !!form.content.trim() || !!form.category || imageUrls.length > 0
+  )
+  const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -190,6 +199,18 @@ export default function NewPostPage() {
           {saving ? t('submitting') : t('submit')}
         </button>
       </form>
+
+      {promptLeave && (
+        <ConfirmModal
+          title={tc('leaveTitle')}
+          description={tc('leaveDesc')}
+          confirmLabel={tc('leaveConfirm')}
+          cancelLabel={tc('keepEditing')}
+          destructive
+          onConfirm={confirmLeave}
+          onCancel={cancelLeave}
+        />
+      )}
     </div>
   )
 }

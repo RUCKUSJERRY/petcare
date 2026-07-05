@@ -305,9 +305,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {!editing && pet.user_id === uid && (
         <button
           onClick={() => setShowDeleteModal(true)}
-          className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+          className="w-full py-3 rounded-lg border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors inline-flex items-center justify-center gap-1"
         >
-          {t('deletePet')}
+          <span aria-hidden>🗑</span> {t('deletePet')}
         </button>
       )}
 

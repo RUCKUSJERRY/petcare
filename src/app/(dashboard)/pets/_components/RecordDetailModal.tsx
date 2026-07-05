@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { careCategoryIcon } from '@/lib/utils'
 import { deleteImageByUrl } from '@/lib/upload'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { RecordForm, type RecordFormHandle } from './RecordForm'
 import type { PetRecord } from '@/types'
 
@@ -81,16 +82,10 @@ export function RecordDetailModal({
             </h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {record && (confirmDel ? (
-              <>
-                <span className="text-xs text-gray-500">{delError ?? t('deleteConfirm')}</span>
-                <button onClick={remove} className="text-sm text-red-500 font-semibold px-2 py-1">{tc('delete')}</button>
-                <button onClick={() => setConfirmDel(false)} className="text-sm text-gray-400 px-1.5 py-1">{tc('cancel')}</button>
-              </>
-            ) : (
+            {record && (
               <>
                 <button
-                  onClick={() => setConfirmDel(true)}
+                  onClick={() => { setDelError(null); setConfirmDel(true) }}
                   aria-label={tc('delete')}
                   className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                 >🗑</button>
@@ -100,7 +95,7 @@ export function RecordDetailModal({
                   className="btn-primary text-sm py-1.5 px-4"
                 >{saving ? tc('saving') : tc('save')}</button>
               </>
-            ))}
+            )}
           </div>
         </div>
 
@@ -120,6 +115,17 @@ export function RecordDetailModal({
           )}
         </div>
       </div>
+
+      {confirmDel && record && (
+        <ConfirmModal
+          title={t('deleteConfirm')}
+          description={delError ?? undefined}
+          confirmLabel={tc('delete')}
+          destructive
+          onConfirm={remove}
+          onCancel={() => setConfirmDel(false)}
+        />
+      )}
     </div>
   )
 }

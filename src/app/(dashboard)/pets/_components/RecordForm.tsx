@@ -35,6 +35,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   allowPetSelect?: boolean
   record?: PetRecord
   defaultCategory?: RecordCategory
+  /** 신규 기록의 기본 날짜(YYYY-MM-DD). 캘린더에서 특정 날짜를 눌러 추가할 때 사용 */
+  defaultDate?: string
   /** 모달 등 외부 헤더가 따로 있을 때: 내부 헤더·카드 틀·하단 저장버튼을 숨긴다 */
   embedded?: boolean
   /** 저장 진행 상태를 외부(헤더 버튼)에 알린다 */
@@ -46,6 +48,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   allowPetSelect = false,
   record,
   defaultCategory = '진료',
+  defaultDate,
   embedded = false,
   onSavingChange,
   onDone,
@@ -61,7 +64,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const [petId, setPetId] = useState<string>(record?.pet_id || fixedPetId || '')
   const [category, setCategory] = useState<RecordCategory>(record?.category || defaultCategory)
   const [title, setTitle] = useState(record?.title || '')
-  const [eventOn, setEventOn] = useState(record?.event_on || today())
+  const [eventOn, setEventOn] = useState(record?.event_on || defaultDate || today())
   // 생활기록의 시각(HH:MM). 편집 시 기존 event_at에서, 신규는 현재 시각.
   const [eventTime, setEventTime] = useState<string>(isoToLocalTime(record?.event_at) ?? nowLocalTime())
   const [place, setPlace] = useState<PlaceValue>({

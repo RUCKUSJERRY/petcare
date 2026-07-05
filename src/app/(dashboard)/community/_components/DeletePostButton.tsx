@@ -36,9 +36,9 @@ export function DeletePostButton({ postId, imageUrls = [] }: { postId: string; i
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="text-sm text-gray-400 hover:text-red-500"
+        className="inline-flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600"
       >
-        {tc('delete')}
+        <span aria-hidden>🗑</span> {tc('delete')}
       </button>
 
       {error && (

@@ -57,6 +57,8 @@ export default function SchedulePage() {
   const { isPremium } = usePlan()
   const [view, setView] = useState<View>('calendar')
   const [showAdd, setShowAdd] = useState(false)
+  // 캘린더에서 특정 날짜를 눌러 추가할 때 그 날짜를 폼 기본값으로 넘긴다
+  const [addDate, setAddDate] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [focusDate, setFocusDate] = useState<string | undefined>(undefined)
@@ -284,7 +286,7 @@ export default function SchedulePage() {
           {/* 기본 동작(직접 기록)은 한 번에 열고, 스캔·내보내기는 보조 메뉴(⋯)로 분리 */}
           <div className="flex items-center gap-1.5 shrink-0" ref={menuRef}>
             <button
-              onClick={() => { setMenuOpen(false); setShowAdd(v => !v) }}
+              onClick={() => { setMenuOpen(false); setAddDate(null); setShowAdd(v => !v) }}
               className={cn('text-sm py-1.5 px-3', showAdd ? 'btn-secondary' : 'btn-primary')}>
               {showAdd ? tc('close') : t('addRecord')}
             </button>
@@ -324,9 +326,11 @@ export default function SchedulePage() {
 
       {showAdd && (
         <RecordForm
+          key={addDate ?? 'new'}
           petId={selectedPetId} allowPetSelect
-          onDone={() => { setShowAdd(false); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }}
-          onCancel={() => setShowAdd(false)}
+          defaultDate={addDate ?? undefined}
+          onDone={() => { setShowAdd(false); setAddDate(null); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }}
+          onCancel={() => { setShowAdd(false); setAddDate(null) }}
         />
       )}
 
@@ -374,7 +378,17 @@ export default function SchedulePage() {
       ) : isLoading ? (
         <CardSkeletonList count={4} />
       ) : view === 'calendar' ? (
-        <ScheduleCalendar items={visible} history={visibleHistory} focusDate={focusDate} onSelect={setDetailId} />
+        <ScheduleCalendar
+          items={visible}
+          history={visibleHistory}
+          focusDate={focusDate}
+          onSelect={setDetailId}
+          onAddForDate={date => {
+            setAddDate(date)
+            setShowAdd(true)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
       ) : view === 'history' ? (
         visibleHistory.length === 0 ? (
           <EmptyState

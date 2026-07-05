@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { getHoliday } from '@/lib/holidays'
 import { useTranslations } from 'next-intl'
 
 type ScheduleItem = {
@@ -44,11 +45,14 @@ export function ScheduleCalendar({
   history = [],
   focusDate,
   onSelect,
+  onAddForDate,
 }: {
   items: ScheduleItem[]
   history?: HistoryItem[]
   focusDate?: string
   onSelect?: (recordId: string) => void
+  /** 선택한 날짜에 새 일정 추가 (날짜 칸/선택영역의 '+ 추가'에서 호출) */
+  onAddForDate?: (date: string) => void
 }) {
   const t = useTranslations('schedule')
   const WEEKDAYS = t.raw('weekdays') as string[]
@@ -195,19 +199,29 @@ export function ScheduleCalendar({
           ))}
         </div>
 
-        {/* 날짜 그리드 */}
-        <div className="grid grid-cols-7 gap-y-1">
+        {/* 날짜 그리드 — 구글 캘린더처럼 각 칸에 일정 '제목'을 글자로 보여준다 */}
+        <div className="grid grid-cols-7 gap-x-0.5 gap-y-0.5">
           {cells.map(d => {
             const ymd = toYMD(d)
             const inMonth = d.getMonth() === cursor.getMonth()
             const dayItems = byDate.get(ymd) ?? []
             const dayHistory = byDateHistory.get(ymd) ?? []
+            const holiday = getHoliday(ymd)
             const isToday = ymd === todayYMD
             const isSelected = ymd === selected
-            const hasOverdue = dayItems.length > 0 && ymd < todayYMD
-            // 마커 색: 예정(지남=빨강, 예정=주황/프라이머리), 예정 없이 지난 기록만이면 회색
-            const dot = dayItems.length > 0 ? (hasOverdue ? 'bg-red-400' : 'bg-primary-500') : 'bg-gray-300'
-            const hasDot = dayItems.length > 0 || dayHistory.length > 0
+            const dow = d.getDay()
+            // 칸에 표시할 라벨: 공휴일 → 예정(지남=빨강/예정=프라이머리) → 지난 기록(회색)
+            const labels: { text: string; cls: string }[] = []
+            if (holiday) labels.push({ text: holiday, cls: 'bg-red-50 text-red-500' })
+            for (const it of dayItems) {
+              const overdue = ymd < todayYMD
+              labels.push({ text: it.title, cls: overdue ? 'bg-red-100 text-red-600' : 'bg-primary-100 text-primary-700' })
+            }
+            for (const it of dayHistory) labels.push({ text: it.title, cls: 'bg-gray-100 text-gray-500' })
+            const shown = labels.slice(0, 2)
+            const moreCount = labels.length - shown.length
+            // 날짜 숫자 색: 공휴일·일요일=빨강, 토요일=파랑 (선택/오늘 강조가 우선)
+            const numTone = holiday || dow === 0 ? 'text-red-500' : dow === 6 ? 'text-blue-500' : 'text-gray-700'
             return (
               <button
                 key={ymd}
@@ -216,20 +230,30 @@ export function ScheduleCalendar({
                   // 앞뒤 달의 날짜를 누르면 그 달로 이동(구글 캘린더식)
                   if (!inMonth) setCursor(new Date(d.getFullYear(), d.getMonth(), 1))
                 }}
-                className="flex flex-col items-center justify-start py-1 min-h-[44px]"
+                className={[
+                  'flex flex-col items-stretch gap-0.5 min-h-[60px] p-0.5 rounded-md text-left align-top transition-colors',
+                  isSelected ? 'bg-primary-50 ring-1 ring-primary-300' : 'hover:bg-gray-50',
+                  !inMonth ? 'opacity-40' : '',
+                ].join(' ')}
               >
                 <span
                   className={[
-                    'w-7 h-7 flex items-center justify-center rounded-full text-sm transition-colors',
-                    !inMonth ? 'text-gray-300' : 'text-gray-700',
-                    isSelected ? 'bg-primary-500 text-white font-bold' : isToday ? 'ring-1 ring-primary-400 text-primary-600 font-semibold' : '',
+                    'mx-auto w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0',
+                    isToday ? 'bg-primary-500 text-white font-bold' : `${numTone} ${isSelected ? 'font-bold' : ''}`,
                   ].join(' ')}
                 >
                   {d.getDate()}
                 </span>
-                {hasDot && (
-                  <span className={['mt-0.5 w-1.5 h-1.5 rounded-full', dot].join(' ')} />
-                )}
+                <span className="flex flex-col gap-0.5 overflow-hidden">
+                  {shown.map((l, i) => (
+                    <span key={i} className={`block truncate rounded px-1 text-[9px] leading-[13px] ${l.cls}`}>
+                      {l.text}
+                    </span>
+                  ))}
+                  {moreCount > 0 && (
+                    <span className="block text-[9px] leading-[12px] text-gray-400 px-1">+{moreCount}</span>
+                  )}
+                </span>
               </button>
             )
           })}
@@ -240,14 +264,33 @@ export function ScheduleCalendar({
 
       {/* 선택한 날짜의 일정 (구글 캘린더처럼 그 날짜 건만, 중복 없이) */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-gray-500">
-          {selected ? selected.replace(/-/g, '.') : t('pickDate')}
-          {dayList.length > 0 && (
-            <span className="text-gray-400 font-normal"> {t('countSuffix', { count: dayList.length })}</span>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-gray-500 min-w-0 truncate">
+            {selected ? selected.replace(/-/g, '.') : t('pickDate')}
+            {selected && getHoliday(selected) && (
+              <span className="text-red-500 font-medium"> · {getHoliday(selected)}</span>
+            )}
+            {dayList.length > 0 && (
+              <span className="text-gray-400 font-normal"> {t('countSuffix', { count: dayList.length })}</span>
+            )}
+          </h2>
+          {selected && onAddForDate && (
+            <button
+              onClick={() => onAddForDate(selected)}
+              className="text-xs font-semibold text-primary-600 shrink-0 whitespace-nowrap"
+            >
+              {t('addOnDate')}
+            </button>
           )}
-        </h2>
+        </div>
         {dayList.length === 0 ? (
-          <div className="card text-center py-6 text-sm text-gray-400">{t('noScheduleThisDay')}</div>
+          <button
+            onClick={() => selected && onAddForDate?.(selected)}
+            disabled={!selected || !onAddForDate}
+            className="card w-full text-center py-6 text-sm text-gray-400 disabled:cursor-default hover:enabled:text-primary-600 transition-colors"
+          >
+            {onAddForDate ? t('noScheduleAddHint') : t('noScheduleThisDay')}
+          </button>
         ) : (
           dayList.map(i => {
             const badge = i.isDue ? ddayBadge(i.due!) : null

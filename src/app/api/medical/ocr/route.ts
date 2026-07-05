@@ -113,12 +113,21 @@ export async function POST(req: Request) {
 
   // 서버측 레이트리밋: 최근 1시간 호출 수 확인 (클라이언트 쿨다운과 별개의 방어선)
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-  const { count } = await supabase
+  const { count, error: countErr } = await supabase
     .from('ai_usage')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('kind', 'ocr')
     .gte('created_at', since)
+  // 카운트 조회 실패 시 fail-closed: 한도를 0으로 오인해 유료 Gemini 를 무제한 호출하지 않도록
+  // 즉시 무료 인식(Tesseract) 폴백으로 유도한다. (사용자는 무료 인식으로 그대로 진행)
+  if (countErr) {
+    console.error('[ocr] usage count query failed', countErr)
+    return NextResponse.json(
+      { error: 'rate_limited', message: '지금은 AI 인식을 쓸 수 없어요. 무료 인식으로 대체할게요.', remaining: 0 },
+      { status: 429 }
+    )
+  }
   const used = count ?? 0
   if (used >= OCR_HOURLY_LIMIT) {
     return NextResponse.json(
@@ -140,12 +149,20 @@ export async function POST(req: Request) {
   if (!premium) {
     const monthLimit = await getFreeOcrMonthlyServer(supabase)
     const monthStart = `${todayKST().slice(0, 8)}01T00:00:00+09:00` // 이달 1일 0시(KST)
-    const { count: monthCount } = await supabase
+    const { count: monthCount, error: monthErr } = await supabase
       .from('ai_usage')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('kind', 'ocr')
       .gte('created_at', monthStart)
+    // 월 사용량 조회 실패도 fail-closed — 유료 Gemini 남용을 막고 무료 인식으로 폴백.
+    if (monthErr) {
+      console.error('[ocr] monthly usage count query failed', monthErr)
+      return NextResponse.json(
+        { error: 'rate_limited', message: '지금은 AI 인식을 쓸 수 없어요. 무료 인식으로 대체할게요.', remaining: 0 },
+        { status: 429 }
+      )
+    }
     const monthUsed = monthCount ?? 0
     if (monthUsed >= monthLimit) {
       return NextResponse.json(

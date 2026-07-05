@@ -10,7 +10,9 @@ import type { Species } from '@/types'
 
 /**
  * 전면(리워드형) 광고 오버레이.
- * 카운트다운이 끝나면 "계속하기"로 원래 행동을 진행한다. 닫기(✕)는 행동을 취소한다.
+ * 닫기(✕)와 "계속하기" 모두 원래 행동을 그대로 진행한다 — 광고 노출은 이미 이뤄졌고,
+ * 사용자가 방금 시작한 행동(산책 시작·스캔 등)을 닫기 때문에 다시 버튼을 눌러야 하는 마찰을 없앤다.
+ * 행동을 취소(abandon)하는 경로는 "프리미엄으로 광고 제거" 링크(다른 화면으로 이탈)뿐이다.
  * 광고 소재는 자체/제휴 상품으로 채우며, 클릭 시 제휴 링크로 이동(클릭 적재).
  */
 export function AdInterstitial({
@@ -54,7 +56,7 @@ export function AdInterstitial({
           {t('sponsored')}
         </span>
         <button
-          onClick={onCancel}
+          onClick={onComplete}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 text-white/80 text-lg"
           aria-label={t('close')}
         >

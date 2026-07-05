@@ -7,6 +7,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { Breed, Species } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 import { todayKST } from '@/lib/utils'
 
 export default function NewPetPage() {
@@ -34,6 +36,13 @@ export default function NewPetPage() {
   })
   const breeds = (allBreeds ?? []).filter(b => b.species === species)
   const breedLabel = species === 'dog' ? t('breedDog') : t('breedCat')
+
+  // 작성 중 뒤로가기/새로고침 시 입력 유실 방지
+  const dirty = !saving && (
+    !!form.name.trim() || !!form.breed_id || !!form.birth_year || !!form.birth_month ||
+    !!form.birth_day || !!form.adopted_on || !!form.gender || !!form.weight_kg || !!photoUrl
+  )
+  const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -224,6 +233,18 @@ export default function NewPetPage() {
           {saving ? tc('saving') : t('submit')}
         </button>
       </form>
+
+      {promptLeave && (
+        <ConfirmModal
+          title={tc('leaveTitle')}
+          description={tc('leaveDesc')}
+          confirmLabel={tc('leaveConfirm')}
+          cancelLabel={tc('keepEditing')}
+          destructive
+          onConfirm={confirmLeave}
+          onCancel={cancelLeave}
+        />
+      )}
     </div>
   )
 }

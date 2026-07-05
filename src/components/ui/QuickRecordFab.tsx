@@ -10,9 +10,14 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn } from '@/lib/utils'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
+import { RecordForm } from '@/app/(dashboard)/pets/_components/RecordForm'
+import { RecordsScanModal } from '@/app/(dashboard)/pets/_components/RecordsScanModal'
+import { WeightSection } from '@/app/(dashboard)/pets/_components/WeightSection'
 
-// FAB를 숨길 화면 (자체 하단 컨트롤이 있거나 몰입형 화면)
-const HIDDEN_PREFIXES = ['/map', '/walks/track']
+// FAB를 숨길 화면
+//  - /map·/walks/track: 자체 하단 컨트롤이 있는 몰입형 화면
+//  - /dashboard: 홈은 선택한 아이 요약 카드에 동일한 빠른 기록이 이미 인라인으로 있어 FAB이 중복
+const HIDDEN_PREFIXES = ['/map', '/walks/track', '/dashboard']
 
 /**
  * 어느 화면에서든 떠 있는 '＋ 기록' 플로팅 버튼 + '오늘의 기록' 바텀시트.
@@ -29,6 +34,14 @@ export function QuickRecordFab() {
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
+  // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
+  const [modal, setModal] = useState<null | 'weight' | 'manual' | 'scan'>(null)
+
+  const afterRecord = () => {
+    qc.invalidateQueries({ queryKey: ['today-timeline', selectedPetId] })
+    qc.invalidateQueries({ queryKey: ['record-feed', selectedPetId] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
+  }
 
   // 시트가 열려 있는 동안 배경 스크롤 잠금 + Esc 닫기
   useEffect(() => {
@@ -134,18 +147,18 @@ export function QuickRecordFab() {
               onLogged={() => qc.invalidateQueries({ queryKey: ['today-timeline', activeId] })}
             />
 
-            {/* 상세 입력 — 대상 아이가 정해졌을 때만 */}
+            {/* 상세 입력 — 대상 아이가 정해졌을 때만. 페이지 이동 대신 모달로 연다. */}
             {activeId && (
               <div className="grid grid-cols-3 gap-2 pt-0.5">
-                <Link href={`/pets/${activeId}?add=weight`} onClick={() => setOpen(false)} className={linkCls}>
+                <button type="button" onClick={() => { setOpen(false); setModal('weight') }} className={linkCls}>
                   <span aria-hidden>⚖️</span> {t('weight')}
-                </Link>
-                <Link href={`/schedule?pet=${activeId}&add=1`} onClick={() => setOpen(false)} className={linkCls}>
+                </button>
+                <button type="button" onClick={() => { setOpen(false); setModal('manual') }} className={linkCls}>
                   <span aria-hidden>📝</span> {t('manual')}
-                </Link>
-                <Link href={`/schedule?pet=${activeId}&scan=1`} onClick={() => setOpen(false)} className={linkCls}>
+                </button>
+                <button type="button" onClick={() => { setOpen(false); setModal('scan') }} className={linkCls}>
                   <span aria-hidden>📷</span> {t('scan')}
-                </Link>
+                </button>
               </div>
             )}
 
@@ -156,6 +169,45 @@ export function QuickRecordFab() {
             >
               {t('viewToday')} ›
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 상세 입력 모달 — 현재 화면 위에 떠서 저장 후 원래 자리로 복귀한다 */}
+      {modal === 'scan' && activeId && (
+        <RecordsScanModal petId={activeId} onClose={() => { setModal(null); afterRecord() }} />
+      )}
+      {(modal === 'manual' || modal === 'weight') && activeId && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setModal(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] overflow-y-auto p-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-bold text-gray-900">{modal === 'weight' ? t('weight') : t('manual')}</p>
+              <button
+                type="button"
+                onClick={() => setModal(null)}
+                aria-label={tc('close')}
+                className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+            {modal === 'manual' ? (
+              <RecordForm
+                petId={activeId}
+                onDone={() => { setModal(null); afterRecord() }}
+                onCancel={() => setModal(null)}
+              />
+            ) : (
+              <WeightSection petId={activeId} defaultOpen />
+            )}
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
 import { WalkPhotoComposer } from '../_components/WalkPhotoComposer'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { deleteImageByUrl } from '@/lib/upload'
 import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 
@@ -45,6 +46,9 @@ export default function WalkTrackPage() {
   const [note, setNote] = useState('')
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  // 추적 중 오탭으로 종료되거나, 작성 중인 산책이 날아가는 것을 막는 확인 모달
+  const [confirmFinish, setConfirmFinish] = useState(false)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
 
   const mapsRef = useRef<any>(null)
   const mapObjRef = useRef<any>(null)
@@ -245,12 +249,11 @@ export default function WalkTrackPage() {
     router.replace(`/walks/${(data as { id: string }).id}`)
   }
 
-  const discard = () => {
-    if (confirm(t('discardConfirm'))) {
-      // 저장하지 않고 폐기 → 업로드된 사진도 정리
-      if (photoUrl) deleteImageByUrl(photoUrl)
-      router.replace('/walks')
-    }
+  const doDiscard = () => {
+    setConfirmDiscard(false)
+    // 저장하지 않고 폐기 → 업로드된 사진도 정리
+    if (photoUrl) deleteImageByUrl(photoUrl)
+    router.replace('/walks')
   }
 
   const notice = kakaoNotice(mapStatus)
@@ -325,7 +328,7 @@ export default function WalkTrackPage() {
                 ⏸ {t('pause')}
               </button>
             )}
-            <button onClick={finish} className="py-3.5 rounded-lg bg-red-500 text-white text-base font-semibold">
+            <button onClick={() => setConfirmFinish(true)} className="py-3.5 rounded-lg bg-red-500 text-white text-base font-semibold">
               ■ {t('finish')}
             </button>
           </div>
@@ -375,7 +378,7 @@ export default function WalkTrackPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={discard} className="btn-secondary py-3 text-sm">{t('discard')}</button>
+              <button onClick={() => setConfirmDiscard(true)} className="btn-secondary py-3 text-sm">{t('discard')}</button>
               <button onClick={save} disabled={saving} className="btn-primary py-3 text-sm">
                 {saving ? tc('saving') : t('saveWalk')}
               </button>
@@ -383,6 +386,29 @@ export default function WalkTrackPage() {
           </div>
         )}
       </div>
+
+      {/* 추적 중 ■ 종료 오탭 방지 확인 */}
+      {confirmFinish && (
+        <ConfirmModal
+          title={t('finishConfirmTitle')}
+          description={t('finishConfirmDesc')}
+          confirmLabel={t('finish')}
+          onConfirm={() => { setConfirmFinish(false); finish() }}
+          onCancel={() => setConfirmFinish(false)}
+        />
+      )}
+
+      {/* 저장 전 폐기 확인 (앱 톤 통일 — 기존 네이티브 confirm 대체) */}
+      {confirmDiscard && (
+        <ConfirmModal
+          title={t('discardTitle')}
+          description={t('discardConfirm')}
+          confirmLabel={t('discard')}
+          destructive
+          onConfirm={doDiscard}
+          onCancel={() => setConfirmDiscard(false)}
+        />
+      )}
     </div>
   )
 }
