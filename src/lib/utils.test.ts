@@ -175,6 +175,13 @@ describe('addMonths', () => {
     expect(addMonths('2026-12-10', 1)).toBe('2027-01-10')
     expect(addMonths('2026-06-09', 12)).toBe('2027-06-09')
   })
+  it('월말은 대상 달 말일로 클램핑 (오버플로우로 한 달 건너뛰지 않음)', () => {
+    expect(addMonths('2026-01-31', 1)).toBe('2026-02-28')   // Feb 31 → 2/28 (평년)
+    expect(addMonths('2024-01-31', 1)).toBe('2024-02-29')   // 윤년 2/29
+    expect(addMonths('2026-03-31', 1)).toBe('2026-04-30')   // Apr 31 → 4/30
+    expect(addMonths('2026-08-31', 6)).toBe('2027-02-28')   // 6개월 후 2월
+    expect(addMonths('2026-01-30', 1)).toBe('2026-02-28')   // 30일도 클램핑
+  })
 })
 
 describe('careDefaultIntervalMonths', () => {

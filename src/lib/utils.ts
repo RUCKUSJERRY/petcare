@@ -213,10 +213,13 @@ export function todayKST(): string {
   }).format(new Date())
 }
 
-/** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 (시간대 영향 없이 UTC 기준 계산) */
+/** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 (시간대 영향 없이 UTC 기준 계산).
+ *  월말 클램핑: 1/31 + 1개월은 2/31→3/3 으로 튀지 않고 2/28(윤년 2/29)로 맞춘다.
+ *  (day 29~31 이 더 짧은 달에 떨어질 때 한 달을 건너뛰는 오버플로우 방지 — toss.addOneMonth 와 동일 규칙) */
 export function addMonths(dateStr: string, months: number): string {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1 + months, d)).toISOString().slice(0, 10)
+  const lastDay = new Date(Date.UTC(y, m + months, 0)).getUTCDate() // 대상 달의 말일
+  return new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay))).toISOString().slice(0, 10)
 }
 
 /** 날짜 문자열(YYYY-MM-DD)에 일수를 더해 반환 (시간대 영향 없이 UTC 기준) */
