@@ -14,6 +14,9 @@ import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
 import { PetMembers } from '../_components/PetMembers'
+import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
+import Link from 'next/link'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const t = useTranslations('petDetail')
@@ -42,7 +45,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
   }, [supabase])
 
-  const { data: pet, refetch } = useQuery({
+  const { data: pet, refetch, isPending } = useQuery({
     queryKey: ['pet', params.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -50,7 +53,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         .select('*, breed:breeds(*)')
         .eq('id', params.id)
         .single()
-      return data as Pet & { breed: Breed }
+      // 삭제됨/오탐/RLS 거부 시 data 는 null 로 정착한다. null 을 그대로 반환하되,
+      // 화면에서는 '로딩'(isPending)과 '없음'(정착된 null)을 구분해 처리한다.
+      return (data ?? null) as (Pet & { breed: Breed }) | null
     },
   })
 
@@ -150,7 +155,24 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
-  if (!pet) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>
+  // 로딩 중에는 스켈레톤을, 조회가 끝났는데도 없으면(삭제/권한없음) 안내를 보여준다.
+  // (이전엔 두 경우 모두 '불러오는 중'만 떠서 없는 아이 진입 시 영원히 로딩처럼 보였다.)
+  if (isPending) return <div className="px-4 py-6"><CardSkeletonList count={3} /></div>
+  if (!pet) return (
+    <div className="px-4 py-6">
+      <EmptyState
+        variant="error"
+        icon="🐾"
+        title={t('notFoundTitle')}
+        hint={t('notFoundHint')}
+        action={
+          <Link href="/pets" className="btn-primary text-sm py-1.5 px-4 inline-block">
+            {t('toPetList')}
+          </Link>
+        }
+      />
+    </div>
+  )
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
 

@@ -271,6 +271,22 @@ export default function SchedulePage() {
         )}
       </div>
 
+      {/* 지난 일정 경보 — 지난 접종·구충 등은 건강상 가장 중요하지만, 기본(캘린더) 뷰에는
+          '지난 일정' 섹션이 없어 묻힌다. 검색 중이 아닐 때 모든 뷰 상단에 상시 배너로 노출하고,
+          누르면 지난 일정이 정리된 목록 뷰로 보낸다. */}
+      {!q && overdue.length > 0 && view !== 'list' && (
+        <button
+          onClick={() => setView('list')}
+          className="w-full flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-left"
+        >
+          <span aria-hidden>⚠️</span>
+          <span className="flex-1 text-sm font-semibold text-red-600">
+            {t('overdueBanner', { count: overdue.length })}
+          </span>
+          <span className="text-xs font-semibold text-red-500 shrink-0">{t('overdueBannerCta')} ›</span>
+        </button>
+      )}
+
       {/* 보기 전환 + 추가 (검색 중에는 숨김) */}
       {!q && (
         <div className="flex items-center gap-2">

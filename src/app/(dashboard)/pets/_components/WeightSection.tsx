@@ -171,6 +171,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               placeholder={t('weightPlaceholder')}
               value={form.weight_kg}
               onChange={e => setForm(f => ({ ...f, weight_kg: e.target.value }))}
+              autoFocus
             />
             <input
               className="input"
@@ -215,7 +216,8 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               ) : (
                 <button
                   onClick={() => setConfirmDeleteId(log.id)}
-                  className="ml-auto text-xs text-gray-300 hover:text-red-500"
+                  className="ml-auto text-xs text-gray-400 hover:text-red-500 px-2 py-1 -my-1 rounded"
+                  aria-label={`${log.measured_on} ${log.weight_kg}kg ${tc('delete')}`}
                 >
                   {tc('delete')}
                 </button>

@@ -42,7 +42,8 @@
   "header": {
     "myPetsAria": "내 아이 관리",
     "registerPet": "내 아이 등록하기 →",
-    "profile": "프로필"
+    "profile": "프로필",
+    "addPetAria": "다른 아이 추가"
   },
   "login": {
     "appName": "펫케어",
@@ -618,6 +619,8 @@
     "emptyAll": "다음 예정일이 등록된 건강 기록이 없어요.",
     "emptyHint": "위 “+ 기록”을 눌러 진료·관리 기록과 다음 예정일을 등록해보세요.",
     "sectionOverdue": "지난 일정 {count}",
+    "overdueBanner": "지난 일정 {count}건이 있어요",
+    "overdueBannerCta": "지금 확인",
     "sectionSoon": "임박한 일정 (7일 이내) {count}",
     "sectionLater": "예정된 일정 {count}",
     "errNoPet": "등록된 아이가 없어요",
@@ -808,6 +811,9 @@
     "errNameRequired": "이름을 입력해주세요.",
     "errBirthYearRequired": "출생연도를 올바르게 입력해주세요.",
     "loading": "불러오는 중...",
+    "notFoundTitle": "이 아이 정보를 찾을 수 없어요",
+    "notFoundHint": "삭제되었거나 접근 권한이 없을 수 있어요.",
+    "toPetList": "내 아이 목록으로",
     "back": "뒤로",
     "edit": "수정",
     "photo": "사진",

@@ -101,22 +101,32 @@ export function AppHeader() {
         {/* 펫 칩 목록 (없으면 빈 공간으로 우측 버튼 정렬 유지) */}
         <div data-tour="pets" className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-none min-w-0">
           {hasPets ? (
-            pets!.map(pet => (
-              <button
-                key={pet.id}
-                onClick={() => toggle(pet.id)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border',
-                  selectedPetId === pet.id
-                    ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
-                )}
+            <>
+              {pets!.map(pet => (
+                <button
+                  key={pet.id}
+                  onClick={() => toggle(pet.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border',
+                    selectedPetId === pet.id
+                      ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
+                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
+                  )}
+                >
+                  <PetAvatar photoUrl={pet.photo_url} species={pet.species}
+                    className="w-4 h-4" emojiClassName="text-sm leading-none" />
+                  <span>{pet.name}</span>
+                </button>
+              ))}
+              {/* 다른 아이 추가 — 이미 아이가 있을 때도 한 번에 등록으로 진입 (기존엔 아이 목록을 거쳐야 했다) */}
+              <Link
+                href="/pets/new"
+                aria-label={t('addPetAria')}
+                className="shrink-0 w-7 h-7 rounded-full border border-dashed border-gray-300 text-gray-400 flex items-center justify-center text-base leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
               >
-                <PetAvatar photoUrl={pet.photo_url} species={pet.species}
-                  className="w-4 h-4" emojiClassName="text-sm leading-none" />
-                <span>{pet.name}</span>
-              </button>
-            ))
+                +
+              </Link>
+            </>
           ) : (
             <Link href="/pets/new" className="text-sm font-medium text-primary-600">{t('registerPet')}</Link>
           )}
