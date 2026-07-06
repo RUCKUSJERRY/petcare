@@ -120,7 +120,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const rule = buildRule()
   // 반복이면 시작일 다음 발생일을, 아니면 수동 입력값을 다음 예정일로 사용
   const computedNext = rule
-    ? (() => { const n = nextOccurrence(rule, parseYMD(eventOn), parseYMD(eventOn)); return n ? ymd(n) : '' })()
+    ? (() => { const n = nextOccurrence(rule, parseYMD(eventOn), parseYMD(eventOn)); return n ? ymd(n) : null })()
     : (manualDue || null)
 
   // 편집 시 상세 테이블 값 로드

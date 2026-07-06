@@ -45,6 +45,13 @@ export async function POST(req: Request) {
     existingSub && existingSub.status === 'active' &&
     existingSub.current_period_end && new Date(existingSub.current_period_end) > new Date()
   ) {
+    // 자가 복구: 직전 결제에서 subscriptions 는 활성이 됐으나 profiles 갱신만 실패해
+    // "돈은 빠졌는데 프리미엄 미반영"으로 멈춘 사용자를, 재시도 시 여기서 되돌린다.
+    // (프리미엄 판정 기준은 profiles.plan/premium_until 이므로 활성 구독과 항상 일치시킨다.)
+    const { error: healErr } = await admin.from('profiles')
+      .update({ plan: 'premium', premium_until: existingSub.current_period_end })
+      .eq('id', user.id)
+    if (healErr) console.error('[billing/issue] profile reconcile failed', user.id, healErr.message)
     return NextResponse.json(
       { error: 'already_subscribed', premiumUntil: existingSub.current_period_end },
       { status: 409 }

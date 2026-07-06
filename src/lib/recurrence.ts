@@ -51,6 +51,17 @@ export function parseRule(s: string | null | undefined): RecurRule | null {
     if (!Number.isFinite(r.interval) || r.interval < 1) return null
     // 주간 규칙은 요일이 하나 이상 선택돼야 유효하다(빈 배열이면 영구히 매칭 안 됨).
     if (r.freq === 'week' && (!Array.isArray(r.byweekday) || r.byweekday.length === 0)) return null
+    // 월간 규칙은 mode 가 'dom' 이거나, 'dow' + 유효한 week(-1|1~5)·weekday(0~6) 여야 한다.
+    // mode 누락·잘못된 dow 값이면 matches 가 어떤 날짜에도 매칭되지 않아 nextOccurrence 가
+    // null 을 반환하고 일정이 예정 목록·리마인더에서 사라진다(week/interval 가드와 같은 취지).
+    if (r.freq === 'month') {
+      if (r.mode === 'dow') {
+        if (![-1, 1, 2, 3, 4, 5].includes(r.week)) return null
+        if (!Number.isInteger(r.weekday) || r.weekday < 0 || r.weekday > 6) return null
+      } else if (r.mode !== 'dom') {
+        return null
+      }
+    }
     return r as RecurRule
   } catch { /* noop */ }
   return null

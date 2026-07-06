@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
@@ -8,6 +9,9 @@ import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
+import { RecordForm } from '@/app/(dashboard)/pets/_components/RecordForm'
+import { RecordsScanModal } from '@/app/(dashboard)/pets/_components/RecordsScanModal'
+import { WeightSection } from '@/app/(dashboard)/pets/_components/WeightSection'
 import { PetAvatar } from '@/components/ui/PetAvatar'
 import type { CareAlert, Pet } from '@/types'
 
@@ -24,11 +28,22 @@ export function SelectedPetSummary({
 }) {
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
+  const tc = useTranslations('common')
+  const qc = useQueryClient()
   const [detailId, setDetailId] = useState<string | null>(null)
+  // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 홈 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
+  // (QuickRecordFab 과 동일 패턴 — 앱 전반의 기록 진입을 일관되게)
+  const [modal, setModal] = useState<null | 'weight' | 'manual' | 'scan'>(null)
   if (!selectedPetId) return null
 
   const pet = pets.find(p => p.id === selectedPetId)
   if (!pet) return null
+
+  const afterRecord = () => {
+    qc.invalidateQueries({ queryKey: ['today-timeline', pet.id] })
+    qc.invalidateQueries({ queryKey: ['record-feed', pet.id] })
+    qc.invalidateQueries({ queryKey: ['care-schedule'] })
+  }
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
   // 30일 이내 다가오는 생일 배지 + 함께한 날수
@@ -105,26 +120,65 @@ export function SelectedPetSummary({
         <QuickLogBar petId={pet.id} tone="onPrimary" onOpenDetail={setDetailId} />
         {/* 기록 시간순 흐름(무한 스크롤 피드) — 항목을 누르면 상세로 진입 */}
         <RecordFeed petId={pet.id} tone="onPrimary" scroll onSelect={setDetailId} />
-        {/* 상세 입력: 체중·직접 입력·영수증 스캔 */}
+        {/* 상세 입력: 체중·직접 입력·영수증 스캔 — 페이지 이동 없이 홈에서 바로 모달로 연다 */}
         <div className="grid grid-cols-3 gap-2 pt-0.5">
-          <Link href={`/pets/${pet.id}?add=weight`}
+          <button type="button" onClick={() => setModal('weight')}
             className="flex items-center justify-center gap-1 bg-white/15 hover:bg-white/25 rounded-lg py-2 text-xs font-medium transition-colors">
             <span aria-hidden>⚖️</span> {t('weight')}
-          </Link>
-          <Link href={`/schedule?pet=${pet.id}&add=1`}
+          </button>
+          <button type="button" onClick={() => setModal('manual')}
             className="flex items-center justify-center gap-1 bg-white/15 hover:bg-white/25 rounded-lg py-2 text-xs font-medium transition-colors">
             <span aria-hidden>📝</span> {t('recordManual')}
-          </Link>
-          <Link href={`/schedule?pet=${pet.id}&scan=1`}
+          </button>
+          <button type="button" onClick={() => setModal('scan')}
             className="flex items-center justify-center gap-1 bg-white/15 hover:bg-white/25 rounded-lg py-2 text-xs font-medium transition-colors">
             <span aria-hidden>📷</span> {t('scan')}
-          </Link>
+          </button>
         </div>
       </div>
     </div>
 
     {detailId && (
       <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} />
+    )}
+
+    {/* 상세 입력 모달 — 현재 화면 위에 떠서 저장 후 원래 자리로 복귀 (QuickRecordFab 과 동일) */}
+    {modal === 'scan' && (
+      <RecordsScanModal petId={pet.id} onClose={() => { setModal(null); afterRecord() }} />
+    )}
+    {(modal === 'manual' || modal === 'weight') && (
+      <div
+        className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center"
+        onClick={() => setModal(null)}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] overflow-y-auto p-4"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold text-gray-900">{modal === 'weight' ? t('weight') : t('recordManual')}</p>
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              aria-label={tc('close')}
+              className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+          {modal === 'manual' ? (
+            <RecordForm
+              petId={pet.id}
+              onDone={() => { setModal(null); afterRecord() }}
+              onCancel={() => setModal(null)}
+            />
+          ) : (
+            <WeightSection petId={pet.id} defaultOpen />
+          )}
+        </div>
+      </div>
     )}
     </>
   )

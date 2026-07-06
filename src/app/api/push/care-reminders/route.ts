@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
 import { careCategoryIcon, ddayBadge } from '@/lib/utils'
 import { cronAuthError } from '@/lib/cron'
+import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
+import type { RecordCategory } from '@/types'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -33,14 +35,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'service role not configured' }, { status: 500 })
   }
 
-  // 오늘~내일 예정 (+ force가 아니면 오늘 아직 리마인드 안 한 것만)
-  let query = admin
+  // 후보 조회: (1) next_due_on 이 오늘~내일인 일반(비반복) 기록 + (2) 반복 규칙이 있는 모든 기록.
+  // 반복 기록의 next_due_on 은 생성 시점 값에 고정되어 있어(완료 탭 전까지 갱신 안 됨) 정적
+  // 범위 필터로는 두 번째 발생부터 빠진다 — 앱 화면(computeUpcoming/activeNextDue)은 event_on+
+  // recur_rule 로 다음 발생일을 굴려서 계속 보여주는데 리마인더만 첫 회 이후 조용히 멈추던 버그.
+  // 그래서 반복 기록은 next_due_on 과 무관하게 모두 받아 아래에서 활성 예정일을 재계산한다.
+  const { data, error } = await admin
     .from('records')
-    .select('id, pet_id, category, title, next_due_on, last_reminded_on, pet:pets(user_id, name)')
-    .gte('next_due_on', today)
-    .lte('next_due_on', tomorrow)
-  if (!force) query = query.or(`last_reminded_on.is.null,last_reminded_on.lt.${today}`)
-  const { data, error } = await query
+    .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, last_reminded_on, pet:pets(user_id, name)')
+    .or(`and(next_due_on.gte.${today},next_due_on.lte.${tomorrow}),recur_rule.not.is.null`)
 
   if (error) {
     console.error('[care-reminders] select error:', error)
@@ -50,12 +53,44 @@ export async function GET(req: Request) {
   type Row = {
     id: string
     pet_id: string
-    category: string
+    category: RecordCategory
     title: string
-    next_due_on: string
+    event_on: string
+    next_due_on: string | null
+    recur_rule: string | null
+    last_reminded_on: string | null
     pet: { user_id: string; name: string } | null
   }
-  const rows = (data ?? []) as unknown as Row[]
+  const allRows = (data ?? []) as unknown as Row[]
+
+  // 앱 화면과 동일한 단일 출처(computeUpcoming)로 "항목 라인별 최신 기록 → 활성 다음 예정일"을
+  // 계산한다. 반복은 event_on+recur_rule 로 굴러간 실제 다음 발생일이 나온다. 그중 오늘/내일
+  // 예정인 라인만 발송 대상으로 삼는다. (라인별 최신 1건으로 자동 중복 제거 → 라인당 1회 알림)
+  const rowById = new Map(allRows.map(r => [r.id, r]))
+  // computeUpcoming/latestRecordPerLine 은 입력이 event_on 내림차순(최신 우선)임을 전제한다.
+  // DB 조회 순서를 신뢰하지 말고 여기서 정렬해 라인별 '최신 기록'이 올바로 선택되게 한다.
+  const scheduleRows: ScheduleRow[] = allRows
+    .map(r => ({
+      id: r.id, pet_id: r.pet_id, category: r.category, title: r.title,
+      event_on: r.event_on, next_due_on: r.next_due_on, recur_rule: r.recur_rule,
+    }))
+    .sort((a, b) => b.event_on.localeCompare(a.event_on))
+  const rows = computeUpcoming(scheduleRows, today)
+    .filter(it => it.next_due_on === today || it.next_due_on === tomorrow)
+    // force가 아니면 오늘 이미 리마인드한 라인은 제외(당일 중복 방지). 라인의 대표는 최신 기록.
+    .filter(it => {
+      if (force) return true
+      const rem = rowById.get(it.record_id)?.last_reminded_on
+      return !rem || rem < today
+    })
+    .map(it => ({
+      id: it.record_id,
+      pet_id: it.pet_id,
+      category: it.category,
+      title: it.title,
+      next_due_on: it.next_due_on,
+      pet: rowById.get(it.record_id)?.pet ?? null,
+    }))
 
   // 공동 관리자(pet_members)에게도 발송하기 위해 반려동물별 구성원 user_id를 조회한다.
   // (소유자뿐 아니라 함께 돌보는 가족 전원이 D-day 알림을 받도록)

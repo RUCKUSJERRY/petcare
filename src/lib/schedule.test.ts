@@ -43,6 +43,21 @@ describe('computeUpcoming', () => {
     expect(out[0].next_due_on).toBe('2026-07-05') // 매월 5일 → 오늘(7/2) 이후 다음은 7/5
   })
 
+  it('반복 기록의 next_due_on이 과거로 굳어 있어도 활성 예정일로 굴린다 (리마인더 지속 발송의 근거)', () => {
+    // 생성 시점에 next_due_on='2026-06-05'로 고정된 뒤 완료 탭을 안 해 과거로 남은 매월 반복.
+    // 정적 next_due_on 범위 필터라면 두 번째 발생부터 빠지지만, computeUpcoming은 오늘 이후로 굴린다.
+    const rows: ScheduleRow[] = [
+      {
+        id: 'r1', pet_id: 'p1', category: '심장사상충', title: '하트가드',
+        event_on: '2026-06-05', next_due_on: '2026-06-05',
+        recur_rule: JSON.stringify({ freq: 'month', interval: 1, mode: 'dom' }),
+      },
+    ]
+    const out = computeUpcoming(rows, today)
+    expect(out).toHaveLength(1)
+    expect(out[0].next_due_on).toBe('2026-07-05') // 과거(6/5)가 아니라 오늘(7/2) 이후 다음 발생일
+  })
+
   it('반복이 아니면 저장된 next_due_on을 그대로 쓰고, 없으면 제외', () => {
     const rows: ScheduleRow[] = [
       { id: 'a', pet_id: 'p1', category: '접종', title: '종합백신', event_on: '2026-06-01', next_due_on: '2027-06-01', recur_rule: null },

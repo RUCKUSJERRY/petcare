@@ -58,6 +58,20 @@ describe('parseRule (유효성)', () => {
     expect(parseRule(null)).toBeNull()
     expect(parseRule('not json')).toBeNull()
   })
+  it('mode 누락·잘못된 월간 규칙은 거부 (어떤 날짜에도 매칭 안 돼 일정이 사라지는 것 방지)', () => {
+    // mode 없음 → matches 가 dow 분기로 빠져 undefined week/weekday 로 영구 미매칭
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: 1 }))).toBeNull()
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: 1, mode: 'weird' }))).toBeNull()
+    // dow 인데 week/weekday 가 유효 범위를 벗어남
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: 1, mode: 'dow', week: 0, weekday: 1 }))).toBeNull()
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: 1, mode: 'dow', week: 1, weekday: 7 }))).toBeNull()
+  })
+  it('정상 월간 규칙(dom·dow)은 파싱된다', () => {
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: 1, mode: 'dom' })))
+      .toEqual({ freq: 'month', interval: 1, mode: 'dom' })
+    expect(parseRule(JSON.stringify({ freq: 'month', interval: 2, mode: 'dow', week: -1, weekday: 5 })))
+      .toEqual({ freq: 'month', interval: 2, mode: 'dow', week: -1, weekday: 5 })
+  })
 })
 
 describe('activeNextDue', () => {
