@@ -132,6 +132,8 @@ export default function WalkTrackPage() {
   }
 
   const onPosition = (pos: GeolocationPosition) => {
+    // 유효한 위치가 들어오면 직전의 일시적 위치 오류(타임아웃 등) 안내는 해제한다.
+    setGeoError(null)
     const lat = pos.coords.latitude
     const lng = pos.coords.longitude
     const now = Date.now()
@@ -188,9 +190,10 @@ export default function WalkTrackPage() {
     watchIdRef.current = navigator.geolocation.watchPosition(
       onPosition,
       err => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoError(t('errPermission'))
-        }
+        // 권한 거부뿐 아니라 신호 없음(POSITION_UNAVAILABLE)·타임아웃(TIMEOUT)도 안내한다.
+        // (예전엔 이 두 경우를 삼켜서, 실내 등으로 위치를 못 잡으면 0.00km 산책이 아무 설명 없이
+        //  기록되던 문제가 있었다.) 유효한 위치가 잡히면 onPosition 에서 이 안내를 해제한다.
+        setGeoError(err.code === err.PERMISSION_DENIED ? t('errPermission') : t('errLocationLost'))
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )

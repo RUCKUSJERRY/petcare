@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { isPremiumActive } from '@/lib/plan'
 
 export interface PlanState {
   plan: 'free' | 'premium'
@@ -32,8 +33,8 @@ export function usePlan() {
       if (error || !data) return FREE
       const plan = (data.plan as 'free' | 'premium') ?? 'free'
       const premiumUntil = (data.premium_until as string | null) ?? null
-      const active = plan === 'premium' && (!premiumUntil || new Date(premiumUntil) > new Date())
-      return { plan, premiumUntil, isPremium: active }
+      // 프리미엄 유효 판정은 서버(게이팅)와 동일한 단일 규칙(lib/plan.isPremiumActive)을 쓴다.
+      return { plan, premiumUntil, isPremium: isPremiumActive(plan, premiumUntil) }
     },
     staleTime: 5 * 60 * 1000,
   })

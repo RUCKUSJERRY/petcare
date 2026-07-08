@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { careCategoryIcon, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { getHoliday } from '@/lib/holidays'
 import { useTranslations } from 'next-intl'
 
@@ -56,7 +56,9 @@ export function ScheduleCalendar({
 }) {
   const t = useTranslations('schedule')
   const WEEKDAYS = t.raw('weekdays') as string[]
-  const todayYMD = toYMD(new Date())
+  // 일정 데이터(next_due_on·event_on)가 모두 KST 달력 기준이므로 '오늘'도 KST로 맞춘다.
+  // (기기 로컬 날짜로 계산하면 해외/오설정 기기에서 '오늘' 하이라이트·지남(빨강) 표시가 하루 어긋난다.)
+  const todayYMD = todayKST()
   const [cursor, setCursor] = useState(() => {
     const n = new Date()
     return new Date(n.getFullYear(), n.getMonth(), 1)

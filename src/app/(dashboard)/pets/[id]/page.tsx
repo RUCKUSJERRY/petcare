@@ -67,6 +67,13 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     },
   })
 
+  // 이 상세 페이지에 들어오면 헤더/플로팅 빠른기록(FAB)의 '선택된 아이'를 지금 보고 있는
+  // 아이로 맞춘다. (이 동기화가 없으면 다견 사용자가 A가 선택된 상태에서 B의 상세로 들어와
+  // FAB로 기록할 때 엉뚱하게 A에게 기록되던 버그가 있었다.)
+  useEffect(() => {
+    if (pet && selectedPetId !== params.id) setSelectedPetId(params.id)
+  }, [pet, params.id, selectedPetId, setSelectedPetId])
+
   useEffect(() => {
     if (pet) {
       setForm({

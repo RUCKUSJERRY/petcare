@@ -87,9 +87,14 @@ export async function GET(req: Request) {
     if (newEnd <= now) newEnd = addOneMonth(now)
     // 결제는 이미 성공했으므로, 이후 DB 반영 실패는 "돈은 빠졌는데 권한 미반영" 상태를
     // 만든다. 조용히 넘기지 말고 반드시 로그로 남겨 운영자가 수동 복구할 수 있게 한다.
-    const { error: subErr } = await admin.from('subscriptions')
-      .update({ current_period_end: newEnd.toISOString() })
-      .eq('user_id', s.user_id)
+    //
+    // 쓰기 순서가 자가복구의 핵심이다: subscriptions.current_period_end 는 반드시 '마지막'에
+    // 전진시킨다. 이 값이 먼저 미래로 넘어가 버리면 다음 크론의 선택 필터(.lte(current_period_end,
+    // now))에 다시 잡히지 않아, profiles 갱신이 실패했을 때 premium_until 이 과거인 채로 남아
+    // 프리미엄이 조용히 사라진다. 반대로 current_period_end 를 마지막에 두면, 앞선 어떤 단계가
+    // 실패해도 이 행은 계속 '만료' 상태로 재선택되어 ALREADY_PROCESSED_PAYMENT 복구 경로를 타고
+    // DB 정합이 자동으로 맞춰진다. (billing/issue 의 자가복구와 동일한 원리)
+    //
     // 멱등키(order_id)로 upsert — 재시도(복구) 시 중복 결제 이력이 쌓이지 않는다.
     const { error: payErr } = await admin.from('payments').upsert({
       user_id: s.user_id, order_id: charge.orderId, payment_key: charge.paymentKey,
@@ -98,6 +103,10 @@ export async function GET(req: Request) {
     const { error: profErr } = await admin.from('profiles')
       .update({ plan: 'premium', premium_until: newEnd.toISOString() })
       .eq('id', s.user_id)
+    // 프리미엄 권한(profiles)이 반영된 뒤에야 결제 주기를 전진시켜 재선택 대상에서 뺀다.
+    const { error: subErr } = await admin.from('subscriptions')
+      .update({ current_period_end: newEnd.toISOString() })
+      .eq('user_id', s.user_id)
     if (subErr || payErr || profErr) {
       console.error('[billing/renew] charged but DB update failed', s.user_id, {
         orderId: charge.orderId, paymentKey: charge.paymentKey,

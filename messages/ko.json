@@ -305,6 +305,7 @@
     "deleteConfirm": "삭제한 기록은 복구할 수 없어요. 정말 삭제할까요?",
     "errNoGeo": "이 기기에서는 위치 추적을 사용할 수 없어요.",
     "errPermission": "위치 권한이 필요해요. 브라우저 설정에서 위치 접근을 허용해주세요.",
+    "errLocationLost": "위치 신호를 잡지 못하고 있어요. 실외로 이동하거나 잠시 후 다시 시도해주세요.",
     "errLoginRequired": "로그인이 필요해요.",
     "errSaveRetry": "저장에 실패했어요. 다시 시도해주세요.",
     "defaultTitle": "{m}월 {d}일 산책",
