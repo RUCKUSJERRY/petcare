@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { careCategoryIcon, ddayBadge, ddayToneClass } from '@/lib/utils'
+import { careCategoryIcon, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { completeCareToday } from '@/lib/careActions'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
@@ -28,6 +28,10 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
 
   if (shown.length === 0) return null
 
+  // D-day 배지는 KST '오늘' 기준으로 계산한다. (서버 대시보드가 KST로 산출한 알림 목록과
+  // 배지 표기가 자정 부근에 어긋나지 않도록 클라이언트도 동일 기준을 쓴다.)
+  const today = todayKST()
+
   const complete = async (v: CareAlert) => {
     if (!v.record_id) return
     setBusyId(v.record_id)
@@ -46,7 +50,7 @@ export function VaccAlerts({ pets, alerts }: { pets: Pet[]; alerts: CareAlert[] 
       </div>
       {shown.slice(0, 4).map(v => {
         const pet = pets.find(p => p.id === v.pet_id)
-        const badge = ddayBadge(v.next_due_on)
+        const badge = ddayBadge(v.next_due_on, today)
         return (
           <div key={v.record_id ?? `${v.pet_id}|${v.category}|${v.title}`} className="flex items-center gap-2 text-sm">
             <span aria-hidden>{careCategoryIcon(v.category)}</span>

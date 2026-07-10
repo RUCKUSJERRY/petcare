@@ -14,10 +14,8 @@ import { RecordFormModal } from '@/app/(dashboard)/pets/_components/RecordFormMo
 import { RecordsScanModal } from '@/app/(dashboard)/pets/_components/RecordsScanModal'
 import { WeightSection } from '@/app/(dashboard)/pets/_components/WeightSection'
 
-// FAB를 숨길 화면
-//  - /map·/walks/track: 자체 하단 컨트롤이 있는 몰입형 화면
-//  - /dashboard: 홈은 선택한 아이 요약 카드에 동일한 빠른 기록이 이미 인라인으로 있어 FAB이 중복
-const HIDDEN_PREFIXES = ['/map', '/walks/track', '/dashboard']
+// FAB를 항상 숨길 화면 — 자체 하단 컨트롤이 있는 몰입형 화면
+const HIDDEN_PREFIXES = ['/map', '/walks/track']
 
 /**
  * 어느 화면에서든 떠 있는 '＋ 기록' 플로팅 버튼 + '오늘의 기록' 바텀시트.
@@ -62,6 +60,11 @@ export function QuickRecordFab() {
   if (hidden || petList.length === 0) return null
 
   const activeId = selectedPetId && petList.some(p => p.id === selectedPetId) ? selectedPetId : null
+
+  // 홈(/dashboard)에서는 선택한 아이 요약 카드에 동일한 빠른 기록이 이미 인라인으로 있으므로
+  // FAB이 중복 — 단, 아이가 선택된 경우에만 숨긴다. 다견 사용자가 아무 아이도 선택하지 않은
+  // 상태(요약 카드 미표시)에서는 홈에 기록 진입점이 전혀 없으므로 FAB을 노출한다(바텀시트에 아이 선택 포함).
+  if (pathname === '/dashboard' && activeId) return null
 
   const linkCls =
     'flex items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg py-2 text-xs font-medium hover:bg-gray-100 transition-colors'

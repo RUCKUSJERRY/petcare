@@ -229,6 +229,8 @@
     "cat": "고양이",
     "searchPlaceholder": "음식 이름 검색...",
     "noResults": "검색 결과가 없어요",
+    "noResultsHint": "검색어나 필터를 바꿔보세요.",
+    "resetFilters": "필터 초기화",
     "breedCaution": "{breed} 주의: {note}",
     "defaultBreed": "우리 아이",
     "caution": "주의: {caution}",
@@ -380,7 +382,8 @@
     "registerPet": "반려동물 등록하기",
     "noGuides": "현재 나이에 해당하는 가이드가 없어요",
     "dailyMinutes": "일일 권장 분",
-    "intensity": "강도"
+    "intensity": "강도",
+    "startTrack": "산책 기록 시작하기"
   },
   "lostNew": {
     "title": "실종 제보",

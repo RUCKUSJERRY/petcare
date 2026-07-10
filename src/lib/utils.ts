@@ -378,8 +378,11 @@ export function formatDuration(totalSec: number): string {
 export function formatPace(meters: number, totalSec: number): string {
   if (meters < 10) return '-'
   const secPerKm = totalSec / (meters / 1000)
-  const m = Math.floor(secPerKm / 60)
-  const s = Math.round(secPerKm % 60)
+  // 초를 먼저 반올림한 뒤 분/초로 분해한다. (분·초를 따로 계산하면 초가 59.6→60 으로
+  // 올림될 때 5'60"/km 같은 잘못된 값이 나온다 — 총초 기준으로 캐리를 정확히 처리)
+  const totalRounded = Math.round(secPerKm)
+  const m = Math.floor(totalRounded / 60)
+  const s = totalRounded % 60
   return `${m}'${String(s).padStart(2, '0')}"/km`
 }
 

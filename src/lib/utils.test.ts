@@ -284,5 +284,9 @@ describe('산책 거리/포맷 헬퍼', () => {
   it('formatPace: 거리 짧으면 "-", 아니면 분초/km', () => {
     expect(formatPace(5, 100)).toBe('-')
     expect(formatPace(1000, 360)).toBe("6'00\"/km")
+    // 초 반올림이 분 경계를 넘어가도 5'60" 같은 잘못된 값이 나오지 않아야 한다.
+    // 1000m / 359.6s → 359.6초/km → 6'00"/km (5'60" 아님)
+    expect(formatPace(1000, 359.6)).toBe("6'00\"/km")
+    expect(formatPace(1000, 89.6)).toBe("1'30\"/km")
   })
 })

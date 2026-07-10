@@ -136,6 +136,17 @@ export default function WalkPage() {
                         {guide.tips}
                       </p>
                     )}
+
+                    {/* 산책 활동은 실제 GPS 산책 기록 화면으로 바로 연결 — 가이드(권장 분)를
+                        읽은 뒤 다른 탭을 찾아 헤매지 않고 그 자리에서 기록을 시작한다. */}
+                    {type === '산책' && (
+                      <Link
+                        href="/walks/track"
+                        className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-1.5"
+                      >
+                        <span aria-hidden>🦮</span> {t('startTrack')}
+                      </Link>
+                    )}
                   </div>
                 )
               })

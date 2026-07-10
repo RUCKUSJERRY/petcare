@@ -11,6 +11,7 @@ import { foodGuidesForSpecies, type FoodGuideTopic } from '@/lib/foodGuideData'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { FeedCalculator } from '../care/_components/FeedCalculator'
 import type { BreedFoodRule, FoodItem, FoodSafety, PetAge, Species } from '@/types'
@@ -256,7 +257,23 @@ export default function FoodsPage() {
       {isLoading ? (
         <CardSkeletonList count={5} />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">{t('noResults')}</div>
+        <EmptyState
+          icon="🍽️"
+          title={t('noResults')}
+          hint={t('noResultsHint')}
+          // 검색·안전·분류·견종 필터 조합으로 막다른 결과가 나오면, 어떤 필터가 걸렸는지
+          // 사용자가 찾아 헤매지 않도록 한 번에 초기화하는 버튼을 준다(필터가 걸렸을 때만).
+          action={
+            (search || filter !== '전체' || category !== '전체' || breedFilter !== 'all') ? (
+              <button
+                onClick={() => { setSearch(''); setFilter('전체'); setCategory('전체'); setBreedFilter('all') }}
+                className="btn-primary text-sm py-1.5 px-4"
+              >
+                {t('resetFilters')}
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map(({ food, safety }) => {

@@ -237,7 +237,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
                   {t('birthday')} {t('birthdayValue', { month: pet.birth_month, day: pet.birth_day })}
                   {(() => {
                     const next = nextAnniversary(pet.birth_month, pet.birth_day)
-                    return next ? ` · ${ddayBadge(next).text}` : ''
+                    return next ? ` · ${ddayBadge(next, todayKST()).text}` : ''
                   })()}
                 </span>
               )}

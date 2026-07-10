@@ -327,7 +327,7 @@ export function ScheduleCalendar({
           </button>
         ) : (
           dayList.map(i => {
-            const badge = i.isDue ? ddayBadge(i.due!) : null
+            const badge = i.isDue ? ddayBadge(i.due!, todayYMD) : null
             return (
               <button key={i.id} onClick={() => onSelect?.(i.id)} className="w-full text-left">
                 <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">

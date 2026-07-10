@@ -156,9 +156,12 @@ export default function SchedulePage() {
   const q = search.trim().toLowerCase()
   const searchResults = q ? visibleHistory.filter(i => i.search.includes(q)).slice(0, 50) : []
 
-  const overdue = visible.filter(i => daysUntil(i.next_due_on) < 0)
-  const soon = visible.filter(i => { const d = daysUntil(i.next_due_on); return d >= 0 && d <= 7 })
-  const later = visible.filter(i => daysUntil(i.next_due_on) > 7)
+  // D-day·경과일은 반드시 KST '오늘' 기준으로 계산한다. (인자를 비우면 기기 로컬 시간대로
+  // 계산돼, 기록 날짜가 KST 달력인 서버 대시보드와 자정 부근에서 하루 어긋난다.)
+  const today = todayKST()
+  const overdue = visible.filter(i => daysUntil(i.next_due_on, today) < 0)
+  const soon = visible.filter(i => { const d = daysUntil(i.next_due_on, today); return d >= 0 && d <= 7 })
+  const later = visible.filter(i => daysUntil(i.next_due_on, today) > 7)
 
   // OCR 스캔·기록 내보내기 직전 전면 광고(무료 사용자). 프리미엄/광고 OFF/쿨다운 시 즉시 진행.
   const { requestAd, adNode } = useInterstitialAd()
@@ -206,8 +209,8 @@ export default function SchedulePage() {
   }
 
   const Row = ({ i }: { i: ScheduleItem }) => {
-    const badge = ddayBadge(i.next_due_on)
-    const daysSince = i.last_on ? Math.max(0, -daysUntil(i.last_on)) : null
+    const badge = ddayBadge(i.next_due_on, today)
+    const daysSince = i.last_on ? Math.max(0, -daysUntil(i.last_on, today)) : null
     return (
       <button onClick={() => setDetailId(i.id)} className="w-full text-left">
         <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">

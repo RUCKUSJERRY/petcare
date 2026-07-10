@@ -10,11 +10,11 @@ import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
-import { daysUntil } from '@/lib/utils'
+import { daysUntil, todayKST } from '@/lib/utils'
 import type { LostPet } from '@/types'
 
 function dPlus(lostAt: string, t: (key: string, values?: Record<string, string | number | Date>) => string) {
-  const d = -daysUntil(lostAt) // 과거일수록 양수
+  const d = -daysUntil(lostAt, todayKST()) // 과거일수록 양수 (경과일은 KST 오늘 기준)
   return d <= 0 ? t('today') : t('dPlus', { days: d })
 }
 

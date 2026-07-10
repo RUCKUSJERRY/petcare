@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil } from '@/lib/utils'
+import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil, todayKST } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
@@ -46,9 +46,12 @@ export function SelectedPetSummary({
   }
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
+  // D-day 계산은 KST '오늘' 기준으로 통일한다. (인자를 비우면 기기 로컬 시간대로 계산돼,
+  // KST 달력 기준인 서버 대시보드 알림과 자정 부근에서 하루 어긋난다.)
+  const today = todayKST()
   // 30일 이내 다가오는 생일 배지 + 함께한 날수
   const nextBirthday = nextAnniversary(pet.birth_month, pet.birth_day)
-  const birthdayUpcoming = nextBirthday && daysUntil(nextBirthday) <= 30
+  const birthdayUpcoming = nextBirthday && daysUntil(nextBirthday, today) <= 30
   const together = daysTogether(pet.adopted_on)
   const nextVacc = vaccAlerts
     .filter(v => v.pet_id === pet.id)
@@ -74,7 +77,7 @@ export function SelectedPetSummary({
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {birthdayUpcoming && (
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
-                  {t('birthdayBadge', { dday: ddayBadge(nextBirthday!).text })}
+                  {t('birthdayBadge', { dday: ddayBadge(nextBirthday!, today).text })}
                 </span>
               )}
               {together != null && (
@@ -102,7 +105,7 @@ export function SelectedPetSummary({
           <span aria-hidden>{careCategoryIcon(nextVacc.category)}</span>
           <span className="flex-1 truncate">{nextVacc.title}</span>
           <span className="text-xs font-semibold text-white/90 shrink-0">
-            {ddayBadge(nextVacc.next_due_on).text}
+            {ddayBadge(nextVacc.next_due_on, today).text}
           </span>
           <span aria-hidden className="text-white/60">›</span>
         </Link>
