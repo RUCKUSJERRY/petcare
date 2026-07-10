@@ -217,17 +217,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'image_fetch_failed', message: '이미지를 불러오지 못했어요.' }, { status: 502 })
   }
 
+  // 사용량 슬롯을 '유료 호출 직전'에 먼저 예약(선점)한다.
+  // 예전엔 Gemini 응답(최대 15초) 이후에야 insert 해서, 그 사이 병렬 요청들이 모두 한도 검사를
+  // 통과해 시간당/월 한도를 넘길 수 있었다(TOCTOU). 예약을 앞당겨 경합 창을 크게 줄인다.
+  const { data: usageRow, error: usageErr } = await supabase
+    .from('ai_usage').insert({ user_id: user.id, kind: 'ocr' }).select('id').maybeSingle()
+  if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
+
   const gemini = await tryGemini(base64, mimeType)
 
-  // 실제 비용이 발생한 경우에만 사용량을 기록한다.
-  //  - 성공 또는 'failed'(모델이 실행됐으나 인식 결과 없음): Gemini가 실행되어 과금 → 기록.
-  //  - 'rate_limited'(429): 쿼터로 요청이 거절되어 과금이 없음 → 기록하지 않는다.
-  // 이렇게 해야 서버측 쿼터 초과(429)로 무료 사용자의 월 한도·시간당 한도가 헛되이 깎이지 않는다.
-  // (이미지 내려받기·크기검증 실패는 위에서 이미 return 되어 여기 도달하지 않는다.)
+  // 과금 없는 경로면 예약을 되돌려, 무료 사용자의 한도가 헛되이 깎이지 않게 한다.
+  //  - 'rate_limited'(429): 쿼터로 거절되어 과금 없음 → 예약 취소.
+  //  - 성공/'failed'(모델이 실행됨): Gemini가 실행되어 과금 → 예약 유지.
   const costIncurred = 'records' in gemini || gemini.error === 'failed'
-  if (costIncurred) {
-    const { error: usageErr } = await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'ocr' })
-    if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
+  if (!costIncurred && usageRow) {
+    await supabase.from('ai_usage').delete().eq('id', usageRow.id)
   }
 
   if ('records' in gemini) {

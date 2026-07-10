@@ -122,6 +122,33 @@ export function nextOccurrence(rule: RecurRule, base: Date, after: Date): Date |
 }
 
 /**
+ * base(시작일) 기준, [fromYmd, toYmd] 구간(양끝 포함) 안의 모든 반복 발생일(YYYY-MM-DD).
+ * 캘린더가 "보이는 달 범위"로 반복 일정을 펼쳐 그리는 데 쓴다 — 다음 1회만 찍혀
+ * 미래 달이 텅 비어 보이던 문제를 없앤다. 규칙이 없으면 빈 배열.
+ * (구간은 캘린더 6주=42일이라 일 단위 순회로 충분히 가볍다.)
+ */
+export function occurrencesBetween(
+  recurRule: string | null | undefined,
+  baseYmd: string,
+  fromYmd: string,
+  toYmd: string,
+): string[] {
+  const rule = parseRule(recurRule)
+  if (!rule) return []
+  const base = parseYMD(baseYmd)
+  const to = parseYMD(toYmd)
+  // base 이전은 발생하지 않으므로 시작점을 max(from, base) 로 잡는다.
+  const d = new Date(Math.max(parseYMD(fromYmd).getTime(), base.getTime()))
+  const out: string[] = []
+  // 순회 상한(안전장치): 구간이 비정상적으로 넓어도 폭주하지 않게 한다.
+  for (let guard = 0; d <= to && guard < 4000; guard++) {
+    if (matches(rule, base, d)) out.push(ymd(new Date(d)))
+    d.setDate(d.getDate() + 1)
+  }
+  return out
+}
+
+/**
  * 화면·정렬에 쓸 "다음 예정일".
  * 반복이면 today(포함) 이후의 다음 발생일로 굴려서 항상 미래 일정을 보여준다.
  * 반복이 아니면 저장된 next_due를 그대로 쓴다(미내원 예정일이 지나면 '지남'으로 표시).

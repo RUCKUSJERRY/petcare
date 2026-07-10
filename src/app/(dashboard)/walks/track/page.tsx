@@ -262,6 +262,8 @@ export default function WalkTrackPage() {
   const notice = kakaoNotice(mapStatus)
   const finishedDate = new Date(startedAtRef.current || Date.now())
   const finishedDateLabel = t('dateLabel', { m: finishedDate.getMonth() + 1, d: finishedDate.getDate() })
+  // 거리 50m 미만이면서 시간도 60초 미만이면 사실상 빈 산책 → 저장 차단(둘 중 하나만 넘어도 저장 허용)
+  const tooShort = distRef.current < 50 && elapsed < 60
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg top-[52px] bottom-0 z-[60] bg-gray-100 overflow-hidden flex flex-col">
@@ -339,6 +341,21 @@ export default function WalkTrackPage() {
 
         {phase === 'finished' && (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {/* 거리·시간·페이스 요약 — 지도 오버레이는 키보드/폼에 가려지므로 폼 안에도 다시 보여준다 */}
+            <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+              <div>
+                <div className="text-lg font-bold text-primary-600 tabular-nums">{formatDistance(distRef.current)}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">{t('distance')}</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900 tabular-nums">{formatDuration(elapsed)}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">{t('time')}</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900 tabular-nums">{formatPace(distRef.current, elapsed)}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">{t('pace')}</div>
+              </div>
+            </div>
             {/* 시작/종료 시각 요약 */}
             <div className="flex justify-center gap-4 text-xs text-gray-500">
               <span>{t('startTime')} <b className="text-gray-700 tabular-nums">{hhmm(startedAtRef.current)}</b></span>
@@ -380,9 +397,11 @@ export default function WalkTrackPage() {
               {photoError && <p className="text-sm text-red-500 mt-1.5">{photoError}</p>}
             </div>
 
+            {/* 오탭 등으로 생긴 사실상 빈 산책(거리·시간 모두 아주 작음)은 통계를 흐리므로 저장을 막는다 */}
+            {tooShort && <p className="text-xs text-amber-600 text-center">{t('tooShortHint')}</p>}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirmDiscard(true)} className="btn-secondary py-3 text-sm">{t('discard')}</button>
-              <button onClick={save} disabled={saving} className="btn-primary py-3 text-sm">
+              <button onClick={save} disabled={saving || tooShort} className="btn-primary py-3 text-sm disabled:opacity-50">
                 {saving ? tc('saving') : t('saveWalk')}
               </button>
             </div>

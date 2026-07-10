@@ -31,8 +31,9 @@ type ScheduleItem = {
   pet_species: string
   category: string
   title: string
-  last_on: string | null   // 마지막 시행/발생일
+  last_on: string | null   // 마지막 시행/발생일 (반복 규칙의 기준일)
   next_due_on: string      // 다음 예정일 — 정렬·배지 기준
+  recur_rule: string | null // 반복 규칙(JSON) — 캘린더가 보이는 달로 펼쳐 그리는 데 사용
 }
 
 type HistoryItem = {
@@ -127,6 +128,7 @@ export default function SchedulePage() {
       const upcoming: ScheduleItem[] = computeUpcoming(all as ScheduleRow[], today).map(u => ({
         id: u.record_id, pet_id: u.pet_id, ...meta(u.pet_id),
         category: u.category, title: u.title, last_on: u.last_on, next_due_on: u.next_due_on,
+        recur_rule: u.recur_rule,
       }))
 
       const history: HistoryItem[] = all.map(r => ({

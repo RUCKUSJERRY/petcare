@@ -11,6 +11,7 @@
     "foods": "음식",
     "health": "건강",
     "activity": "활동",
+    "care": "생활관리",
     "map": "지도",
     "lost": "실종",
     "walks": "산책"
@@ -87,7 +88,9 @@
     "featCommunity": "커뮤니티",
     "othersCount": "다른 아이들 {count}마리",
     "collapse": "접기 ▲",
-    "expand": "펼치기 ▼"
+    "expand": "펼치기 ▼",
+    "alertBadge": "알림 {count}",
+    "selectHint": "위에서 아이를 선택하면 오늘 기록·건강 요약을 한눈에 볼 수 있어요"
   },
   "vaccAlerts": {
     "otherTitle": "다른 아이 일정",
@@ -335,6 +338,7 @@
     "shareHint": "(커뮤니티에서 좋아요·댓글 가능)",
     "discard": "저장 안 함",
     "saveWalk": "저장하기",
+    "tooShortHint": "너무 짧은 산책이에요. 조금 더 걷거나, 저장하지 않고 나갈 수 있어요.",
     "photoOptional": "산책 사진 (선택)",
     "photoAlt": "산책 사진",
     "goalTitle": "이번 주 목표",
@@ -807,6 +811,9 @@
     "pickGallery": "🖼️ 갤러리"
   },
   "petDetail": {
+    "recordSection": "기록",
+    "recordManual": "직접 기록",
+    "recordScan": "스캔",
     "errSaveFailed": "저장에 실패했어요. 다시 시도해주세요.",
     "errDeleteFailed": "삭제에 실패했어요. 다시 시도해주세요.",
     "errNameRequired": "이름을 입력해주세요.",
@@ -908,6 +915,10 @@
     "monthly": "월별 지출",
     "byCategory": "항목별 지출",
     "monthLabel": "{n}월",
+    "monthlyHint": "막대를 누르면 그 달 내역을 볼 수 있어요",
+    "drillMonth": "{n}월 내역",
+    "drillCategory": "{category} 내역",
+    "drillEmpty": "해당 내역이 없어요.",
     "empty": "아직 기록된 비용이 없어요.",
     "emptyHint": "일정에서 진료·미용 등 기록에 비용을 입력하면 여기서 월별·항목별로 모아볼 수 있어요.",
     "goRecord": "일정에서 기록하기 →",

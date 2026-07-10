@@ -19,9 +19,11 @@ const matchPath = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(prefix + '/')
 
 // 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화)
-const INFO_SUBPATHS = ['/foods', '/health', '/walk']
+const INFO_SUBPATHS = ['/foods', '/health', '/walk', '/care']
 // 지도 탭에 묶이는 하위 페이지 (실종 신고/제보·산책하기는 지도 탭에서 진입)
 const MAP_SUBPATHS = ['/lost', '/walks']
+// 일정 탭에 묶이는 하위 페이지 (케어 비용은 기록/일정에서 파생 — 활성 탭이 없던 문제 해결)
+const SCHEDULE_SUBPATHS = ['/costs']
 
 export function BottomNav() {
   const pathname = usePathname()
@@ -36,7 +38,9 @@ export function BottomNav() {
               ? matchPath(pathname, '/info') || INFO_SUBPATHS.some(p => matchPath(pathname, p))
               : item.href === '/map'
                 ? matchPath(pathname, '/map') || MAP_SUBPATHS.some(p => matchPath(pathname, p))
-                : matchPath(pathname, item.href)
+                : item.href === '/schedule'
+                  ? matchPath(pathname, '/schedule') || SCHEDULE_SUBPATHS.some(p => matchPath(pathname, p))
+                  : matchPath(pathname, item.href)
           return (
             <Link
               key={item.href}

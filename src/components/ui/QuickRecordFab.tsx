@@ -10,7 +10,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn } from '@/lib/utils'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
-import { RecordForm } from '@/app/(dashboard)/pets/_components/RecordForm'
+import { RecordFormModal } from '@/app/(dashboard)/pets/_components/RecordFormModal'
 import { RecordsScanModal } from '@/app/(dashboard)/pets/_components/RecordsScanModal'
 import { WeightSection } from '@/app/(dashboard)/pets/_components/WeightSection'
 
@@ -177,7 +177,16 @@ export function QuickRecordFab() {
       {modal === 'scan' && activeId && (
         <RecordsScanModal petId={activeId} onClose={() => { setModal(null); afterRecord() }} />
       )}
-      {(modal === 'manual' || modal === 'weight') && activeId && (
+      {/* 직접 기록: 헤더 저장 버튼이 임베드 폼을 구동하는 공용 모달(이중 헤더 제거) */}
+      {modal === 'manual' && activeId && (
+        <RecordFormModal
+          petId={activeId}
+          title={t('manual')}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); afterRecord() }}
+        />
+      )}
+      {modal === 'weight' && activeId && (
         <div
           className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center"
           onClick={() => setModal(null)}
@@ -189,7 +198,7 @@ export function QuickRecordFab() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="font-bold text-gray-900">{modal === 'weight' ? t('weight') : t('manual')}</p>
+              <p className="font-bold text-gray-900">{t('weight')}</p>
               <button
                 type="button"
                 onClick={() => setModal(null)}
@@ -199,15 +208,7 @@ export function QuickRecordFab() {
                 ✕
               </button>
             </div>
-            {modal === 'manual' ? (
-              <RecordForm
-                petId={activeId}
-                onDone={() => { setModal(null); afterRecord() }}
-                onCancel={() => setModal(null)}
-              />
-            ) : (
-              <WeightSection petId={activeId} defaultOpen />
-            )}
+            <WeightSection petId={activeId} defaultOpen />
           </div>
         </div>
       )}

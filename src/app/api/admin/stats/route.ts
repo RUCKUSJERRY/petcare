@@ -25,13 +25,17 @@ export async function GET() {
   const nowIso = new Date().toISOString()
   const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  // 쿼리 오류를 삼키면 일시적 장애가 실제 '0 매출·0 사용자'처럼 표시되어 지표를 오독한다.
+  // 오류는 throw 해 아래 try/catch 에서 500 으로 표면화한다(가짜 0 대신 명시적 실패).
   const countOf = async (table: string, build?: (q: any) => any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     let q = admin.from(table).select('*', { count: 'exact', head: true })
     if (build) q = build(q)
-    const { count } = await q
+    const { count, error } = await q
+    if (error) throw error
     return count ?? 0
   }
 
+  try {
   // 제휴 클릭
   const affiliateTotal = await countOf('affiliate_clicks')
   const affiliate7d = await countOf('affiliate_clicks', q => q.gte('created_at', since7))
@@ -41,8 +45,10 @@ export async function GET() {
   const subsCanceled = await countOf('subscriptions', q => q.eq('status', 'canceled'))
   const subsPastDue = await countOf('subscriptions', q => q.eq('status', 'past_due'))
 
-  // 결제: 건수 + 누적 매출
-  const { data: pays } = await admin.from('payments').select('amount').limit(10000)
+  // 결제: 건수 + 누적 매출 — 실제 성공 결제(status='DONE')만 집계한다.
+  // (중단·실패 건까지 더하면 매출이 부풀려진다.)
+  const { data: pays, error: paysErr } = await admin.from('payments').select('amount').eq('status', 'DONE').limit(10000)
+  if (paysErr) throw paysErr
   const paymentsCount = pays?.length ?? 0
   const revenue = (pays ?? []).reduce((s, p) => s + (p.amount as number), 0)
 
@@ -57,7 +63,8 @@ export async function GET() {
   // 전환율(%) = 유효 프리미엄 / 전체
   const conversionRate = totalUsers > 0 ? Math.round((premiumUsers / totalUsers) * 1000) / 10 : 0
   // 최근 30일 매출 + 결제 사용자 수 → 월 ARPU/ARPPU
-  const { data: pays30 } = await admin.from('payments').select('amount, user_id').gte('created_at', since30).limit(10000)
+  const { data: pays30, error: pays30Err } = await admin.from('payments').select('amount, user_id').eq('status', 'DONE').gte('created_at', since30).limit(10000)
+  if (pays30Err) throw pays30Err
   const revenue30d = (pays30 ?? []).reduce((s, p) => s + (p.amount as number), 0)
   const payingUsers30d = new Set((pays30 ?? []).map(p => p.user_id as string)).size
   const arppu = payingUsers30d > 0 ? Math.round(revenue30d / payingUsers30d) : 0 // 결제자 1인당
@@ -70,12 +77,13 @@ export async function GET() {
   // 기록 생성(records.created_at)을 "활동" 신호로 사용, 반려동물 소유자 기준 활성 사용자 집계.
   // 최신순으로 가져오므로 limit에 걸려도 1·7일 지표는 정확하고, 30일은 과소집계될 수 있다(시드 규모에선 무관).
   const since1 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const { data: recentRecs } = await admin
+  const { data: recentRecs, error: recsErr } = await admin
     .from('records')
     .select('created_at, pet:pets(user_id)')
     .gte('created_at', since30)
     .order('created_at', { ascending: false })
     .limit(10000)
+  if (recsErr) throw recsErr
   type ActRow = { created_at: string; pet: { user_id: string } | null }
   const acts = (recentRecs ?? []) as unknown as ActRow[]
   const activeSince = (iso: string) => {
@@ -93,7 +101,8 @@ export async function GET() {
   const recordsPerActive7d = activeUsers7d > 0 ? Math.round((records7d / activeUsers7d) * 10) / 10 : 0
 
   // 제휴 인기 상품 Top
-  const { data: clicks } = await admin.from('affiliate_clicks').select('product_id').limit(10000)
+  const { data: clicks, error: clicksErr } = await admin.from('affiliate_clicks').select('product_id').limit(10000)
+  if (clicksErr) throw clicksErr
   const byProduct = new Map<string, number>()
   for (const c of clicks ?? []) {
     const id = c.product_id as string
@@ -115,4 +124,9 @@ export async function GET() {
     activeUsers1d, activeUsers7d, activeUsers30d,
     stickiness, recordingRate7d, recordsPerActive7d,
   })
+  } catch (err) {
+    // 집계 중 어떤 쿼리라도 실패하면 가짜 0 대신 명시적 오류로 알린다.
+    console.error('[admin/stats] aggregation failed', err)
+    return NextResponse.json({ error: 'stats_query_failed' }, { status: 500 })
+  }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nextOccurrence, activeNextDue, describeRule, parseRule, parseYMD, ymd, type RecurRule } from './recurrence'
+import { nextOccurrence, activeNextDue, describeRule, parseRule, parseYMD, ymd, occurrencesBetween, type RecurRule } from './recurrence'
 
 const next = (rule: RecurRule, base: string, after: string) => {
   const d = nextOccurrence(rule, parseYMD(base), parseYMD(after))
@@ -71,6 +71,30 @@ describe('parseRule (유효성)', () => {
       .toEqual({ freq: 'month', interval: 1, mode: 'dom' })
     expect(parseRule(JSON.stringify({ freq: 'month', interval: 2, mode: 'dow', week: -1, weekday: 5 })))
       .toEqual({ freq: 'month', interval: 2, mode: 'dow', week: -1, weekday: 5 })
+  })
+})
+
+describe('occurrencesBetween', () => {
+  const rule = (r: RecurRule) => JSON.stringify(r)
+  it('매월 1일 — 구간 안의 모든 발생일을 편다 (미래 달도 채워짐)', () => {
+    // 시작 1/1, 3~5월 구간이면 3/1·4/1·5/1 이 모두 나와야 한다.
+    expect(occurrencesBetween(rule({ freq: 'month', interval: 1, mode: 'dom' }), '2025-01-01', '2025-03-01', '2025-05-31'))
+      .toEqual(['2025-03-01', '2025-04-01', '2025-05-01'])
+  })
+  it('매주 월요일 — 한 달 창의 모든 월요일', () => {
+    expect(occurrencesBetween(rule({ freq: 'week', interval: 1, byweekday: [1] }), '2025-06-02', '2025-06-01', '2025-06-30'))
+      .toEqual(['2025-06-02', '2025-06-09', '2025-06-16', '2025-06-23', '2025-06-30'])
+  })
+  it('base 이전 구간은 발생 없음', () => {
+    expect(occurrencesBetween(rule({ freq: 'day', interval: 1 }), '2025-06-10', '2025-06-01', '2025-06-05'))
+      .toEqual([])
+  })
+  it('양끝(from·to)을 포함한다', () => {
+    expect(occurrencesBetween(rule({ freq: 'day', interval: 5 }), '2025-06-01', '2025-06-06', '2025-06-16'))
+      .toEqual(['2025-06-06', '2025-06-11', '2025-06-16'])
+  })
+  it('규칙이 없으면 빈 배열', () => {
+    expect(occurrencesBetween(null, '2025-06-01', '2025-06-01', '2025-06-30')).toEqual([])
   })
 })
 

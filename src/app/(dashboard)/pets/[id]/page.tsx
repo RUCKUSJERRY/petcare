@@ -14,6 +14,11 @@ import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { WeightSection } from '../_components/WeightSection'
 import { PetMembers } from '../_components/PetMembers'
+import { QuickLogBar } from '../_components/QuickLogBar'
+import { RecordFeed } from '../_components/RecordFeed'
+import { RecordDetailModal } from '../_components/RecordDetailModal'
+import { RecordFormModal } from '../_components/RecordFormModal'
+import { RecordsScanModal } from '../_components/RecordsScanModal'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import Link from 'next/link'
@@ -37,6 +42,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [uid, setUid] = useState<string | null>(null)
+  // 기록 패널: 항목 상세 모달 / 직접기록·스캔 모달
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [recModal, setRecModal] = useState<null | 'manual' | 'scan'>(null)
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
@@ -99,6 +107,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       return () => clearTimeout(t)
     }
   }, [pet, addTarget])
+
+  // 기록(원탭·직접·스캔) 후 이 아이의 오늘/피드/예정 캐시를 갱신
+  const afterRecord = () => {
+    queryClient.invalidateQueries({ queryKey: ['today-timeline', params.id] })
+    queryClient.invalidateQueries({ queryKey: ['today-log', params.id] })
+    queryClient.invalidateQueries({ queryKey: ['record-feed', params.id] })
+    queryClient.invalidateQueries({ queryKey: ['care-schedule'] })
+  }
 
   const handleSave = async () => {
     // 신규 등록 폼과 동일하게 필수값을 검증한다.
@@ -318,6 +334,28 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 내 아이 기록 (조회 모드에서만) */}
       {!editing && (
         <>
+          {/* 원탭 생활기록 + 시간순 피드 + 직접기록/스캔 — 홈 요약카드와 동일한 기록 진입을
+              이 아이의 상세 페이지에서도 그대로 제공(상세가 요약카드의 상위집합이 되도록). */}
+          <div className="card space-y-2">
+            <p className="text-sm font-semibold text-gray-500">{t('recordSection')}</p>
+            <QuickLogBar
+              petId={params.id}
+              onOpenDetail={setDetailId}
+              onLogged={afterRecord}
+            />
+            <RecordFeed petId={params.id} scroll onSelect={setDetailId} />
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <button type="button" onClick={() => setRecModal('manual')}
+                className="flex items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg py-2 text-xs font-medium hover:bg-gray-100 transition-colors">
+                <span aria-hidden>📝</span> {t('recordManual')}
+              </button>
+              <button type="button" onClick={() => setRecModal('scan')}
+                className="flex items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg py-2 text-xs font-medium hover:bg-gray-100 transition-colors">
+                <span aria-hidden>📷</span> {t('recordScan')}
+              </button>
+            </div>
+          </div>
+
           <div ref={weightRef}>
             <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
           </div>
@@ -350,6 +388,22 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteModal(false)}
         />
+      )}
+
+      {/* 기록 상세/직접기록/스캔 모달 */}
+      {detailId && (
+        <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} onChanged={afterRecord} />
+      )}
+      {recModal === 'manual' && (
+        <RecordFormModal
+          petId={params.id}
+          title={t('recordManual')}
+          onClose={() => setRecModal(null)}
+          onDone={() => { setRecModal(null); afterRecord() }}
+        />
+      )}
+      {recModal === 'scan' && (
+        <RecordsScanModal petId={params.id} onClose={() => { setRecModal(null); afterRecord() }} />
       )}
     </div>
   )

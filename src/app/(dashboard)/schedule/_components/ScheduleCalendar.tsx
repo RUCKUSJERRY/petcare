@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { careCategoryIcon, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
+import { occurrencesBetween } from '@/lib/recurrence'
 import { getHoliday } from '@/lib/holidays'
 import { useTranslations } from 'next-intl'
 
@@ -13,6 +14,9 @@ type ScheduleItem = {
   category: string
   title: string
   next_due_on: string
+  // 반복 일정을 보이는 달 범위로 펼쳐 그리기 위한 정보 (없으면 next_due_on 한 곳에만 표시)
+  last_on?: string | null
+  recur_rule?: string | null
 }
 
 // 지난(또는 전체) 기록 — 실제 시행/진료일에 캘린더에 표시
@@ -78,28 +82,6 @@ export function ScheduleCalendar({
     setPickerOpen(false)
   }, [focusDate])
 
-  // 날짜별 예정 일정 그룹
-  const byDate = useMemo(() => {
-    const map = new Map<string, ScheduleItem[]>()
-    items.forEach(it => {
-      const arr = map.get(it.next_due_on) ?? []
-      arr.push(it)
-      map.set(it.next_due_on, arr)
-    })
-    return map
-  }, [items])
-
-  // 날짜별 지난 기록 그룹 (실제 시행/진료일 기준)
-  const byDateHistory = useMemo(() => {
-    const map = new Map<string, HistoryItem[]>()
-    history.forEach(it => {
-      const arr = map.get(it.event_on) ?? []
-      arr.push(it)
-      map.set(it.event_on, arr)
-    })
-    return map
-  }, [history])
-
   // 표시할 6주(42칸) 그리드 계산
   const cells = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
@@ -112,16 +94,66 @@ export function ScheduleCalendar({
     })
   }, [cursor])
 
+  // 날짜별 예정 일정 그룹.
+  // 반복 일정은 '다음 1회'만이 아니라 지금 보이는 달 범위(오늘~창의 끝)의 모든 발생일에 찍는다.
+  // (예전엔 next_due_on 한 곳에만 찍혀 다음 달로 넘기면 텅 빈 달력처럼 보였다.)
+  const byDate = useMemo(() => {
+    const map = new Map<string, ScheduleItem[]>()
+    const winFrom = toYMD(cells[0])
+    const winTo = toYMD(cells[cells.length - 1])
+    // 과거 칸에 예정을 새로 그리지 않도록 오늘 이후로만 펼친다(지난 실제 기록은 history 로 표시).
+    const projFrom = winFrom < todayYMD ? todayYMD : winFrom
+    const push = (ymd: string, it: ScheduleItem) => {
+      const arr = map.get(ymd) ?? []
+      arr.push(it.next_due_on === ymd ? it : { ...it, next_due_on: ymd })
+      map.set(ymd, arr)
+    }
+    items.forEach(it => {
+      const dates = it.recur_rule && it.last_on
+        ? occurrencesBetween(it.recur_rule, it.last_on, projFrom, winTo)
+        : []
+      if (dates.length) {
+        dates.forEach(d => push(d, it))
+      } else if (it.next_due_on >= winFrom && it.next_due_on <= winTo) {
+        // 반복이 아니거나(단발) 이 창에 발생이 없으면 저장된 다음 예정일에만 찍는다.
+        push(it.next_due_on, it)
+      }
+    })
+    return map
+  }, [items, cells, todayYMD])
+
+  // 날짜별 지난 기록 그룹 (실제 시행/진료일 기준)
+  const byDateHistory = useMemo(() => {
+    const map = new Map<string, HistoryItem[]>()
+    history.forEach(it => {
+      const arr = map.get(it.event_on) ?? []
+      arr.push(it)
+      map.set(it.event_on, arr)
+    })
+    return map
+  }, [history])
+
   const monthLabel = t('monthLabel', { year: cursor.getFullYear(), month: cursor.getMonth() + 1 })
-  const move = (delta: number) =>
-    setCursor(c => new Date(c.getFullYear(), c.getMonth() + delta, 1))
+  // 달을 이동하면 아래 '선택한 날짜' 목록도 그 달로 맞춘다(보는 달과 목록이 어긋나 보이지 않게).
+  // 이동한 달에 오늘이 있으면 오늘을, 아니면 그 달 1일을 선택한다.
+  const selectForMonth = (monthStart: Date) => {
+    const ym = toYMD(monthStart).slice(0, 7)
+    setSelected(ym === todayYMD.slice(0, 7) ? todayYMD : toYMD(monthStart))
+  }
+  const move = (delta: number) => {
+    const next = new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1)
+    setCursor(next)
+    selectForMonth(next)
+  }
 
   const openPicker = () => {
     setPickerYear(cursor.getFullYear())
     setPickerOpen(o => !o)
   }
   const pickMonth = (monthIdx: number) => {
-    setCursor(new Date(pickerYear, monthIdx, 1))
+    const next = new Date(pickerYear, monthIdx, 1)
+    setCursor(next)
+    selectForMonth(next)
     setPickerOpen(false)
   }
   const goToday = () => {

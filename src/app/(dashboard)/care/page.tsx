@@ -8,6 +8,7 @@ import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import type { PetAge, Species } from '@/types'
@@ -34,17 +35,30 @@ function GuideCard({
   const notes = guide.notes.filter(
     n => (n.stage === stage || n.stage === '공통') && (!n.size || n.size === size)
   )
+  // 펼쳤을 때 실제로 더 보여줄 내용(방법·팁)이 있을 때만 펼치기 버튼을 노출한다.
+  // (노트는 항상 보이므로, 펼칠 게 없는데도 '펼치기'가 있으면 눌러도 반응이 없어 오해를 준다.)
+  const hasMore = (guide.steps?.length ?? 0) > 0 || (guide.tips?.length ?? 0) > 0
+
+  const Header = (
+    <>
+      <span className="text-2xl shrink-0" aria-hidden>{guide.icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-gray-900">{guide.topic}</div>
+        <div className="text-xs text-primary-600 font-medium mt-0.5">🔁 {guide.frequency}</div>
+      </div>
+      {hasMore && <span className="text-gray-400 text-sm shrink-0">{open ? t('collapse') : t('expand')}</span>}
+    </>
+  )
 
   return (
     <div className="card space-y-2 border-l-4 border-primary-400" style={{ borderRadius: '0 12px 12px 0' }}>
-      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2.5 text-left">
-        <span className="text-2xl shrink-0" aria-hidden>{guide.icon}</span>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-gray-900">{guide.topic}</div>
-          <div className="text-xs text-primary-600 font-medium mt-0.5">🔁 {guide.frequency}</div>
-        </div>
-        <span className="text-gray-400 text-sm shrink-0">{open ? t('collapse') : t('expand')}</span>
-      </button>
+      {hasMore ? (
+        <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2.5 text-left">
+          {Header}
+        </button>
+      ) : (
+        <div className="w-full flex items-center gap-2.5">{Header}</div>
+      )}
 
       {notes.length > 0 && (
         <div className="space-y-1.5">
@@ -59,7 +73,7 @@ function GuideCard({
         </div>
       )}
 
-      {open && (
+      {open && hasMore && (
         <div className="space-y-3 pt-1">
           {guide.steps && guide.steps.length > 0 && (
             <div>
@@ -108,6 +122,8 @@ export default function CarePage() {
   return (
     <div className="px-4 py-6 space-y-4">
       <PageHeader title={t('title')} fallbackHref="/info" />
+      {/* 정보 섹션 형제(음식·건강·활동·생활관리) 간 이동 — 건강 가이드와 동일한 탭 스트립으로 일관화 */}
+      <SectionTabs section="info" />
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3">
         {t('disclaimer')}

@@ -66,6 +66,10 @@ export function PetSection({
 
   const hasSelection = selectedPetId != null && pets.some(p => p.id === selectedPetId)
   const listPets = hasSelection ? pets.filter(p => p.id !== selectedPetId) : pets
+  // 접힌 '다른 아이들' 안에 숨는 건강 알림 건수 — 접힌 헤더에 배지로 노출(놓치지 않도록)
+  const othersAlertCount = hasSelection
+    ? vaccAlerts.filter(a => a.pet_id !== selectedPetId).length
+    : 0
 
   return (
     <div className="space-y-3">
@@ -82,11 +86,19 @@ export function PetSection({
             <button
               type="button"
               onClick={() => setOthersOpen(o => !o)}
-              className="w-full flex items-center justify-between pt-1 text-sm font-semibold text-gray-500"
+              className="w-full flex items-center justify-between gap-2 pt-1 text-sm font-semibold text-gray-500"
               aria-expanded={othersOpen}
             >
-              <span>{t('othersCount', { count: listPets.length })}</span>
-              <span className="text-gray-400">{othersOpen ? t('collapse') : t('expand')}</span>
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate">{t('othersCount', { count: listPets.length })}</span>
+                {/* 접혀 있을 때만: 그 안에 숨은 건강 알림 개수를 배지로 알린다 */}
+                {!othersOpen && othersAlertCount > 0 && (
+                  <span className="shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                    {t('alertBadge', { count: othersAlertCount })}
+                  </span>
+                )}
+              </span>
+              <span className="text-gray-400 shrink-0">{othersOpen ? t('collapse') : t('expand')}</span>
             </button>
             {othersOpen && (
               <div className="space-y-2">
@@ -100,6 +112,12 @@ export function PetSection({
       ) : (
         // 선택이 없으면: 전체 아이 목록 + 전체 건강 일정 알림
         <>
+          {/* 다견인데 선택이 없으면, 요약 카드가 칩 탭 뒤에 숨어 있음을 안내(발견성 개선) */}
+          {pets.length > 1 && (
+            <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2 text-center">
+              {t('selectHint')}
+            </p>
+          )}
           {listPets.length > 0 && (
             <div className="space-y-2">
               {listPets.map(pet => <PetRow key={pet.id} pet={pet} />)}
