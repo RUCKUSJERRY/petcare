@@ -21,6 +21,7 @@ import { RecordFormModal } from '../_components/RecordFormModal'
 import { RecordsScanModal } from '../_components/RecordsScanModal'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { BackButton } from '@/components/ui/BackButton'
 import Link from 'next/link'
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
@@ -203,11 +204,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     <div className="px-4 py-6 space-y-5">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        {/* 알림·공유링크·새로고침 등 히스토리가 없는 진입에서도 목록으로 빠져나갈 수 있도록
+            fallbackHref 를 갖춘 공용 BackButton 사용(직접 router.back() 은 막다른 길이 됐다). */}
+        <BackButton fallbackHref="/pets" />
         <h1 className="text-xl font-bold text-gray-900">{pet.name}</h1>
         <button
           onClick={() => { setEditing(e => !e); setSaveError(null) }}

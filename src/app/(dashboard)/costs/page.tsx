@@ -81,7 +81,17 @@ export default function CostsPage() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <PageHeader title={t('title')} fallbackHref="/dashboard" />
+      {/* 데이터가 있어도 이 화면에서 바로 비용을 기록할 수 있도록 상단에 추가 진입점을 둔다.
+          (예전엔 빈 상태에만 링크가 있어, 기록이 쌓이면 비용을 더하려 다른 화면으로 나가야 했다.) */}
+      <div className="flex items-center justify-between gap-2">
+        <PageHeader title={t('title')} fallbackHref="/dashboard" />
+        <Link
+          href="/schedule?add=1"
+          className="shrink-0 flex items-center gap-1 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold px-3 py-1.5 hover:bg-primary-100 transition-colors"
+        >
+          <span aria-hidden>＋</span> {t('addRecord')}
+        </Link>
+      </div>
 
       {/* 아이 선택 */}
       {myPets && myPets.length > 1 && (

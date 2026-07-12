@@ -188,8 +188,12 @@ export const RecordForm = forwardRef<RecordFormHandle, {
       memo: memo.trim() || null,
       photo_url: photoUrls[0] ?? null,
       photo_urls: photoUrls.length ? photoUrls : null,
-      recur_rule: rule ? serializeRule(rule) : null,
-      next_due_on: computedNext,
+      // 생활기록(식사·배변 등)은 반복 UI 자체가 숨겨져 있다. 하지만 recurOn/manualDue 상태는
+      // 카테고리 전환 시 초기화되지 않으므로(예: 접종에 반복 설정 후 배변으로 변경), 여기서
+      // 카테고리 기준으로 한 번 더 차단한다. 방치하면 배변 기록에 recur_rule/next_due_on 이 붙어
+      // 일정·캘린더에 유령 예정으로 뜨고, care-reminders 가 헛푸시를 보낸다.
+      recur_rule: isDailyLog ? null : (rule ? serializeRule(rule) : null),
+      next_due_on: isDailyLog ? null : computedNext,
     }
 
     let recordId = record?.id

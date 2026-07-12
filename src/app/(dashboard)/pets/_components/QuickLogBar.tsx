@@ -13,7 +13,7 @@ type TodayLog = { id: string; category: string; event_at: string | null }
 const hhmm = (iso: string | null) => {
   if (!iso) return ''
   const d = new Date(iso)
-  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 /**
