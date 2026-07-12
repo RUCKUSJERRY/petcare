@@ -35,15 +35,35 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'service role not configured' }, { status: 500 })
   }
 
-  // 후보 조회: (1) next_due_on 이 오늘~내일인 일반(비반복) 기록 + (2) 반복 규칙이 있는 모든 기록.
-  // 반복 기록의 next_due_on 은 생성 시점 값에 고정되어 있어(완료 탭 전까지 갱신 안 됨) 정적
-  // 범위 필터로는 두 번째 발생부터 빠진다 — 앱 화면(computeUpcoming/activeNextDue)은 event_on+
-  // recur_rule 로 다음 발생일을 굴려서 계속 보여주는데 리마인더만 첫 회 이후 조용히 멈추던 버그.
-  // 그래서 반복 기록은 next_due_on 과 무관하게 모두 받아 아래에서 활성 예정일을 재계산한다.
+  // 1단계 — 후보 반려동물 추리기: (1) next_due_on 이 오늘~내일인 일반(비반복) 기록 또는
+  // (2) 반복 규칙이 있는 기록을 가진 반려동물. 반복 기록의 next_due_on 은 생성 시점 값에 고정돼
+  // 있어(완료 탭 전까지 갱신 안 됨) 정적 범위 필터로는 두 번째 발생부터 빠진다 — 앱 화면은
+  // event_on+recur_rule 로 다음 발생일을 굴려서 계속 보여주므로 반복 기록은 모두 후보로 본다.
+  const { data: candidates, error: candErr } = await admin
+    .from('records')
+    .select('pet_id')
+    .or(`and(next_due_on.gte.${today},next_due_on.lte.${tomorrow}),recur_rule.not.is.null`)
+
+  if (candErr) {
+    console.error('[care-reminders] candidate select error:', candErr)
+    return NextResponse.json({ error: candErr.message }, { status: 500 })
+  }
+
+  const candidatePetIds = Array.from(new Set((candidates ?? []).map(c => c.pet_id as string)))
+  if (candidatePetIds.length === 0) {
+    const result = { processed: 0, sent: 0, force }
+    console.log('[care-reminders]', JSON.stringify(result))
+    return NextResponse.json(result)
+  }
+
+  // 2단계 — 후보 반려동물의 '모든' 기록을 받아 라인별 최신 기록을 정확히 판정한다.
+  // (후보 조회만으로 계산하면, 최근에 처리된 비반복 1회성 기록이 오늘~내일 창 밖이라 빠져서
+  //  같은 라인의 오래된 반복 기록이 '최신'으로 오인 → 이미 처리된 일정에 리마인더가 잘못 나갈 수
+  //  있다. 앱 화면(computeUpcoming)은 전체 기록을 읽으므로 리마인더도 동일 기준을 쓴다.)
   const { data, error } = await admin
     .from('records')
     .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, last_reminded_on, pet:pets(user_id, name)')
-    .or(`and(next_due_on.gte.${today},next_due_on.lte.${tomorrow}),recur_rule.not.is.null`)
+    .in('pet_id', candidatePetIds)
 
   if (error) {
     console.error('[care-reminders] select error:', error)

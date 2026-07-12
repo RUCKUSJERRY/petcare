@@ -3,6 +3,7 @@ import { calcPetAge, lifeStageColor } from '@/lib/utils'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { PetAvatar } from '@/components/ui/PetAvatar'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { Pet } from '@/types'
 
 export default async function PetsPage() {
@@ -26,13 +27,15 @@ export default async function PetsPage() {
       </div>
 
       {!pets || pets.length === 0 ? (
-        <div className="card text-center py-12">
-          <div className="text-4xl mb-3">🐶</div>
-          <p className="text-gray-500 text-sm">{t('empty')}</p>
-          <Link href="/pets/new" className="btn-primary inline-block mt-4 text-sm">
-            {t('registerFirst')}
-          </Link>
-        </div>
+        <EmptyState
+          icon="🐶"
+          title={t('empty')}
+          action={
+            <Link href="/pets/new" className="btn-primary inline-block text-sm">
+              {t('registerFirst')}
+            </Link>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {(pets as Pet[]).map(pet => {

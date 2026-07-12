@@ -365,7 +365,8 @@
     "disclaimer": "ⓘ 일반적인 참고 정보예요. 우리 아이의 정확한 건강 상태와 진단은 수의사와 상담하세요.",
     "noPets": "반려동물을 먼저 등록해주세요",
     "registerPet": "반려동물 등록하기",
-    "noGuides": "현재 나이에 해당하는 가이드가 없어요"
+    "noGuides": "현재 나이에 해당하는 가이드가 없어요",
+    "petBasis": "{name} 기준"
   },
   "careGuide": {
     "title": "생활 관리 가이드",
@@ -374,7 +375,8 @@
     "expand": "자세히 ▼",
     "methodLabel": "방법",
     "emptyHint": "아이를 등록하면 견종·나이에 맞춰 보여드려요.",
-    "registerPet": "반려동물 등록하기"
+    "registerPet": "반려동물 등록하기",
+    "petBasis": "{name} 기준"
   },
   "walkGuide": {
     "title": "활동 가이드",
@@ -383,7 +385,8 @@
     "noGuides": "현재 나이에 해당하는 가이드가 없어요",
     "dailyMinutes": "일일 권장 분",
     "intensity": "강도",
-    "startTrack": "산책 기록 시작하기"
+    "startTrack": "산책 기록 시작하기",
+    "petBasis": "{name} 기준"
   },
   "lostNew": {
     "title": "실종 제보",

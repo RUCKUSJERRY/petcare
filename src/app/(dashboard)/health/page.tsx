@@ -11,6 +11,7 @@ import { SectionTabs } from '@/components/ui/SectionTabs'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchHealthGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { HealthGuide, Pet } from '@/types'
 
 export default function HealthPage() {
@@ -30,6 +31,8 @@ export default function HealthPage() {
   const pets = selectedPetId
     ? (petsAll ?? []).filter(p => p.id === selectedPetId)
     : (petsAll ?? [])
+  // 헤더 칩으로 특정 아이를 고르면 그 아이 기준으로 필터됨을 상단 라벨로 알린다(음식·일정 화면과 통일).
+  const activePet = selectedPetId ? (petsAll ?? []).find(p => p.id === selectedPetId) : null
 
   const petGuides = pets.map((pet: Pet) => {
     const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
@@ -53,7 +56,14 @@ export default function HealthPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <PageHeader title={t('title')} />
+      <div className="flex items-center justify-between gap-2">
+        <PageHeader title={t('title')} />
+        {activePet && (
+          <span className="text-sm text-primary-600 font-medium shrink-0">
+            {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
+          </span>
+        )}
+      </div>
 
       <SectionTabs section="info" />
 
@@ -64,12 +74,15 @@ export default function HealthPage() {
       {isLoading ? (
         <CardSkeletonList count={4} />
       ) : petGuides.length === 0 ? (
-        <div className="card text-center py-10 space-y-3">
-          <p className="text-gray-400">{t('noPets')}</p>
-          <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">
-            {t('registerPet')}
-          </Link>
-        </div>
+        <EmptyState
+          icon="🐾"
+          title={t('noPets')}
+          action={
+            <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">
+              {t('registerPet')}
+            </Link>
+          }
+        />
       ) : (
         petGuides.map(({ pet, age, guides }) => (
           <div key={pet.id} className="space-y-3">

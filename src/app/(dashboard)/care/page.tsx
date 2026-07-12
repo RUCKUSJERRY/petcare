@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTabs } from '@/components/ui/SectionTabs'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import type { PetAge, Species } from '@/types'
 
@@ -109,6 +110,8 @@ export default function CarePage() {
   const pets = selectedPetId
     ? (petsAll ?? []).filter(p => p.id === selectedPetId)
     : (petsAll ?? [])
+  // 헤더 칩으로 특정 아이를 고르면 그 아이 기준으로 필터됨을 상단 라벨로 알린다(음식·일정 화면과 통일).
+  const activePet = selectedPetId ? (petsAll ?? []).find(p => p.id === selectedPetId) : null
 
   // 선택된 아이가 없으면 강아지 기준 전체 표시 (등록 전에도 둘러볼 수 있게)
   const species: Species = pets[0]?.species ?? 'dog'
@@ -121,7 +124,14 @@ export default function CarePage() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <PageHeader title={t('title')} fallbackHref="/info" />
+      <div className="flex items-center justify-between gap-2">
+        <PageHeader title={t('title')} />
+        {activePet && (
+          <span className="text-sm text-primary-600 font-medium shrink-0">
+            {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
+          </span>
+        )}
+      </div>
       {/* 정보 섹션 형제(음식·건강·활동·생활관리) 간 이동 — 건강 가이드와 동일한 탭 스트립으로 일관화 */}
       <SectionTabs section="info" />
 
@@ -150,10 +160,13 @@ export default function CarePage() {
       )}
 
       {!pet && !isLoading && (
-        <div className="card text-center py-6 space-y-2">
-          <p className="text-sm text-gray-400">{t('emptyHint')}</p>
-          <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">{t('registerPet')}</Link>
-        </div>
+        <EmptyState
+          icon="🐾"
+          title={t('emptyHint')}
+          action={
+            <Link href="/pets/new" className="btn-primary inline-block text-sm px-4 py-2">{t('registerPet')}</Link>
+          }
+        />
       )}
 
       {/* 하단 고정 제휴 배너(생활관리 용품) */}

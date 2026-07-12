@@ -24,6 +24,10 @@ export default function CostsPage() {
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const { data: myPets } = useMyPets()
   const [year, setYear] = useState<number | null>(null)
+  // '전체 아이' 보기는 전역 선택(useSelectedPet)을 지우지 않고 이 화면 안에서만 처리한다.
+  // (예전엔 setSelectedPetId(null)로 전역을 비워, 홈 복귀 시 요약 카드·인라인 기록이 사라지던 문제)
+  const [showAll, setShowAll] = useState(false)
+  const effectivePetId = showAll ? null : selectedPetId
   // 월/항목 막대를 누르면 해당 내역을 아래에 펼친다 (탭하면 상세/수정 모달)
   const [drill, setDrill] = useState<Drill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -46,8 +50,8 @@ export default function CostsPage() {
 
   // 선택된 아이로 필터 (없으면 전체)
   const scoped = useMemo(
-    () => (selectedPetId ? records.filter(r => r.pet_id === selectedPetId) : records),
-    [records, selectedPetId]
+    () => (effectivePetId ? records.filter(r => r.pet_id === effectivePetId) : records),
+    [records, effectivePetId]
   )
 
   const years = useMemo(() => costYears(scoped), [scoped])
@@ -68,7 +72,7 @@ export default function CostsPage() {
   }, [scoped, drill, activeYear])
 
   // 아이/연도를 바꾸면 펼친 내역은 접는다 (엉뚱한 스코프의 목록이 남지 않도록)
-  const scopeKey = `${selectedPetId ?? 'all'}-${activeYear}`
+  const scopeKey = `${effectivePetId ?? 'all'}-${activeYear}`
   const prevScope = useRef(scopeKey)
   if (prevScope.current !== scopeKey) { prevScope.current = scopeKey; if (drill) setDrill(null) }
 
@@ -83,10 +87,10 @@ export default function CostsPage() {
       {myPets && myPets.length > 1 && (
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4">
           <button
-            onClick={() => setSelectedPetId(null)}
+            onClick={() => setShowAll(true)}
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium border shrink-0 transition-colors',
-              !selectedPetId ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+              !effectivePetId ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
             )}
           >
             {t('allPets')}
@@ -94,10 +98,10 @@ export default function CostsPage() {
           {myPets.map(p => (
             <button
               key={p.id}
-              onClick={() => setSelectedPetId(p.id)}
+              onClick={() => { setShowAll(false); setSelectedPetId(p.id) }}
               className={cn(
                 'px-3 py-1.5 rounded-full text-sm font-medium border shrink-0 transition-colors',
-                selectedPetId === p.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                effectivePetId === p.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
               )}
             >
               {p.species === 'cat' ? '🐱' : '🐶'} {p.name}
