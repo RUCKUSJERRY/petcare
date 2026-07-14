@@ -9,6 +9,7 @@ import type { Breed, Species } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
+import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { todayKST } from '@/lib/utils'
 
 export default function NewPetPage() {
@@ -17,6 +18,7 @@ export default function NewPetPage() {
   const router = useRouter()
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { setSelectedPetId } = useSelectedPet()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -64,7 +66,7 @@ export default function NewPetPage() {
       setError(tc('loginRequired'))
       return
     }
-    const { error: insErr } = await supabase.from('pets').insert({
+    const { data: inserted, error: insErr } = await supabase.from('pets').insert({
       user_id: user.id,
       name,
       breed_id: form.breed_id,
@@ -76,14 +78,18 @@ export default function NewPetPage() {
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
       species,
-    })
+    }).select('id').single()
     setSaving(false)
-    if (insErr) {
+    if (insErr || !inserted) {
       setError(t('errCreateFailed'))
       return
     }
     queryClient.invalidateQueries({ queryKey: ['my-pets'] })
-    router.push('/dashboard')
+    // 방금 등록한 아이를 선택하고 그 아이의 상세로 보낸다. 예전엔 홈(/dashboard)으로 보내
+    // 등록이 됐는지 확인이 어렵고, 2번째 이후로 등록한 아이는 자동 선택도 안 돼(1마리일 때만
+    // 헤더가 자동 선택) 방금 만든 아이가 선택되지 않은 채 홈에 떨어졌다.
+    setSelectedPetId(inserted.id)
+    router.push(`/pets/${inserted.id}`)
   }
 
   const set = (k: string, v: string) => {

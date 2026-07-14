@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { aggregateCostStats, costYears, type CostRecord } from './costStats'
+import { todayKST } from './utils'
 
 const rows: CostRecord[] = [
   { category: '진료', event_on: '2026-01-10', cost: 30000 },
@@ -46,7 +47,7 @@ describe('costYears', () => {
   it('비용 기록이 있는 연도만 내림차순', () => {
     expect(costYears(rows)).toEqual([2026, 2025])
   })
-  it('비용 기록이 없으면 올해', () => {
-    expect(costYears([])).toEqual([new Date().getFullYear()])
+  it('비용 기록이 없으면 올해(KST 기준)', () => {
+    expect(costYears([])).toEqual([Number(todayKST().slice(0, 4))])
   })
 })

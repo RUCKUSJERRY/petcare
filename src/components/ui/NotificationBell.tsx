@@ -72,9 +72,10 @@ export function NotificationBell() {
   }
 
   const markAllRead = async () => {
-    const ids = items.filter(n => !n.read).map(n => n.id)
-    if (ids.length === 0) return
-    await supabase.from('notifications').update({ read: true }).in('id', ids)
+    // 로드된 목록(최대 50건)만이 아니라 내 안읽음 전체를 서버에서 읽음 처리한다.
+    // (RLS 로 내 알림만 대상 — 예전엔 로드된 id 만 갱신해 50건 초과이거나 목록이 아직
+    //  안 불러와진 상태에서 배지가 그대로 남았다.)
+    await supabase.from('notifications').update({ read: true }).eq('read', false)
     refresh()
   }
 

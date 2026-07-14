@@ -175,8 +175,10 @@ export default function FoodsPage() {
   const activePet = selectedPetId ? myPets?.find(p => p.id === selectedPetId) : null
   const breedName = (activePet?.breed as unknown as { name_ko: string } | undefined)?.name_ko
 
-  // 펫 선택기가 없는 경우(펫 1마리 이하)에만 종 탭 노출
-  const showSpeciesTabs = !myPets || myPets.length <= 1
+  // 종 탭 노출 조건: 헤더에서 특정 아이를 고르면 그 아이의 종으로 고정되므로 숨긴다.
+  // 아이를 안 골랐을 때(전체 보기)는 아이가 여러 마리(예: 강아지+고양이)여도 종을 직접
+  // 바꿀 수 있어야 한다 — 예전엔 2마리 이상이면 탭이 사라져 첫 아이 종에 갇혔다.
+  const showSpeciesTabs = !selectedPetId || !myPets || myPets.length <= 1
 
   // 급여량 계산기 기본값 (선택된 펫 → 없으면 첫 펫 기준)
   const calcPet = activePet ?? myPets?.[0] ?? null

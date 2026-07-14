@@ -73,6 +73,11 @@ export function QuickLogBar({
     qc.invalidateQueries({ queryKey: ['today-log', petId] })
     qc.invalidateQueries({ queryKey: ['today-timeline', petId] })
     qc.invalidateQueries({ queryKey: ['record-feed', petId] })
+    // '전체 아이'(null 스코프) 타임라인·피드도 함께 갱신 — 일정 '오늘' 탭과 홈(선택 없음)에서
+    // TodayTimeline/RecordFeed 가 petId=null 로 쓰이는데, 특정 아이로 원탭 기록하면 이 캐시가
+    // 남아 최대 60초간 새 기록이 안 보였다(다른 기록 경로와 동일하게 null 키까지 무효화).
+    qc.invalidateQueries({ queryKey: ['today-timeline', null] })
+    qc.invalidateQueries({ queryKey: ['record-feed', null] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     if (petId) qc.invalidateQueries({ queryKey: ['records', petId] })
   }

@@ -17,10 +17,13 @@ export function useMyPets() {
       if (!user) return [] as Pet[]
       // 멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환하므로 user_id 필터 불필요
       // (공동 관리로 초대받은 아이도 함께 표시됨)
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pets')
         .select('*, breed:breeds(*)')
         .order('created_at')
+      // 네트워크/RLS 오류를 던져 isError 로 표면화한다. 던지지 않으면 일시적 실패가 []('아이 없음')
+      // 과 구분되지 않아, 아이를 가진 사용자에게 "첫 아이 등록" 온보딩이 뜨고 FAB 이 사라진다.
+      if (error) throw error
       return (data ?? []) as Pet[]
     },
   })

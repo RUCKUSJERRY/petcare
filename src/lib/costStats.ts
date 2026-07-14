@@ -1,4 +1,5 @@
 import type { RecordCategory } from '@/types'
+import { todayKST } from './utils'
 
 /** 비용 집계에 필요한 최소 기록 형태 */
 export interface CostRecord {
@@ -68,6 +69,8 @@ export function costYears(records: CostRecord[]): number[] {
   for (const r of records) {
     if (r.cost && r.cost > 0 && r.event_on) set.add(Number(r.event_on.slice(0, 4)))
   }
-  if (set.size === 0) set.add(new Date().getFullYear())
+  // 앱 전역의 '오늘'은 KST 기준(todayKST)이다. 기기 로컬 연도(new Date().getFullYear())로
+  // 폴백하면 연말·연초 자정 부근에 비-KST 클라이언트가 엉뚱한 연도를 기본 선택할 수 있다.
+  if (set.size === 0) set.add(Number(todayKST().slice(0, 4)))
   return Array.from(set).sort((a, b) => b - a)
 }
