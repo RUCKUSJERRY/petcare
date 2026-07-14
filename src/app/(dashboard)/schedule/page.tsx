@@ -56,7 +56,9 @@ export default function SchedulePage() {
   const tq = useTranslations('quickLog')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const { isPremium } = usePlan()
-  const [view, setView] = useState<View>('calendar')
+  // 기본은 '경과/예정 목록' — 앱을 열면 "이번 주에 뭘 챙겨야 하는지"(지남·곧 다가옴)가
+  // 바로 보이게 한다. 캘린더는 한 탭이면 열린다. (반복 케어를 경과일 트래커로 다루는 방향)
+  const [view, setView] = useState<View>('list')
   const [showAdd, setShowAdd] = useState(false)
   // 캘린더에서 특정 날짜를 눌러 추가할 때 그 날짜를 폼 기본값으로 넘긴다
   const [addDate, setAddDate] = useState<string | null>(null)
