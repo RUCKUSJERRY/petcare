@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { cn, careCategoryIcon, daysUntil, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
+import { cn, careCategoryIcon, daysUntil, elapsedBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { RecordForm } from '../pets/_components/RecordForm'
 import { ScheduleCalendar } from './_components/ScheduleCalendar'
@@ -60,6 +60,8 @@ export default function SchedulePage() {
   const [showAdd, setShowAdd] = useState(false)
   // 캘린더에서 특정 날짜를 눌러 추가할 때 그 날짜를 폼 기본값으로 넘긴다
   const [addDate, setAddDate] = useState<string | null>(null)
+  // 반복 회차를 '이 날짜로 기록'할 때 새 기록 폼에 프리필할 라인 정보(카테고리·제목·반복규칙)
+  const [addTemplate, setAddTemplate] = useState<{ category: RecordCategory; title: string; recur_rule: string | null } | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [focusDate, setFocusDate] = useState<string | undefined>(undefined)
@@ -209,8 +211,9 @@ export default function SchedulePage() {
   }
 
   const Row = ({ i }: { i: ScheduleItem }) => {
-    const badge = ddayBadge(i.next_due_on, today)
-    const daysSince = i.last_on ? Math.max(0, -daysUntil(i.last_on, today)) : null
+    // 건강 케어는 '마지막 시행으로부터 N일 경과'를 우선 표시하고(배지), 색은 예정일 긴급도로.
+    // 마지막 시행일·다음 예정일은 부제로 함께 보여준다(D-day 카운트다운은 뒤로 뺀다).
+    const badge = elapsedBadge(i.last_on, i.next_due_on, today)
     return (
       <button onClick={() => setDetailId(i.id)} className="w-full text-left">
         <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
@@ -223,15 +226,15 @@ export default function SchedulePage() {
             </div>
             <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {daysSince != null && (
-                <>{t('lastLabel')} {daysSince === 0 ? t('today') : t('daysAgo', { n: daysSince })} · </>
-              )}
-              {t('nextLabel')} {i.next_due_on}
+              {i.last_on && <>{t('lastLabel')} {i.last_on.replace(/-/g, '.')} · </>}
+              {t('nextLabel')} {i.next_due_on.replace(/-/g, '.')}
             </p>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
-            {badge.text}
-          </span>
+          {badge.text && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
+              {badge.text}
+            </span>
+          )}
         </div>
       </button>
     )
@@ -307,7 +310,7 @@ export default function SchedulePage() {
           {/* 기본 동작(직접 기록)은 한 번에 열고, 스캔·내보내기는 보조 메뉴(⋯)로 분리 */}
           <div className="flex items-center gap-1.5 shrink-0" ref={menuRef}>
             <button
-              onClick={() => { setMenuOpen(false); setAddDate(null); setShowAdd(v => !v) }}
+              onClick={() => { setMenuOpen(false); setAddDate(null); setAddTemplate(null); setShowAdd(v => !v) }}
               className={cn('text-sm py-1.5 px-3', showAdd ? 'btn-secondary' : 'btn-primary')}>
               {showAdd ? tc('close') : t('addRecord')}
             </button>
@@ -347,11 +350,12 @@ export default function SchedulePage() {
 
       {showAdd && (
         <RecordForm
-          key={addDate ?? 'new'}
+          key={`${addDate ?? 'new'}-${addTemplate?.title ?? ''}`}
           petId={selectedPetId} allowPetSelect
           defaultDate={addDate ?? undefined}
-          onDone={() => { setShowAdd(false); setAddDate(null); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }}
-          onCancel={() => { setShowAdd(false); setAddDate(null) }}
+          template={addTemplate ?? undefined}
+          onDone={() => { setShowAdd(false); setAddDate(null); setAddTemplate(null); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }}
+          onCancel={() => { setShowAdd(false); setAddDate(null); setAddTemplate(null) }}
         />
       )}
 
@@ -406,6 +410,15 @@ export default function SchedulePage() {
           onSelect={setDetailId}
           onAddForDate={date => {
             setAddDate(date)
+            setAddTemplate(null)
+            setShowAdd(true)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onLogOccurrence={info => {
+            // 반복 예정일을 '완료로 기록' — 대상 아이를 맞추고, 라인 정보를 프리필해 폼을 연다.
+            setSelectedPetId(info.petId)
+            setAddTemplate({ category: info.category as RecordCategory, title: info.title, recur_rule: info.recurRule })
+            setAddDate(info.date)
             setShowAdd(true)
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}

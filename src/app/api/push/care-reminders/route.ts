@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
-import { careCategoryIcon, ddayBadge } from '@/lib/utils'
+import { careCategoryIcon, daysUntil } from '@/lib/utils'
 import { cronAuthError } from '@/lib/cron'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import type { RecordCategory } from '@/types'
@@ -108,6 +108,7 @@ export async function GET(req: Request) {
       pet_id: it.pet_id,
       category: it.category,
       title: it.title,
+      last_on: it.last_on,
       next_due_on: it.next_due_on,
       pet: rowById.get(it.record_id)?.pet ?? null,
     }))
@@ -134,11 +135,16 @@ export async function GET(req: Request) {
     const recipients = membersByPet.get(r.pet_id) ?? (r.pet?.user_id ? [r.pet.user_id] : [])
     if (recipients.length === 0) continue
     const petName = r.pet?.name ?? ''
-    const badge = ddayBadge(r.next_due_on, today)
+    // 케어 톤 문구: D-day 대신 "오늘/내일 예정 + 마지막 시행 N일 전"으로, 사용자가 바로
+    // "아, 우리 아이 이제 챙겨야겠다"고 인지하게 한다.
+    const due = daysUntil(r.next_due_on, today)      // 0=오늘, 1=내일 (발송 대상이 이 둘뿐)
+    const since = Math.max(0, -daysUntil(r.last_on, today))
+    const whenTxt = due <= 0 ? '오늘' : '내일'
+    const sinceTxt = since > 0 ? ` · 마지막 시행 ${since}일 전` : ''
     for (const uid of recipients) {
       await sendPushToUser(uid, {
-        title: `${careCategoryIcon(r.category)} 건강 일정 ${badge.text}`,
-        body: `${petName} · ${r.category} (${r.title}) 예정일이 다가와요`,
+        title: `${careCategoryIcon(r.category)} ${petName} · ${r.category} 챙길 시간이에요`,
+        body: `${whenTxt} ${r.title} 예정이에요${sinceTxt}`,
         url: '/schedule',
         tag: `care-${r.id}`,
       })

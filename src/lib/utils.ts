@@ -194,6 +194,22 @@ export function ddayBadge(dateStr: string, todayStr?: string): {
   return { text: `D-${d}`, tone: 'upcoming' }
 }
 
+/**
+ * '경과일' 중심 배지 — 건강 케어는 D-day 카운트다운보다 "마지막 시행으로부터 며칠 지났는지"가
+ * 더 직관적이라(예: 심장사상충 먹인 지 32일) 이 배지를 우선 표시한다.
+ * 텍스트는 경과일, 색상 톤은 예정일(dueOn)의 긴급도(지남/임박/여유)로 정한다.
+ * 시행 이력(lastOn)이 없으면 예정일 D-day 배지로 폴백한다.
+ */
+export function elapsedBadge(lastOn: string | null | undefined, dueOn: string | null | undefined, todayStr?: string): {
+  text: string
+  tone: 'overdue' | 'today' | 'soon' | 'upcoming'
+} {
+  const tone = dueOn ? ddayBadge(dueOn, todayStr).tone : 'upcoming'
+  if (!lastOn) return dueOn ? ddayBadge(dueOn, todayStr) : { text: '', tone }
+  const since = Math.max(0, -daysUntil(lastOn, todayStr))
+  return { text: since === 0 ? '오늘 시행' : `${since}일 경과`, tone }
+}
+
 /** D-day 톤별 색상 클래스 */
 export function ddayToneClass(tone: 'overdue' | 'today' | 'soon' | 'upcoming'): string {
   return {

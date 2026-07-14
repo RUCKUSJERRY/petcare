@@ -37,6 +37,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   defaultCategory?: RecordCategory
   /** 신규 기록의 기본 날짜(YYYY-MM-DD). 캘린더에서 특정 날짜를 눌러 추가할 때 사용 */
   defaultDate?: string
+  /** 신규 기록 프리필(반복 케어의 다음 회차를 '완료로 기록'할 때 라인 정보를 미리 채운다) */
+  template?: { category?: RecordCategory; title?: string; recur_rule?: string | null }
   /** 모달 등 외부 헤더가 따로 있을 때: 내부 헤더·카드 틀·하단 저장버튼을 숨긴다 */
   embedded?: boolean
   /** 저장 진행 상태를 외부(헤더 버튼)에 알린다 */
@@ -49,6 +51,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   record,
   defaultCategory = '진료',
   defaultDate,
+  template,
   embedded = false,
   onSavingChange,
   onDone,
@@ -62,8 +65,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const editing = !!record
 
   const [petId, setPetId] = useState<string>(record?.pet_id || fixedPetId || '')
-  const [category, setCategory] = useState<RecordCategory>(record?.category || defaultCategory)
-  const [title, setTitle] = useState(record?.title || '')
+  const [category, setCategory] = useState<RecordCategory>(record?.category || template?.category || defaultCategory)
+  const [title, setTitle] = useState(record?.title || template?.title || '')
   const [eventOn, setEventOn] = useState(record?.event_on || defaultDate || today())
   // 생활기록의 시각(HH:MM). 편집 시 기존 event_at에서, 신규는 현재 시각.
   const [eventTime, setEventTime] = useState<string>(isoToLocalTime(record?.event_at) ?? nowLocalTime())
@@ -82,8 +85,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 반복 규칙 상태
-  const initRule = parseRule(record?.recur_rule)
+  // 반복 규칙 상태 (신규 회차 프리필 시 template 의 규칙을 이어받아 같은 주기로 계속 굴러가게 한다)
+  const initRule = parseRule(record?.recur_rule ?? template?.recur_rule ?? null)
   const eventWeekday = parseYMD(record?.event_on || today()).getDay() as Weekday
   const [recurOn, setRecurOn] = useState<boolean>(!!initRule)
   const [freq, setFreq] = useState<RecurRule['freq']>(initRule?.freq ?? 'month')

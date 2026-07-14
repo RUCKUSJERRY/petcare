@@ -3,6 +3,7 @@ import {
   calcPetAge,
   daysUntil,
   ddayBadge,
+  elapsedBadge,
   addMonths,
   careDefaultIntervalMonths,
   guideMatchScore,
@@ -109,6 +110,28 @@ describe('daysUntil / ddayBadge', () => {
     expect(ddayBadge('2026-06-10')).toEqual({ text: 'D-1', tone: 'soon' })
     expect(ddayBadge('2026-06-20')).toEqual({ text: 'D-11', tone: 'upcoming' })
     expect(ddayBadge('2026-06-07')).toEqual({ text: '2일 지남', tone: 'overdue' })
+  })
+})
+
+describe('elapsedBadge', () => {
+  const today = '2026-06-09'
+
+  it('마지막 시행으로부터 경과일을 텍스트로, 톤은 예정일 긴급도로', () => {
+    // 마지막 5/10 시행(30일 경과), 다음 예정 6/09(오늘=지남 임박) → 텍스트=경과일, 톤=예정 긴급도
+    expect(elapsedBadge('2026-05-10', '2026-06-09', today)).toEqual({ text: '30일 경과', tone: 'today' })
+    expect(elapsedBadge('2026-05-10', '2026-06-12', today)).toEqual({ text: '30일 경과', tone: 'soon' })
+    expect(elapsedBadge('2026-05-10', '2026-06-30', today)).toEqual({ text: '30일 경과', tone: 'upcoming' })
+    // 예정일이 지났으면 톤은 overdue, 텍스트는 여전히 경과일
+    expect(elapsedBadge('2026-05-10', '2026-06-07', today)).toEqual({ text: '30일 경과', tone: 'overdue' })
+  })
+
+  it('오늘 시행했으면 "오늘 시행"', () => {
+    expect(elapsedBadge('2026-06-09', '2026-07-09', today).text).toBe('오늘 시행')
+  })
+
+  it('시행 이력(lastOn)이 없으면 예정일 D-day 배지로 폴백', () => {
+    expect(elapsedBadge(null, '2026-06-10', today)).toEqual({ text: 'D-1', tone: 'soon' })
+    expect(elapsedBadge(undefined, null, today)).toEqual({ text: '', tone: 'upcoming' })
   })
 })
 

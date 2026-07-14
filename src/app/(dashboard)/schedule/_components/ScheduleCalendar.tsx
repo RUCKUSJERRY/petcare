@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { careCategoryIcon, ddayBadge, ddayToneClass, todayKST } from '@/lib/utils'
+import { careCategoryIcon, daysUntil, elapsedBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { occurrencesBetween } from '@/lib/recurrence'
 import { getHoliday } from '@/lib/holidays'
 import { useTranslations } from 'next-intl'
@@ -50,6 +50,7 @@ export function ScheduleCalendar({
   focusDate,
   onSelect,
   onAddForDate,
+  onLogOccurrence,
 }: {
   items: ScheduleItem[]
   history?: HistoryItem[]
@@ -57,8 +58,11 @@ export function ScheduleCalendar({
   onSelect?: (recordId: string) => void
   /** 선택한 날짜에 새 일정 추가 (날짜 칸/선택영역의 '+ 추가'에서 호출) */
   onAddForDate?: (date: string) => void
+  /** 반복 예정일(미래 회차)을 '이 날짜로 기록'할 때 — 라인 정보를 프리필해 새 기록 폼을 연다 */
+  onLogOccurrence?: (info: { petId: string; category: string; title: string; recurRule: string | null; date: string }) => void
 }) {
   const t = useTranslations('schedule')
+  const tc = useTranslations('common')
   const WEEKDAYS = t.raw('weekdays') as string[]
   // 일정 데이터(next_due_on·event_on)가 모두 KST 달력 기준이므로 '오늘'도 KST로 맞춘다.
   // (기기 로컬 날짜로 계산하면 해외/오설정 기기에서 '오늘' 하이라이트·지남(빨강) 표시가 하루 어긋난다.)
@@ -165,20 +169,28 @@ export function ScheduleCalendar({
 
   // 선택한 날짜의 항목: 예정(next_due) + 지난 기록(event_on)을 id 기준 1건으로 병합
   type DayEntry = {
-    id: string; pet_name: string; pet_species: string; category: string; title: string
-    isDue: boolean; due?: string
+    id: string; pet_id: string; pet_name: string; pet_species: string; category: string; title: string
+    isDue: boolean; due?: string; last_on?: string | null; recur_rule?: string | null
   }
   const dayList: DayEntry[] = (() => {
     if (!selected) return []
     const map = new Map<string, DayEntry>()
     for (const i of byDate.get(selected) ?? []) {
-      map.set(i.id, { id: i.id, pet_name: i.pet_name, pet_species: i.pet_species, category: i.category, title: i.title, isDue: true, due: i.next_due_on })
+      map.set(i.id, {
+        id: i.id, pet_id: i.pet_id, pet_name: i.pet_name, pet_species: i.pet_species,
+        category: i.category, title: i.title, isDue: true, due: i.next_due_on,
+        last_on: i.last_on ?? null, recur_rule: i.recur_rule ?? null,
+      })
     }
     for (const i of byDateHistory.get(selected) ?? []) {
-      if (!map.has(i.id)) map.set(i.id, { id: i.id, pet_name: i.pet_name, pet_species: i.pet_species, category: i.category, title: i.title, isDue: false })
+      if (!map.has(i.id)) map.set(i.id, { id: i.id, pet_id: i.pet_id, pet_name: i.pet_name, pet_species: i.pet_species, category: i.category, title: i.title, isDue: false })
     }
     return Array.from(map.values())
   })()
+
+  // 미래 반복 회차(예정)를 눌렀을 때 뜨는 안내 시트 대상 — 원본을 조용히 열지 않고,
+  // '최근 기록 보기' 또는 '이 날짜로 기록(다음 회차 완료)' 을 고르게 한다.
+  const [infoEntry, setInfoEntry] = useState<DayEntry | null>(null)
 
   return (
     <div className="space-y-4">
@@ -327,9 +339,13 @@ export function ScheduleCalendar({
           </button>
         ) : (
           dayList.map(i => {
-            const badge = i.isDue ? ddayBadge(i.due!, todayYMD) : null
+            // 예정(반복 회차)은 '경과일' 배지로, 톤은 예정일 긴급도로. 지난 실제 기록은 배지 없음.
+            const badge = i.isDue ? elapsedBadge(i.last_on, i.due, todayYMD) : null
+            // 반복 예정 회차(실체 없는 미래 발생일)를 누르면 원본을 바로 열지 않고 안내 시트를
+            // 띄운다(A-1). 지난 실제 기록·단발 예정(반복 아님)은 그대로 상세/수정을 연다.
+            const projectedRecurring = i.isDue && !!i.recur_rule
             return (
-              <button key={i.id} onClick={() => onSelect?.(i.id)} className="w-full text-left">
+              <button key={i.id} onClick={() => (projectedRecurring ? setInfoEntry(i) : onSelect?.(i.id))} className="w-full text-left">
                 <div className="card flex items-center gap-3 hover:shadow-md transition-shadow">
                   <span className="text-xl shrink-0" aria-hidden>{careCategoryIcon(i.category)}</span>
                   <div className="flex-1 min-w-0">
@@ -340,7 +356,7 @@ export function ScheduleCalendar({
                     </div>
                     <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
                   </div>
-                  {badge && (
+                  {badge && badge.text && (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${ddayToneClass(badge.tone)}`}>
                       {badge.text}
                     </span>
@@ -351,6 +367,69 @@ export function ScheduleCalendar({
           })
         )}
       </div>
+
+      {/* A-1: 반복 예정일(미래 회차) 안내 시트 — 원본을 조용히 열지 않고 다음 행동을 명확히 준다 */}
+      {infoEntry && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setInfoEntry(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-4 space-y-3 shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-bold text-gray-900 flex items-center gap-1.5 min-w-0">
+                <span aria-hidden>{careCategoryIcon(infoEntry.category)}</span>
+                <span className="truncate">{infoEntry.title}</span>
+              </p>
+              <button
+                onClick={() => setInfoEntry(null)}
+                aria-label={tc('close')}
+                className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 shrink-0"
+              >✕</button>
+            </div>
+
+            <div className="rounded-lg bg-gray-50 p-3 text-sm space-y-1">
+              <p className="text-gray-600">
+                {infoEntry.pet_species === 'cat' ? '🐱' : '🐶'} {infoEntry.pet_name} · {infoEntry.category}
+              </p>
+              <p className="text-primary-600 font-medium">
+                {t('occProjected', { date: (infoEntry.due ?? selected ?? '').replace(/-/g, '.') })}
+              </p>
+              {infoEntry.last_on && (
+                <p className="text-gray-500">
+                  {t('occLastDone', {
+                    date: infoEntry.last_on.replace(/-/g, '.'),
+                    n: Math.max(0, -daysUntil(infoEntry.last_on, todayYMD)),
+                  })}
+                </p>
+              )}
+              <p className="text-gray-400 text-xs">{t('occProjectedHint')}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { const id = infoEntry.id; setInfoEntry(null); onSelect?.(id) }}
+                className="btn-secondary text-sm py-2"
+              >{t('occViewRecord')}</button>
+              <button
+                onClick={() => {
+                  const e = infoEntry
+                  setInfoEntry(null)
+                  onLogOccurrence?.({
+                    petId: e.pet_id, category: e.category, title: e.title,
+                    recurRule: e.recur_rule ?? null, date: e.due ?? selected ?? todayYMD,
+                  })
+                }}
+                className="btn-primary text-sm py-2"
+              >{t('occLogThis')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
