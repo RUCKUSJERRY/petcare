@@ -29,7 +29,7 @@ export function QuickRecordFab() {
   const tc = useTranslations('common')
   const pathname = usePathname()
   const { data: pets } = useMyPets()
-  const { selectedPetId, setSelectedPetId } = useSelectedPet()
+  const { selectedPetId, setSelectedPetId, hydrated } = useSelectedPet()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
@@ -57,7 +57,9 @@ export function QuickRecordFab() {
   const hidden = HIDDEN_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
   const petList = pets ?? []
   // 등록된 아이가 없으면 기록할 대상이 없으므로 노출하지 않는다.
-  if (hidden || petList.length === 0) return null
+  // 선택 복원 전(hydrated=false)에는 홈에서 FAB이 잠깐 떴다가 요약카드 인라인 기록과 겹쳐
+  // 사라지는 깜빡임이 있어, 복원이 끝날 때까지 렌더를 미룬다.
+  if (hidden || petList.length === 0 || !hydrated) return null
 
   const activeId = selectedPetId && petList.some(p => p.id === selectedPetId) ? selectedPetId : null
 

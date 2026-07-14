@@ -21,13 +21,13 @@ type Drill = { kind: 'month'; month: number } | { kind: 'category'; category: st
 export default function CostsPage() {
   const t = useTranslations('costs')
   const supabase = createClient()
-  const { selectedPetId, setSelectedPetId } = useSelectedPet()
+  const { selectedPetId } = useSelectedPet()
   const { data: myPets } = useMyPets()
   const [year, setYear] = useState<number | null>(null)
-  // '전체 아이' 보기는 전역 선택(useSelectedPet)을 지우지 않고 이 화면 안에서만 처리한다.
-  // (예전엔 setSelectedPetId(null)로 전역을 비워, 홈 복귀 시 요약 카드·인라인 기록이 사라지던 문제)
-  const [showAll, setShowAll] = useState(false)
-  const effectivePetId = showAll ? null : selectedPetId
+  // 아이 범위(전체/특정)는 상단 헤더의 아이 칩 하나로 통일한다. 화면마다 중복 선택 UI를 두지
+  // 않고 헤더 선택을 그대로 따른다(선택 없음=전체). 여기선 '현재 기준'만 라벨로 표기한다.
+  const effectivePetId = selectedPetId
+  const activePet = selectedPetId ? (myPets ?? []).find(p => p.id === selectedPetId) : null
   // 월/항목 막대를 누르면 해당 내역을 아래에 펼친다 (탭하면 상세/수정 모달)
   const [drill, setDrill] = useState<Drill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -81,44 +81,24 @@ export default function CostsPage() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      {/* 데이터가 있어도 이 화면에서 바로 비용을 기록할 수 있도록 상단에 추가 진입점을 둔다.
-          (예전엔 빈 상태에만 링크가 있어, 기록이 쌓이면 비용을 더하려 다른 화면으로 나가야 했다.) */}
+      {/* 아이 범위는 헤더 칩으로 통일 — 여기선 현재 기준 라벨 + 바로 기록 진입점만 둔다.
+          (데이터가 있어도 이 화면에서 바로 비용을 기록할 수 있게. 예전엔 빈 상태에만 링크가 있었다.) */}
       <div className="flex items-center justify-between gap-2">
         <PageHeader title={t('title')} fallbackHref="/dashboard" />
-        <Link
-          href="/schedule?add=1"
-          className="shrink-0 flex items-center gap-1 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold px-3 py-1.5 hover:bg-primary-100 transition-colors"
-        >
-          <span aria-hidden>＋</span> {t('addRecord')}
-        </Link>
-      </div>
-
-      {/* 아이 선택 */}
-      {myPets && myPets.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4">
-          <button
-            onClick={() => setShowAll(true)}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-sm font-medium border shrink-0 transition-colors',
-              !effectivePetId ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
-            )}
+        <div className="flex items-center gap-2 shrink-0 min-w-0">
+          {activePet && (
+            <span className="text-sm text-primary-600 font-medium truncate">
+              {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
+            </span>
+          )}
+          <Link
+            href="/schedule?add=1"
+            className="shrink-0 flex items-center gap-1 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold px-3 py-1.5 hover:bg-primary-100 transition-colors"
           >
-            {t('allPets')}
-          </button>
-          {myPets.map(p => (
-            <button
-              key={p.id}
-              onClick={() => { setShowAll(false); setSelectedPetId(p.id) }}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-sm font-medium border shrink-0 transition-colors',
-                effectivePetId === p.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
-              )}
-            >
-              {p.species === 'cat' ? '🐱' : '🐶'} {p.name}
-            </button>
-          ))}
+            <span aria-hidden>＋</span> {t('addRecord')}
+          </Link>
         </div>
-      )}
+      </div>
 
       {isLoading ? (
         <CardSkeletonList count={4} />

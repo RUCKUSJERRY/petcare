@@ -23,7 +23,7 @@ export function PetSection({
   pets: Pet[]
   vaccAlerts: CareAlert[]
 }) {
-  const { selectedPetId } = useSelectedPet()
+  const { selectedPetId, hydrated } = useSelectedPet()
   const t = useTranslations('petSection')
   // 선택된 아이가 있을 때 "다른 아이들" 목록은 기본 접힘 (영역 차지 최소화)
   const [othersOpen, setOthersOpen] = useState(false)
@@ -62,6 +62,12 @@ export function PetSection({
         </div>
       </div>
     )
+  }
+
+  // localStorage 복원 전에는 선택 여부가 미확정 → "선택 없음" 화면을 먼저 그렸다가 요약카드로
+  // 뒤집히는 깜빡임이 난다. 복원 전까지는 자리만 잡는 스켈레톤을 보여 뒤집힘을 없앤다.
+  if (!hydrated) {
+    return <div className="h-40 rounded-2xl bg-gray-100 animate-pulse" aria-hidden />
   }
 
   const hasSelection = selectedPetId != null && pets.some(p => p.id === selectedPetId)

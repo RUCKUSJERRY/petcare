@@ -37,14 +37,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'service_role_not_configured' }, { status: 500 })
   }
 
-  // 이미 활성 구독이 있으면 첫 달 결제를 다시 청구하지 않는다.
-  // (중복 제출·응답 유실 후 재시도로 인한 이중청구와, premium_until 이 더 짧게 덮어써지는 것을 방지)
+  // 유료기간이 아직 남아 있으면 첫 달 결제를 다시 청구하지 않는다.
+  // 업계 표준: "이미 낸 기간은 뺏지 않는다" — 판단 기준은 status 가 아니라 '남은 기간'이다.
+  //  · active            → 중복 제출·재시도로 인한 이중청구 방지
+  //  · canceled/past_due 인데 기간이 남음 → 재청구하면 돈이 또 빠지고 만료일이 now+1개월로
+  //    덮여 남은 선불일을 잃는다. 이 경우엔 청구 없이 구독만 재활성(취소 해제)한다.
   const { data: existingSub } = await admin.from('subscriptions')
     .select('status, current_period_end').eq('user_id', user.id).maybeSingle()
   if (
-    existingSub && existingSub.status === 'active' &&
-    existingSub.current_period_end && new Date(existingSub.current_period_end) > new Date()
+    existingSub && existingSub.current_period_end &&
+    new Date(existingSub.current_period_end) > new Date()
   ) {
+    // 취소 상태였다면 재활성(status active·canceled_at 해제). 이미 active 면 무해한 no-op.
+    const { error: reErr } = await admin.from('subscriptions')
+      .update({ status: 'active', canceled_at: null })
+      .eq('user_id', user.id)
+    if (reErr) console.error('[billing/issue] reactivate failed', user.id, reErr.message)
     // 자가 복구: 직전 결제에서 subscriptions 는 활성이 됐으나 profiles 갱신만 실패해
     // "돈은 빠졌는데 프리미엄 미반영"으로 멈춘 사용자를, 재시도 시 여기서 되돌린다.
     // (프리미엄 판정 기준은 profiles.plan/premium_until 이므로 활성 구독과 항상 일치시킨다.)
