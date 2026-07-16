@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { calcPetAge, lifeStageColor, nextAnniversary, daysTogether, ddayBadge, todayKST } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, ddayBadge, todayKST } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -49,6 +49,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
+  const [careType, setCareType] = useState<'own' | 'foster'>('own')
+  const [ageUnknown, setAgeUnknown] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
@@ -88,13 +90,15 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       setForm({
         name: pet.name,
         breed_id: pet.breed_id,
-        birth_year: String(pet.birth_year),
-        birth_month: String(pet.birth_month),
+        birth_year: pet.birth_year != null ? String(pet.birth_year) : '',
+        birth_month: pet.birth_month != null ? String(pet.birth_month) : '',
         birth_day: pet.birth_day ? String(pet.birth_day) : '',
         adopted_on: pet.adopted_on ?? '',
         gender: pet.gender,
         weight_kg: pet.weight_kg ? String(pet.weight_kg) : '',
       })
+      setCareType(pet.care_type ?? 'own')
+      setAgeUnknown(pet.birth_year == null)
       setPhotoUrl(pet.photo_url)
     }
   }, [pet])
@@ -121,22 +125,26 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     // 신규 등록 폼과 동일하게 필수값을 검증한다.
     // (검증이 없으면 이름 공란 저장·출생연도 공란 → parseInt('')=NaN 으로 저장 실패)
     if (!form.name.trim()) { setSaveError(t('errNameRequired')); return }
-    const by = parseInt(form.birth_year, 10)
-    if (!Number.isFinite(by) || by < 1990 || by > new Date().getFullYear()) {
-      setSaveError(t('errBirthYearRequired')); return
+    // 나이 미상이 아니면 출생연도를 검증한다.
+    if (!ageUnknown) {
+      const by = parseInt(form.birth_year, 10)
+      if (!Number.isFinite(by) || by < 1990 || by > new Date().getFullYear()) {
+        setSaveError(t('errBirthYearRequired')); return
+      }
     }
     setSaving(true)
     setSaveError(null)
     const { error } = await supabase.from('pets').update({
       name: form.name,
       breed_id: form.breed_id,
-      birth_year: parseInt(form.birth_year),
-      birth_month: parseInt(form.birth_month),
-      birth_day: form.birth_day ? parseInt(form.birth_day) : null,
+      birth_year: ageUnknown ? null : parseInt(form.birth_year),
+      birth_month: ageUnknown ? null : parseInt(form.birth_month),
+      birth_day: ageUnknown || !form.birth_day ? null : parseInt(form.birth_day),
       adopted_on: form.adopted_on || null,
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
+      care_type: careType,
     }).eq('id', params.id)
     setSaving(false)
     if (error) {
@@ -243,16 +251,19 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
             className="w-16 h-16 bg-primary-100" emojiClassName="text-3xl" />
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-lg font-bold text-gray-900">{pet.name}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
-                {age.lifeStage}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(stageLabel(age))}`}>
+                {stageLabel(age)}
               </span>
+              {pet.care_type === 'foster' && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-100 text-teal-700">{t('fosterBadge')}</span>
+              )}
             </div>
             <p className="text-sm text-gray-500 mt-0.5">{pet.breed?.name_ko} · {age.displayText} · {pet.gender}</p>
             {pet.weight_kg && <p className="text-sm text-gray-400 mt-0.5">{pet.weight_kg}kg</p>}
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {pet.birth_day && (
+              {pet.birth_month && pet.birth_day && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 font-medium">
                   {t('birthday')} {t('birthdayValue', { month: pet.birth_month, day: pet.birth_day })}
                   {(() => {
@@ -297,29 +308,56 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
-              <input className="input" type="number" value={form.birth_year}
-                onChange={e => set('birth_year', e.target.value)} />
+          {/* 돌봄 유형 (본인 반려 / 임시보호) */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t('careTypeLabel')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([['own', t('careOwn')], ['foster', t('careFoster')]] as const).map(([ct, label]) => (
+                <button key={ct} type="button" onClick={() => setCareType(ct)}
+                  className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    careType === ct ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {label}
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
-              <select className="input" value={form.birth_month} onChange={e => set('birth_month', e.target.value)}>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
-              <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
-                <option value="">{t('daySelect')}</option>
-                {Array.from({ length: 31 }, (_, i) => (
-                  <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
-                ))}
-              </select>
-            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+              <input type="checkbox" checked={ageUnknown} onChange={e => setAgeUnknown(e.target.checked)}
+                className="w-4 h-4 accent-primary-500" />
+              {t('ageUnknownLabel')}
+            </label>
+            {ageUnknown ? (
+              <p className="text-xs text-gray-400">{t('ageUnknownHint')}</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
+                  <input className="input" type="number" value={form.birth_year}
+                    onChange={e => set('birth_year', e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
+                  <select className="input" value={form.birth_month} onChange={e => set('birth_month', e.target.value)}>
+                    <option value="">{t('monthSelect')}</option>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+                  <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+                    <option value="">{t('daySelect')}</option>
+                    {Array.from({ length: 31 }, (_, i) => (
+                      <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('adoptedOn')}</label>

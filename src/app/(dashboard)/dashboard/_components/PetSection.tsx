@@ -1,7 +1,7 @@
 'use client'
 
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, stageLabel } from '@/lib/utils'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
@@ -147,8 +147,8 @@ function PetRow({ pet }: { pet: Pet }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-bold text-gray-900">{pet.name}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
-              {age.lifeStage}
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(stageLabel(age))}`}>
+              {stageLabel(age)}
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-0.5">

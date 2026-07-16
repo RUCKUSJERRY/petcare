@@ -81,6 +81,17 @@ describe('calcPetAge', () => {
     expect(calcPetAge(2024, 1, 'cat').lifeStage).toBe('성묘')   // 29m
     expect(calcPetAge(2010, 1, 'cat').lifeStage).toBe('시니어')
   })
+
+  it('생년 미상: 나이 미상 표시 + 성체 기준으로 일반화', () => {
+    const dog = calcPetAge(null, null, 'dog')
+    expect(dog.unknown).toBe(true)
+    expect(dog.displayText).toBe('나이 미상')
+    expect(dog.lifeStage).toBe('성견')          // 퍼피/시니어가 아닌 성체 기본
+    const cat = calcPetAge(null, null, 'cat')
+    expect(cat.lifeStage).toBe('성묘')
+    // 월만 미상(연도 있음)이면 1월로 간주해 정상 계산
+    expect(calcPetAge(2024, null, 'dog').unknown).toBe(false)
+  })
 })
 
 describe('daysUntil / ddayBadge', () => {

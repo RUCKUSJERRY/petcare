@@ -16,20 +16,23 @@ export interface Breed {
   species: Species
 }
 
+export type CareType = 'own' | 'foster'  // 'foster' = 임시보호
+
 export interface Pet {
   id: string
   user_id: string
   name: string
   breed_id: string
   species: Species
-  birth_year: number
-  birth_month: number
+  birth_year: number | null     // 나이 미상(구조·임보) 허용 — 선택
+  birth_month: number | null    // 나이 미상 허용 — 선택
   birth_day: number | null      // 생일 '일' (선택) — 생일 D-day 계산용
   adopted_on: string | null     // 입양일 YYYY-MM-DD (선택) — 함께한 날·입양 기념일
   gender: Gender
   weight_kg: number | null
   target_weight_kg: number | null
   photo_url: string | null
+  care_type: CareType           // 본인 반려('own') / 임시보호('foster')
   created_at: string
   // join
   breed?: Breed
@@ -113,8 +116,9 @@ export interface WalkGuide {
 export interface PetAge {
   months: number
   years: number
-  displayText: string  // "3살 2개월"
+  displayText: string  // "3살 2개월" · 나이 미상이면 "나이 미상"
   lifeStage: '퍼피' | '성견' | '시니어' | '키튼' | '성묘'
+  unknown: boolean     // 생년 미상이면 true — 나이/생애단계는 성체 기준으로 일반화한 값
 }
 
 /** 음식 조회 시 견종 예외 적용 후 최종 결과 */

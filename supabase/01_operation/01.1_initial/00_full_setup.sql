@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-07-04T00:11:33.112Z
+--  생성 시각: 2026-07-16T05:47:34.717Z
 -- =============================================================
 
 
@@ -239,8 +239,8 @@ create table if not exists public.pets (
   user_id          uuid not null,
   name             text not null,
   breed_id         uuid,
-  birth_year       int not null,
-  birth_month      int not null check (birth_month between 1 and 12),
+  birth_year       int,                                              -- 선택(나이 미상 허용)
+  birth_month      int check (birth_month between 1 and 12),         -- 선택(나이 미상 허용)
   birth_day        smallint check (birth_day is null or birth_day between 1 and 31),
   adopted_on       date,
   gender           text check (gender in ('수컷', '암컷')),
@@ -248,6 +248,7 @@ create table if not exists public.pets (
   photo_url        text,
   species          text not null default 'dog' check (species in ('dog','cat')),
   target_weight_kg float check (target_weight_kg is null or target_weight_kg > 0),
+  care_type        text not null default 'own' check (care_type in ('own','foster')),  -- 'foster'=임시보호
   created_at       timestamptz default now()
 );
 
@@ -258,6 +259,18 @@ do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'pets_birth_day_check') then
     alter table public.pets
       add constraint pets_birth_day_check check (birth_day is null or birth_day between 1 and 31);
+  end if;
+end $$;
+
+-- 나이 미상(구조·임보) 허용 — birth_year/birth_month 선택값화 (재실행 안전)
+alter table public.pets alter column birth_year  drop not null;
+alter table public.pets alter column birth_month drop not null;
+
+-- 임시보호(foster) 여부 (재실행 안전)
+alter table public.pets add column if not exists care_type text not null default 'own';
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'pets_care_type_check') then
+    alter table public.pets add constraint pets_care_type_check check (care_type in ('own','foster'));
   end if;
 end $$;
 
@@ -982,6 +995,31 @@ begin
   new.updated_at = now();
   return new;
 end $$;
+
+-- ── 02.3_function/transfer_pet_ownership.sql ──
+-- transfer_pet_ownership : 반려동물 소유권 이전 (임보→입양 등)
+-- 현재 owner 만 호출 가능하고, 넘길 대상은 이미 이 아이의 구성원(공동관리 초대 수락)이어야 한다.
+-- pet_members 역할을 교체하고 pets.user_id(명의)를 새 주인으로 갱신한다(임보→소유 전환).
+create or replace function public.transfer_pet_ownership(p_pet_id uuid, p_new_owner uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_pet_owner(p_pet_id) then
+    raise exception 'not_owner';
+  end if;
+  if p_new_owner = auth.uid() then
+    raise exception 'same_owner';
+  end if;
+  if not exists (
+    select 1 from public.pet_members
+    where pet_id = p_pet_id and user_id = p_new_owner
+  ) then
+    raise exception 'not_member';
+  end if;
+  update public.pet_members set role = 'owner'  where pet_id = p_pet_id and user_id = p_new_owner;
+  update public.pet_members set role = 'member' where pet_id = p_pet_id and user_id = auth.uid();
+  update public.pets set user_id = p_new_owner, care_type = 'own' where id = p_pet_id;
+end;
+$$;
 
 -- ┌──────────────────────────────────────────────
 -- │ 02.4_trigger

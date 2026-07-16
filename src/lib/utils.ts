@@ -3,12 +3,24 @@ import type { PetAge, Species } from '@/types'
 /**
  * 생년월로부터 현재 개월 수, 나이 단계 등을 계산
  */
-export function calcPetAge(birthYear: number, birthMonth: number, species: Species = 'dog'): PetAge {
+export function calcPetAge(
+  birthYear: number | null | undefined,
+  birthMonth: number | null | undefined,
+  species: Species = 'dog',
+): PetAge {
+  // 생년 미상(구조·임보) — 나이·생애단계를 성체 기준으로 일반화해 나이 기반 콘텐츠(가이드·급여량)가
+  // '퍼피/키튼'으로 오인되지 않게 한다. 화면에는 unknown 플래그로 '미상'을 표시한다.
+  if (birthYear == null) {
+    return {
+      months: 36, years: 3, displayText: '나이 미상',
+      lifeStage: species === 'cat' ? '성묘' : '성견', unknown: true,
+    }
+  }
   // 생년월·기록 날짜가 모두 KST 달력 기준이므로, 서버(UTC)·해외 시간대에서 렌더해도
-  // "오늘"이 흔들리지 않도록 KST 기준 연/월로 계산한다.
+  // "오늘"이 흔들리지 않도록 KST 기준 연/월로 계산한다. (월 미상이면 1월로 간주)
   const [nowYear, nowMonth] = todayKST().split('-').map(Number)
   const totalMonths =
-    (nowYear - birthYear) * 12 + (nowMonth - birthMonth)
+    (nowYear - birthYear) * 12 + (nowMonth - (birthMonth ?? 1))
 
   const months = Math.max(0, totalMonths)
   const years = Math.floor(months / 12)
@@ -25,7 +37,12 @@ export function calcPetAge(birthYear: number, birthMonth: number, species: Speci
     ? (months < 12 ? '키튼' : months < 120 ? '성묘' : '시니어')
     : (months < 12 ? '퍼피' : months < 84 ? '성견' : '시니어')
 
-  return { months, years, displayText, lifeStage }
+  return { months, years, displayText, lifeStage, unknown: false }
+}
+
+/** 생애단계 배지 라벨 — 나이 미상이면 '미상'. */
+export function stageLabel(age: PetAge): PetAge['lifeStage'] | '미상' {
+  return age.unknown ? '미상' : age.lifeStage
 }
 
 /** 금액(원) 표기 — "12,000원". null/undefined·NaN 은 빈 문자열. */
@@ -40,7 +57,7 @@ export function formatWon(n: number | null | undefined): string {
  * 2/29 처럼 올해 없는 날은 그 달의 마지막 날(2/28)로 보정.
  * day 가 없으면(null) 정확한 날을 알 수 없어 null 반환.
  */
-export function nextAnniversary(month: number, day: number | null | undefined): string | null {
+export function nextAnniversary(month: number | null | undefined, day: number | null | undefined): string | null {
   if (!month || !day) return null
   const today = todayKST()
   const nowYear = Number(today.slice(0, 4))
@@ -69,7 +86,7 @@ export function daysTogether(adoptedOn: string | null | undefined): number | nul
 /**
  * 나이 단계별 색상 클래스 (Tailwind)
  */
-export function lifeStageColor(stage: PetAge['lifeStage']): string {
+export function lifeStageColor(stage: PetAge['lifeStage'] | '미상'): string {
   return ({
     퍼피: 'bg-amber-100 text-amber-800',
     키튼: 'bg-amber-100 text-amber-800',

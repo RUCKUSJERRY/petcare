@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, lifeStageColor, pickBestPerActivityType } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, stageLabel, pickBestPerActivityType } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
@@ -105,8 +105,8 @@ export default function WalkPage() {
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-900">{pet.name}</span>
               <span className="text-sm text-gray-400">{age.displayText}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
-                {age.lifeStage}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(stageLabel(age))}`}>
+                {stageLabel(age)}
               </span>
             </div>
 

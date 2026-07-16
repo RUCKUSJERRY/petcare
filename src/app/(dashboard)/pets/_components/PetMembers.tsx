@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { PetMember } from '@/types'
 
 /**
@@ -23,6 +24,8 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 소유권 이전 확인 대상(구성원)
+  const [transferTarget, setTransferTarget] = useState<{ userId: string; name: string } | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
@@ -62,6 +65,21 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
     setBusy(false)
     if (delErr) { setError(t('errRemoveFailed')); return }
     qc.invalidateQueries({ queryKey: ['pet-members', petId] })
+  }
+
+  // 소유권 이전 — 서버 함수(transfer_pet_ownership)가 'owner 만 호출·대상은 기존 구성원' 을
+  // 검증하고 역할 교체 + pets.user_id 갱신을 원자적으로 처리한다.
+  const transferOwnership = async (memberUserId: string) => {
+    setBusy(true); setError(null)
+    const { error: e } = await supabase.rpc('transfer_pet_ownership', {
+      p_pet_id: petId, p_new_owner: memberUserId,
+    })
+    setBusy(false)
+    setTransferTarget(null)
+    if (e) { setError(t('errTransferFailed')); return }
+    qc.invalidateQueries({ queryKey: ['pet-members', petId] })
+    qc.invalidateQueries({ queryKey: ['pet', petId] })
+    qc.invalidateQueries({ queryKey: ['my-pets'] })
   }
 
   const leave = async () => {
@@ -123,12 +141,34 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
               {m.role === 'owner' ? t('roleOwner') : t('roleMember')}
             </span>
             {isOwner && m.role !== 'owner' && (
-              <button onClick={() => removeMember(m.user_id)} disabled={busy}
-                className="text-xs text-gray-300 hover:text-red-500 shrink-0">{t('remove')}</button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setTransferTarget({ userId: m.user_id, name: m.profile?.display_name ?? t('member') })}
+                  disabled={busy}
+                  className="text-xs text-gray-400 hover:text-primary-600">{t('transfer')}</button>
+                <button onClick={() => removeMember(m.user_id)} disabled={busy}
+                  className="text-xs text-gray-300 hover:text-red-500">{t('remove')}</button>
+              </div>
             )}
           </div>
         ))}
       </div>
+
+      {/* 소유권 이전 안내 (owner + 넘길 구성원이 있을 때) */}
+      {isOwner && members.some(m => m.role !== 'owner') && (
+        <p className="text-xs text-gray-400">{t('transferHint')}</p>
+      )}
+
+      {transferTarget && (
+        <ConfirmModal
+          title={t('transfer')}
+          description={t('transferConfirm', { name: transferTarget.name })}
+          confirmLabel={t('transferDo')}
+          busy={busy}
+          onConfirm={() => transferOwnership(transferTarget.userId)}
+          onCancel={() => setTransferTarget(null)}
+        />
+      )}
 
       {!isOwner && myRole && (
         <button onClick={leave} disabled={busy}

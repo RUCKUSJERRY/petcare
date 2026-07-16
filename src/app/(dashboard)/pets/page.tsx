@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { calcPetAge, lifeStageColor } from '@/lib/utils'
+import { calcPetAge, lifeStageColor, stageLabel } from '@/lib/utils'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { PetAvatar } from '@/components/ui/PetAvatar'
@@ -48,9 +48,12 @@ export default async function PetsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-gray-900">{pet.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
-                        {age.lifeStage}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(stageLabel(age))}`}>
+                        {stageLabel(age)}
                       </span>
+                      {pet.care_type === 'foster' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-100 text-teal-700">{t('fosterBadge')}</span>
+                      )}
                     </div>
                     <p className="text-sm text-gray-500 mt-0.5">
                       {pet.breed?.name_ko} · {age.displayText} · {pet.gender}

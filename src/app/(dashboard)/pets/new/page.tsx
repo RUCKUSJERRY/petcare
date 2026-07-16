@@ -25,6 +25,10 @@ export default function NewPetPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [species, setSpecies] = useState<Species>('dog')
+  // 임시보호(임보) 여부 — 임보 아이도 등록하고, 입양되면 소유권을 넘길 수 있다.
+  const [careType, setCareType] = useState<'own' | 'foster'>('own')
+  // 나이 미상(구조·임보) — 정확한 생년월을 모르면 생년 입력을 생략한다.
+  const [ageUnknown, setAgeUnknown] = useState(false)
   const [form, setForm] = useState({
     name: '', breed_id: '', birth_year: '', birth_month: '', birth_day: '', adopted_on: '', gender: '', weight_kg: '',
   })
@@ -42,7 +46,8 @@ export default function NewPetPage() {
   // 작성 중 뒤로가기/새로고침 시 입력 유실 방지
   const dirty = !saving && (
     !!form.name.trim() || !!form.breed_id || !!form.birth_year || !!form.birth_month ||
-    !!form.birth_day || !!form.adopted_on || !!form.gender || !!form.weight_kg || !!photoUrl
+    !!form.birth_day || !!form.adopted_on || !!form.gender || !!form.weight_kg || !!photoUrl ||
+    careType !== 'own' || ageUnknown
   )
   const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
 
@@ -70,14 +75,16 @@ export default function NewPetPage() {
       user_id: user.id,
       name,
       breed_id: form.breed_id,
-      birth_year: parseInt(form.birth_year),
-      birth_month: parseInt(form.birth_month),
-      birth_day: form.birth_day ? parseInt(form.birth_day) : null,
+      // 나이 미상이면 생년 정보는 저장하지 않는다.
+      birth_year: ageUnknown ? null : parseInt(form.birth_year),
+      birth_month: ageUnknown ? null : parseInt(form.birth_month),
+      birth_day: ageUnknown || !form.birth_day ? null : parseInt(form.birth_day),
       adopted_on: form.adopted_on || null,
       gender: form.gender,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
       species,
+      care_type: careType,
     }).select('id').single()
     setSaving(false)
     if (insErr || !inserted) {
@@ -104,8 +111,9 @@ export default function NewPetPage() {
     const errs: Record<string, string> = {}
     if (!form.name.trim()) errs.name = t('errNameRequired')
     if (!form.breed_id) errs.breed = t('errBreedRequired')
-    if (!form.birth_year) errs.birth_year = t('errBirthYearRequired')
-    if (!form.birth_month) errs.birth_month = t('errBirthMonthRequired')
+    // 나이 미상이면 생년 입력을 요구하지 않는다.
+    if (!ageUnknown && !form.birth_year) errs.birth_year = t('errBirthYearRequired')
+    if (!ageUnknown && !form.birth_month) errs.birth_month = t('errBirthMonthRequired')
     if (!form.gender) errs.gender = t('errGenderRequired')
     return errs
   }
@@ -143,6 +151,23 @@ export default function NewPetPage() {
           </div>
         </div>
 
+        {/* 돌봄 유형 — 본인 반려 / 임시보호(임보). 임보는 입양 시 소유권 이전 가능. */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-1">{t('careTypeLabel')}</label>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('careTypeLabel')}>
+            {([['own', t('careOwn')], ['foster', t('careFoster')]] as const).map(([ct, label]) => (
+              <button key={ct} type="button" role="radio" aria-checked={careType === ct}
+                onClick={() => setCareType(ct)}
+                className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  careType === ct ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {careType === 'foster' && <p className="text-xs text-gray-400 mt-1">{t('careFosterHint')}</p>}
+        </div>
+
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-2">{t('photo')}</label>
           <ImagePicker
@@ -173,34 +198,46 @@ export default function NewPetPage() {
         </div>
 
         <div>
-          <div className="grid grid-cols-3 gap-3">
-            <div id="field-birth_year">
-              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
-              <input className={`input${errBorder('birth_year')}`} type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
-                value={form.birth_year} onChange={e => set('birth_year', e.target.value)} aria-invalid={!!fieldErrors.birth_year} />
-            </div>
-            <div id="field-birth_month">
-              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
-              <select className={`input${errBorder('birth_month')}`} value={form.birth_month}
-                onChange={e => set('birth_month', e.target.value)} aria-invalid={!!fieldErrors.birth_month}>
-                <option value="">{t('monthSelect')}</option>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
-              <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
-                <option value="">{t('daySelect')}</option>
-                {Array.from({ length: 31 }, (_, i) => (
-                  <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <FieldError k="birth_year" />
-          <FieldError k="birth_month" />
+          {/* 나이 미상(구조·임보) — 체크하면 생년 입력을 생략한다. */}
+          <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+            <input type="checkbox" checked={ageUnknown} onChange={e => setAgeUnknown(e.target.checked)}
+              className="w-4 h-4 accent-primary-500" />
+            {t('ageUnknownLabel')}
+          </label>
+          {ageUnknown ? (
+            <p className="text-xs text-gray-400">{t('ageUnknownHint')}</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div id="field-birth_year">
+                  <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
+                  <input className={`input${errBorder('birth_year')}`} type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
+                    value={form.birth_year} onChange={e => set('birth_year', e.target.value)} aria-invalid={!!fieldErrors.birth_year} />
+                </div>
+                <div id="field-birth_month">
+                  <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthMonth')}</label>
+                  <select className={`input${errBorder('birth_month')}`} value={form.birth_month}
+                    onChange={e => set('birth_month', e.target.value)} aria-invalid={!!fieldErrors.birth_month}>
+                    <option value="">{t('monthSelect')}</option>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i+1} value={i+1}>{t('monthN', { n: i+1 })}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthDay')}</label>
+                  <select className="input" value={form.birth_day} onChange={e => set('birth_day', e.target.value)}>
+                    <option value="">{t('daySelect')}</option>
+                    {Array.from({ length: 31 }, (_, i) => (
+                      <option key={i+1} value={i+1}>{t('dayN', { n: i+1 })}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <FieldError k="birth_year" />
+              <FieldError k="birth_month" />
+            </>
+          )}
         </div>
 
         <div>

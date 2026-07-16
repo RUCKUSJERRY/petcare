@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, nextAnniversary, daysTogether, daysUntil, todayKST } from '@/lib/utils'
+import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, daysUntil, todayKST } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
@@ -66,8 +66,8 @@ export function SelectedPetSummary({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold truncate">{pet.name}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(age.lifeStage)}`}>
-              {age.lifeStage}
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(stageLabel(age))}`}>
+              {stageLabel(age)}
             </span>
           </div>
           <p className="text-sm text-white/80 mt-0.5 truncate">

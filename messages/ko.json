@@ -123,7 +123,8 @@
     "title": "내 아이",
     "register": "+ 등록",
     "empty": "아직 등록된 반려동물이 없어요",
-    "registerFirst": "첫 아이 등록하기"
+    "registerFirst": "첫 아이 등록하기",
+    "fosterBadge": "임보"
   },
   "petForm": {
     "title": "반려동물 등록",
@@ -159,7 +160,13 @@
     "genderFemale": "♀ 암컷",
     "weight": "몸무게 (kg)",
     "weightPlaceholder": "예: 3.5",
-    "submit": "등록 완료"
+    "submit": "등록 완료",
+    "careTypeLabel": "돌봄 유형",
+    "careOwn": "우리집 반려동물",
+    "careFoster": "임시보호(임보)",
+    "careFosterHint": "임시보호 중인 아이도 등록하고, 나중에 입양되면 새 가족에게 소유권을 넘길 수 있어요.",
+    "ageUnknownLabel": "생년월일을 몰라요 (나이 미상)",
+    "ageUnknownHint": "정확한 생일을 몰라도 등록할 수 있어요. 나이는 ‘미상’으로 표시됩니다."
   },
   "community": {
     "title": "커뮤니티",
@@ -790,7 +797,12 @@
     "roleOwner": "소유자",
     "roleMember": "구성원",
     "remove": "내보내기",
-    "leave": "공동 관리에서 나가기"
+    "leave": "공동 관리에서 나가기",
+    "transfer": "소유권 넘기기",
+    "transferConfirm": "{name}님에게 이 아이의 소유권을 넘길까요? 넘기면 나는 공동관리 구성원이 되고, 상대가 소유자가 됩니다.",
+    "transferHint": "임시보호 아이가 입양되면, 새 가족을 구성원으로 초대한 뒤 소유권을 넘길 수 있어요.",
+    "errTransferFailed": "소유권 이전에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    "transferDo": "넘기기"
   },
   "scan": {
     "errRecognizeFailed": "인식에 실패했어요.",
@@ -859,7 +871,14 @@
     "scanButton": "📷 영수증·이력서 스캔으로 기록 추가",
     "deletePet": "반려동물 삭제",
     "deleteModalTitle": "{name} 삭제",
-    "deleteModalDesc": "삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?"
+    "deleteModalDesc": "삭제한 정보는 복구할 수 없어요. 정말 삭제할까요?",
+    "careTypeLabel": "돌봄 유형",
+    "careOwn": "우리집 반려동물",
+    "careFoster": "임시보호(임보)",
+    "ageUnknownLabel": "생년월일을 몰라요 (나이 미상)",
+    "ageUnknownHint": "정확한 생일을 몰라도 괜찮아요. 나이는 ‘미상’으로 표시됩니다.",
+    "monthSelect": "월",
+    "fosterBadge": "임보"
   },
   "records": {
     "sectionTitle": "기록",
