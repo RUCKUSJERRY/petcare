@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useMyPets } from '@/hooks/useMyPets'
 
 const STORAGE_KEY = 'pc-onboarding-v2'
 export const OPEN_ONBOARDING_EVENT = 'pc:open-onboarding'
@@ -57,18 +58,32 @@ export function OnboardingModal() {
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
   const targetRef = useRef<Element | null>(null)
+  const { data: pets } = useMyPets()
+  // 최초 자동 실행을 한 번만 판정하기 위한 가드
+  const autoChecked = useRef(false)
 
   const close = useCallback(() => {
     try { localStorage.setItem(STORAGE_KEY, '1') } catch { /* noop */ }
     setOpen(false)
   }, [])
 
+  // 수동 다시 보기(프로필 → 앱 둘러보기)는 아이 유무와 무관하게 항상 동작한다.
   useEffect(() => {
-    try { if (!localStorage.getItem(STORAGE_KEY)) setOpen(true) } catch { /* noop */ }
     const reopen = () => { setStep(0); setOpen(true) }
     window.addEventListener(OPEN_ONBOARDING_EVENT, reopen)
     return () => window.removeEventListener(OPEN_ONBOARDING_EVENT, reopen)
   }, [])
+
+  // 최초 자동 실행은 '아이를 1마리 이상 등록한 뒤'에만 연다. 아이가 없으면 투어가 강조할
+  // 요약카드·빠른기록 FAB·일정 타일이 아직 렌더되지 않아 대부분의 단계가 빈 화면을 가리키거나
+  // 자동으로 건너뛰어, 정작 필요한 사용자에게 투어가 반쪽짜리로 보였다. 홈의 환영 히어로가
+  // 등록 전 안내(첫 아이 등록 CTA)를 대신하고, 등록 직후 이 투어가 실제 기능을 짚어준다.
+  useEffect(() => {
+    if (autoChecked.current) return
+    if (!pets || pets.length === 0) return
+    autoChecked.current = true
+    try { if (!localStorage.getItem(STORAGE_KEY)) setOpen(true) } catch { /* noop */ }
+  }, [pets])
 
   // 현재 단계의 대상 요소 측정 (없으면 자동으로 다음 단계로)
   useLayoutEffect(() => {

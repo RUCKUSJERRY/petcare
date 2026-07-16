@@ -23,14 +23,17 @@ export default function NotificationsPage() {
     like: t('typeLike'),
   }
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading, isError } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notification_list')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50)
+      // 네트워크/RLS 오류를 던져 isError 로 표면화 — 던지지 않으면 실패가 '알림 없음'과
+      // 구분되지 않아 빈 상태('🔔 알림이 없어요')로 잘못 표시된다.
+      if (error) throw error
       return (data ?? []) as NotificationItem[]
     },
   })
@@ -38,9 +41,10 @@ export default function NotificationsPage() {
   const unread = items.filter(n => !n.read).length
 
   const markAllRead = async () => {
-    const ids = items.filter(n => !n.read).map(n => n.id)
-    if (ids.length === 0) return
-    await supabase.from('notifications').update({ read: true }).in('id', ids)
+    // 로드된 목록(최대 50건)만이 아니라 내 안읽음 전체를 서버에서 읽음 처리한다.
+    // (RLS 로 내 알림만 대상 — 예전엔 로드된 id 만 갱신해 50건을 초과하면 배지가 그대로 남았다.
+    //  알림 종 드롭다운(NotificationBell)과 동일한 방식으로 통일.)
+    await supabase.from('notifications').update({ read: true }).eq('read', false)
     qc.invalidateQueries({ queryKey: ['notifications'] })
     qc.invalidateQueries({ queryKey: ['notifications-unread'] })
   }
@@ -67,6 +71,8 @@ export default function NotificationsPage() {
 
       {isLoading ? (
         <CardSkeletonList count={5} />
+      ) : isError ? (
+        <EmptyState variant="error" title={t('loadError')} />
       ) : items.length === 0 ? (
         <EmptyState icon="🔔" title={t('empty')} />
       ) : (

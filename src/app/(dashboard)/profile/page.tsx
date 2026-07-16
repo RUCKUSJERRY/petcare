@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Profile } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
+import { BackButton } from '@/components/ui/BackButton'
 import { PushToggle } from '@/components/ui/PushToggle'
 import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
@@ -99,11 +100,7 @@ export default function ProfilePage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        <BackButton fallbackHref="/dashboard" />
         <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
         <div className="ml-auto">
           <LogoutButton />

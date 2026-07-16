@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { Pet, PostCategory } from '@/types'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
+import { BackButton } from '@/components/ui/BackButton'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 
@@ -53,12 +54,12 @@ export default function NewPostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.category) {
-      setError(t('categoryRequired'))
-      return
-    }
-    if (!form.title.trim() || !form.content.trim()) {
-      setError(t('contentRequired'))
+    // 폼이 길어 하단 배너 하나만으로는 어느 항목이 문제인지 알기 어렵다 — 누락된 첫 항목으로
+    // 스크롤해 어디를 고쳐야 하는지 바로 보이게 한다. (반려동물 등록 폼과 동일한 패턴)
+    if (!form.category || !form.title.trim() || !form.content.trim()) {
+      setError(form.category ? t('contentRequired') : t('categoryRequired'))
+      const first = !form.category ? 'category' : !form.title.trim() ? 'title' : 'content'
+      document.getElementById(`field-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     setSaving(true)
@@ -94,17 +95,13 @@ export default function NewPostPage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        <BackButton fallbackHref="/community" />
         <h1 className="text-xl font-bold text-gray-900">{t('write')}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 카테고리 */}
-        <div>
+        <div id="field-category">
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('categoryLabel')}</label>
           <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label={t('category')} aria-required>
             {CATEGORIES.map(c => (
@@ -127,7 +124,7 @@ export default function NewPostPage() {
         </div>
 
         {/* 제목 */}
-        <div>
+        <div id="field-title">
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('titleLabel')}</label>
           <input
             className="input"
@@ -141,7 +138,7 @@ export default function NewPostPage() {
         </div>
 
         {/* 내용 */}
-        <div>
+        <div id="field-content">
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('contentLabel')}</label>
           <textarea
             className="input min-h-[160px] resize-y"
