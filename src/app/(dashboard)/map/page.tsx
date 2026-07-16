@@ -49,6 +49,24 @@ type ListItem = {
 // 클라이언트 세션 동안 마지막 지도 위치를 기억(모듈 스코프).
 let lastMapState: { lat: number; lng: number; level: number } | null = null
 
+// 세션을 넘어(재방문) 마지막 지도 위치를 기억 — 처음 한 번 위치를 잡은 뒤로는 서울시청이 아니라
+// 내가 마지막에 보던 곳 근처에서 열리게 한다.
+const MAP_CENTER_KEY = 'petcare_map_center'
+function readStoredCenter(): { lat: number; lng: number; level: number } | null {
+  try {
+    const raw = localStorage.getItem(MAP_CENTER_KEY)
+    if (!raw) return null
+    const o = JSON.parse(raw)
+    if (typeof o?.lat === 'number' && typeof o?.lng === 'number') {
+      return { lat: o.lat, lng: o.lng, level: typeof o.level === 'number' ? o.level : 5 }
+    }
+  } catch { /* localStorage 접근 불가/파싱 실패는 무시 */ }
+  return null
+}
+function writeStoredCenter(s: { lat: number; lng: number; level: number }) {
+  try { localStorage.setItem(MAP_CENTER_KEY, JSON.stringify(s)) } catch { /* 무시 */ }
+}
+
 export default function MapPage() {
   const supabase = createClient()
   const t = useTranslations('map')
@@ -63,6 +81,7 @@ export default function MapPage() {
   const [selected, setSelected] = useState<ListItem | null>(null) // 하단 상세 시트
   const [listOpen, setListOpen] = useState(false)                 // 목록 시트 펼침
   const [needsResearch, setNeedsResearch] = useState(false)       // 지도 이동 후 '이 지역 재검색' 노출
+  const [locating, setLocating] = useState(false)                 // 최초 진입 시 내 위치 확인 중 오버레이
   const userIdRef = useRef<string | null>(null)
 
   const mapsRef = useRef<any>(null)
@@ -259,29 +278,36 @@ export default function MapPage() {
   // 지도 초기화 (1회)
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
     mapElRef.current = el
-    const start = lastMapState
-      ? new maps.LatLng(lastMapState.lat, lastMapState.lng)
+    // 시작 위치: 이번 세션 마지막 위치 → 저장된(재방문) 위치 → (둘 다 없으면) 서울시청.
+    const stored = lastMapState ?? readStoredCenter()
+    const start = stored
+      ? new maps.LatLng(stored.lat, stored.lng)
       : new maps.LatLng(37.5665, 126.978)
-    const map = new maps.Map(el, { center: start, level: lastMapState?.level ?? 5 })
+    const map = new maps.Map(el, { center: start, level: stored?.level ?? 5 })
     mapsRef.current = maps
     mapObjRef.current = map
     placesRef.current = new maps.services.Places()
 
-    // idle: 세션 위치만 저장 (자동 재검색은 하지 않음 → 카카오 쿼터 절약)
+    // idle: 세션·재방문용 위치 저장 (자동 재검색은 하지 않음 → 카카오 쿼터 절약)
     maps.event.addListener(map, 'idle', () => {
       const c = map.getCenter()
       lastMapState = { lat: c.getLat(), lng: c.getLng(), level: map.getLevel() }
+      writeStoredCenter(lastMapState)
     })
     maps.event.addListener(map, 'dragend', () => onUserMoveRef.current())
     maps.event.addListener(map, 'zoom_changed', () => onUserMoveRef.current())
 
-    if (!lastMapState) {
-      navigator.geolocation?.getCurrentPosition(
+    // 저장된 위치가 전혀 없는 '최초 진입'에서만 현재 위치를 잡는다. 위치가 확정될 때까지
+    // '내 위치 확인 중' 오버레이로 기본값(서울시청)이 그대로 보이지 않게 가린다.
+    if (!stored && navigator.geolocation) {
+      setLocating(true)
+      navigator.geolocation.getCurrentPosition(
         p => {
           map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude))
+          setLocating(false)
           loadRef.current() // 현재 위치 확정 후 그 지역으로 재검색
         },
-        () => loadRef.current(),
+        () => { setLocating(false); loadRef.current() }, // 거부/실패 시 기본값 유지
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
       )
     }
@@ -331,6 +357,16 @@ export default function MapPage() {
         <div className="absolute inset-0 flex items-center justify-center p-6">
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white/90 p-6 text-center text-sm text-gray-500 max-w-xs">
             {notice}
+          </div>
+        </div>
+      )}
+
+      {/* 최초 진입 시 내 위치 확인 중 — 확인 전 기본값(서울시청)이 그대로 보이지 않도록 가린다 */}
+      {locating && !notice && (
+        <div className="absolute inset-0 z-[25] flex items-center justify-center bg-gray-100/70 backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-md border border-gray-100 text-sm font-medium text-gray-600">
+            <span className="animate-pulse" aria-hidden>📍</span>
+            {t('locating')}
           </div>
         </div>
       )}

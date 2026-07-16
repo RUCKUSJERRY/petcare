@@ -202,18 +202,39 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="px-4 py-6 space-y-5">
-      {/* 헤더 */}
+      {/* 헤더.
+          - 조회: 뒤로가기(BackButton) + 이름 + '수정' 진입 버튼.
+          - 편집: 좌측 뒤로가기 화살표를 '편집 취소'로 재사용한다. 예전엔 좌측 뒤로가기(<)와
+            우측 '취소' 두 개가 모두 뒤로 가는 것처럼 보여 중복이었다 → 우측 취소를 없애고,
+            편집 중 <는 페이지를 벗어나는 대신 편집만 취소해 상세로 돌아온다(변경 내용 폐기).
+            (조회 모드에서 <를 다시 누르면 목록으로 나간다.) */}
       <div className="flex items-center justify-between">
-        {/* 알림·공유링크·새로고침 등 히스토리가 없는 진입에서도 목록으로 빠져나갈 수 있도록
-            fallbackHref 를 갖춘 공용 BackButton 사용(직접 router.back() 은 막다른 길이 됐다). */}
-        <BackButton fallbackHref="/pets" />
+        {editing ? (
+          <button
+            onClick={() => { setEditing(false); setSaveError(null) }}
+            className="text-gray-400"
+            aria-label={tc('cancel')}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        ) : (
+          // 알림·공유링크·새로고침 등 히스토리가 없는 진입에서도 목록으로 빠져나갈 수 있도록
+          // fallbackHref 를 갖춘 공용 BackButton 사용(직접 router.back() 은 막다른 길이 됐다).
+          <BackButton fallbackHref="/pets" />
+        )}
         <h1 className="text-xl font-bold text-gray-900">{pet.name}</h1>
-        <button
-          onClick={() => { setEditing(e => !e); setSaveError(null) }}
-          className={editing ? 'text-sm text-gray-400' : 'text-sm text-primary-600 font-semibold'}
-        >
-          {editing ? tc('cancel') : t('edit')}
-        </button>
+        {editing ? (
+          <span className="w-6 shrink-0" aria-hidden />
+        ) : (
+          <button
+            onClick={() => { setEditing(true); setSaveError(null) }}
+            className="text-sm text-primary-600 font-semibold"
+          >
+            {t('edit')}
+          </button>
+        )}
       </div>
 
       {/* 프로필 카드 */}

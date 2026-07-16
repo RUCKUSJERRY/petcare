@@ -11,12 +11,14 @@ import { RecordForm, type RecordFormHandle } from './RecordForm'
  * (기존 RecordDetailModal 의 헤더+embedded 폼 패턴과 동일한 구조)
  */
 export function RecordFormModal({
-  petId, title, onClose, onDone,
+  petId, title, onClose, onDone, allowPetSelect = false,
 }: {
-  petId: string
+  petId: string | null
   title: string
   onClose: () => void
   onDone: () => void
+  /** 대상 아이가 고정되지 않은 화면(예: 비용 '전체 보기')에서 폼 안에서 아이를 고르게 한다 */
+  allowPetSelect?: boolean
 }) {
   const tc = useTranslations('common')
   const formRef = useRef<RecordFormHandle>(null)
@@ -48,6 +50,7 @@ export function RecordFormModal({
           <RecordForm
             ref={formRef}
             petId={petId}
+            allowPetSelect={allowPetSelect}
             embedded
             onSavingChange={setSaving}
             onDone={onDone}

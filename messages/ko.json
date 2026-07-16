@@ -449,7 +449,8 @@
     "directions": "🧭 길찾기",
     "kakaoDetail": "ℹ️ 카카오맵 상세",
     "favSaved": "★ 즐겨찾기됨",
-    "favSave": "☆ 즐겨찾기"
+    "favSave": "☆ 즐겨찾기",
+    "locating": "내 위치를 확인하는 중…"
   },
   "profile": {
     "title": "프로필 편집",

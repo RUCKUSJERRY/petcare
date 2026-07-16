@@ -56,9 +56,10 @@ export default function SchedulePage() {
   const tq = useTranslations('quickLog')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const { isPremium } = usePlan()
-  // 기본은 '경과/예정 목록' — 앱을 열면 "이번 주에 뭘 챙겨야 하는지"(지남·곧 다가옴)가
-  // 바로 보이게 한다. 캘린더는 한 탭이면 열린다. (반복 케어를 경과일 트래커로 다루는 방향)
-  const [view, setView] = useState<View>('list')
+  // 기본 뷰는 '캘린더' — 앱을 열면 이번 달 일정 전반을 한눈에 본다.
+  // (지난/임박 정리는 '목록' 탭, 지난 일정이 있으면 상단 경보 배너로도 유도한다.)
+  // 'today' 는 탭에서는 뺐지만(빠른기록 FAB·홈 요약카드가 대체) ?view=today 딥링크로는 유지한다.
+  const [view, setView] = useState<View>('calendar')
   const [showAdd, setShowAdd] = useState(false)
   // 캘린더에서 특정 날짜를 눌러 추가할 때 그 날짜를 폼 기본값으로 넘긴다
   const [addDate, setAddDate] = useState<string | null>(null)
@@ -301,7 +302,7 @@ export default function SchedulePage() {
       {!q && (
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
-            {([['calendar', t('viewCalendar')], ['today', t('viewToday')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
+            {([['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
               <button key={v} onClick={() => setView(v)}
                 className={cn('flex-1 py-1.5 rounded-md text-sm font-medium transition-colors',
                   view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500')}>
