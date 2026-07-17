@@ -39,7 +39,7 @@ export default async function DashboardPage() {
       // 같은 날짜 동점 시 '최신 기록' 선택을 결정적으로 — 일정 화면과 동일 규칙(computeUpcoming)
       .order('created_at', { ascending: false })
 
-    vaccAlerts = computeUpcoming((data ?? []) as ScheduleRow[], todayStr)
+    vaccAlerts = computeUpcoming((data ?? []) as ScheduleRow[])
       .filter(u => u.next_due_on <= soon)
       .map((u): CareAlert => ({
         pet_id: u.pet_id, category: u.category, title: u.title,

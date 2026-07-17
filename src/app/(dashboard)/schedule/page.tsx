@@ -127,10 +127,9 @@ export default function SchedulePage() {
         place_name: string | null; memo: string | null
       }
       const all = (rows ?? []) as Row[]
-      const today = todayKST()
 
       // 예정: 라인별 최신 기록 → 다음 예정일 산출 (홈과 동일한 공용 로직)
-      const upcoming: ScheduleItem[] = computeUpcoming(all as ScheduleRow[], today).map(u => ({
+      const upcoming: ScheduleItem[] = computeUpcoming(all as ScheduleRow[]).map(u => ({
         id: u.record_id, pet_id: u.pet_id, ...meta(u.pet_id),
         category: u.category, title: u.title, last_on: u.last_on, next_due_on: u.next_due_on,
         recur_rule: u.recur_rule,

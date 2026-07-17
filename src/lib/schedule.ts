@@ -59,10 +59,10 @@ export function latestRecordPerLine<T extends { pet_id: string; category: Record
  * 라인별 최신 기록에서 활성 다음 예정일을 계산해 "예정 항목" 목록을 만든다.
  * 반복이 끝났거나 예정일이 없는 라인은 제외한다. (정렬은 호출부에서 필요에 맞게 수행)
  */
-export function computeUpcoming(rowsSortedByEventDesc: ScheduleRow[], today: string): UpcomingItem[] {
+export function computeUpcoming(rowsSortedByEventDesc: ScheduleRow[]): UpcomingItem[] {
   const items: UpcomingItem[] = []
   for (const r of latestRecordPerLine(rowsSortedByEventDesc)) {
-    const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on, today)
+    const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on)
     if (!due) continue
     items.push({
       record_id: r.id,

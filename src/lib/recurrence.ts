@@ -150,15 +150,18 @@ export function occurrencesBetween(
 
 /**
  * 화면·정렬에 쓸 "다음 예정일".
- * 반복이면 today(포함) 이후의 다음 발생일로 굴려서 항상 미래 일정을 보여준다.
- * 반복이 아니면 저장된 next_due를 그대로 쓴다(미내원 예정일이 지나면 '지남'으로 표시).
+ * 반복이면 '마지막 시행일(eventOn)'의 다음 발생일을 쓴다. today 로 굴려 미래로 건너뛰지
+ * 않는다 — 예정일이 지나도 다음 회차로 넘기지 않고 '지난 일정(overdue)'으로 남겨야, 아직
+ * 하지 않은 케어(예: 심장사상충 복용)를 놓치지 않는다. 새 기록을 남기면 eventOn 이 최신으로
+ * 옮겨가며 자연히 다음 회차로 진행된다. (이 값은 저장 시 계산해 두는 next_due_on·상세 화면의
+ * 다음 예정일과 동일 — 목록/상세/저장값이 항상 일치한다.)
+ * 반복이 아니면 저장된 next_due를 그대로 쓴다(예정일이 지나면 '지남'으로 표시).
  */
-export function activeNextDue(eventOn: string, recurRule: string | null, storedNextDue: string | null, today: string): string | null {
+export function activeNextDue(eventOn: string, recurRule: string | null, storedNextDue: string | null): string | null {
   const rule = parseRule(recurRule)
   if (rule) {
-    const before = parseYMD(today)
-    before.setDate(before.getDate() - 1) // today 포함
-    const next = nextOccurrence(rule, parseYMD(eventOn), before)
+    const base = parseYMD(eventOn)
+    const next = nextOccurrence(rule, base, base)
     return next ? ymd(next) : storedNextDue
   }
   return storedNextDue

@@ -95,7 +95,7 @@ export async function GET(req: Request) {
       event_on: r.event_on, next_due_on: r.next_due_on, recur_rule: r.recur_rule,
     }))
     .sort((a, b) => b.event_on.localeCompare(a.event_on))
-  const rows = computeUpcoming(scheduleRows, today)
+  const rows = computeUpcoming(scheduleRows)
     .filter(it => it.next_due_on === today || it.next_due_on === tomorrow)
     // force가 아니면 오늘 이미 리마인드한 라인은 제외(당일 중복 방지). 라인의 대표는 최신 기록.
     .filter(it => {

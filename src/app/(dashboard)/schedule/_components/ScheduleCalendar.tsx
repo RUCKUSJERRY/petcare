@@ -421,7 +421,10 @@ export function ScheduleCalendar({
                   setInfoEntry(null)
                   onLogOccurrence?.({
                     petId: e.pet_id, category: e.category, title: e.title,
-                    recurRule: e.recur_rule ?? null, date: e.due ?? selected ?? todayYMD,
+                    // '완료로 기록'은 실제 시행한 날(오늘)을 기본값으로 — 예정일(e.due)로 채우면
+                    // 하루 늦게(예: 16일 예정을 17일에) 복용해도 기록이 16일로 남아, 다음 예정일이
+                    // 실제 시행일을 반영하지 못하고 그대로 16일에 묶인다. 날짜는 폼에서 수정 가능.
+                    recurRule: e.recur_rule ?? null, date: todayYMD,
                   })
                 }}
                 className="btn-primary text-sm py-2"
