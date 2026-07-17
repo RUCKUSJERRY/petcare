@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { careCategoryIcon, daysUntil, elapsedBadge, ddayToneClass, todayKST } from '@/lib/utils'
+import { careCategoryIcon, daysUntil, elapsedBadge, ddayToneClass, todayKST, addDays } from '@/lib/utils'
 import { occurrencesBetween } from '@/lib/recurrence'
 import { getHoliday } from '@/lib/holidays'
 import { useTranslations } from 'next-intl'
@@ -113,13 +113,18 @@ export function ScheduleCalendar({
       map.set(ymd, arr)
     }
     items.forEach(it => {
+      // 반복 예정은 '마지막 시행일 다음날'부터 펼친다. last_on 당일은 이미 완료된 실제 기록
+      // (history)으로 그려지는데, occurrencesBetween 은 base(=last_on)를 포함하므로 같은 날에
+      // 예정 마커가 겹쳐 '한 날에 같은 항목 2개'로 중복돼 보였다(예: 오늘 복용 기록 + 오늘 예정).
+      const from = it.last_on && addDays(it.last_on, 1) > projFrom ? addDays(it.last_on, 1) : projFrom
       const dates = it.recur_rule && it.last_on
-        ? occurrencesBetween(it.recur_rule, it.last_on, projFrom, winTo)
+        ? occurrencesBetween(it.recur_rule, it.last_on, from, winTo)
         : []
       if (dates.length) {
         dates.forEach(d => push(d, it))
-      } else if (it.next_due_on >= winFrom && it.next_due_on <= winTo) {
+      } else if (it.next_due_on >= winFrom && it.next_due_on <= winTo && it.next_due_on !== it.last_on) {
         // 반복이 아니거나(단발) 이 창에 발생이 없으면 저장된 다음 예정일에만 찍는다.
+        // (예정일이 마지막 시행일과 같으면 이미 history 로 그려지므로 중복 방지)
         push(it.next_due_on, it)
       }
     })
