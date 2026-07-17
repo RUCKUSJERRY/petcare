@@ -241,14 +241,21 @@ export function CommentSection({
         {t('comment')} <span className="text-primary-500">{comments.length}</span>
       </h3>
 
-      {/* 입력 */}
-      <form onSubmit={submitTop} className="flex gap-2">
-        <input
-          className="input flex-1"
+      {/* 입력 — 여러 줄 작성이 가능하도록 textarea. 한 줄에서 시작해 내용에 따라 자동으로 늘어난다. */}
+      <form onSubmit={submitTop} className="flex items-end gap-2">
+        <textarea
+          className="input flex-1 resize-none min-h-[42px] max-h-40 leading-snug"
+          rows={1}
           placeholder={t('commentPlaceholder')}
           maxLength={1000}
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => {
+            setText(e.target.value)
+            // 내용 높이에 맞춰 자동 확장 (최대 높이는 CSS max-h로 제한)
+            const el = e.currentTarget
+            el.style.height = 'auto'
+            el.style.height = `${el.scrollHeight}px`
+          }}
         />
         <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-4 shrink-0">
           {t('submit')}

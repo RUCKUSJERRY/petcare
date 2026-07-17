@@ -335,7 +335,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
-                  <input className="input" type="number" value={form.birth_year}
+                  <input className="input" type="number" inputMode="numeric" value={form.birth_year}
                     onChange={e => set('birth_year', e.target.value)} />
                 </div>
                 <div>
@@ -379,7 +379,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('weight')}</label>
-            <input className="input" type="number" step="0.1" value={form.weight_kg}
+            <input className="input" type="number" inputMode="decimal" step="0.1" value={form.weight_kg}
               onChange={e => set('weight_kg', e.target.value)} />
           </div>
           {saveError && <p className="text-sm text-red-500">{saveError}</p>}

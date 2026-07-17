@@ -198,7 +198,7 @@ export default function NewLostPage() {
 
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('contactLabel')}</label>
-          <input className="input" value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="010-0000-0000" />
+          <input className="input" type="tel" inputMode="tel" value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="010-0000-0000" />
           <label className="flex items-center gap-2 mt-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.contact_public} onChange={e => set('contact_public', e.target.checked)} />
             {t('contactPublicConsent')}

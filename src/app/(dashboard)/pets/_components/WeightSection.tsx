@@ -128,7 +128,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
           <div className="flex items-center gap-1.5 ml-auto">
             <input
               className="input py-1 w-24 text-sm"
-              type="number" step="0.1" min="0"
+              type="number" inputMode="decimal" step="0.1" min="0"
               placeholder={t('goalPlaceholder')}
               value={goalInput}
               onChange={e => setGoalInput(e.target.value)}
@@ -166,6 +166,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
             <input
               className="input"
               type="number"
+              inputMode="decimal"
               step="0.1"
               min="0"
               placeholder={t('weightPlaceholder')}

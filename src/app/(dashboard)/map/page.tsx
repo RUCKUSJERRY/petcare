@@ -67,10 +67,27 @@ function writeStoredCenter(s: { lat: number; lng: number; level: number }) {
   try { localStorage.setItem(MAP_CENTER_KEY, JSON.stringify(s)) } catch { /* 무시 */ }
 }
 
+// 마지막으로 본 필터도 기억한다 — 지도는 하단탭 핵심 목적지인데 매 방문 '필터 선택'을 강제하면
+// '주변 동물병원 찾기' 같은 가장 흔한 여정에 매번 탭이 하나 더 든다. 최초 방문은 '동물병원'으로 시작.
+const MAP_CATEGORY_KEY = 'petcare_map_category'
+const CATEGORY_KEYS: CategoryKey[] = ['lost', 'hospital', 'cafe', 'restaurant', 'favorite']
+function readStoredCategory(): CategoryKey | null {
+  try {
+    const raw = localStorage.getItem(MAP_CATEGORY_KEY)
+    if (raw && (CATEGORY_KEYS as string[]).includes(raw)) return raw as CategoryKey
+  } catch { /* 무시 */ }
+  return 'hospital'
+}
+function writeStoredCategory(c: CategoryKey | null) {
+  // 선택 해제(null)는 저장하지 않는다 — 빈 지도 상태를 재방문 시 복원할 필요는 없으므로 직전 필터를 유지.
+  try { if (c) localStorage.setItem(MAP_CATEGORY_KEY, c) } catch { /* 무시 */ }
+}
+
 export default function MapPage() {
   const supabase = createClient()
   const t = useTranslations('map')
-  // 지도 진입 시엔 어떤 필터도 선택하지 않은 상태로 시작 (사용자가 직접 선택)
+  // 마지막으로 본 필터를 복원(최초 방문은 '동물병원')해 매 방문 '필터 선택' 탭을 없앤다.
+  // localStorage 접근은 클라이언트 전용이라 초기값은 null로 두고 마운트 후 복원한다(하이드레이션 불일치 방지).
   const [category, setCategory] = useState<CategoryKey | null>(null)
   const [keyword, setKeyword] = useState('')
   const [appliedKeyword, setAppliedKeyword] = useState('')
@@ -324,8 +341,16 @@ export default function MapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 카테고리/검색어 변경 시 재로드
+  // 마지막으로 본 필터 복원 (마운트 1회) — 지도 초기화(비동기)보다 먼저 category가 채워져,
+  // 지도 준비 후 loadRef가 그 필터로 곧바로 검색한다.
   useEffect(() => {
+    setCategory(readStoredCategory())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 카테고리/검색어 변경 시 재로드 + 마지막 필터 저장
+  useEffect(() => {
+    writeStoredCategory(category)
     setItems([])
     setSelected(null)
     loadRef.current()
@@ -470,8 +495,16 @@ export default function MapPage() {
           onClick={() => {
             navigator.geolocation?.getCurrentPosition(
               p => {
-                mapObjRef.current?.panTo(new mapsRef.current.LatLng(p.coords.latitude, p.coords.longitude))
-                onUserMoveRef.current() // 이동한 위치에서 재검색 버튼 노출
+                const map = mapObjRef.current, maps = mapsRef.current
+                if (!map || !maps) return
+                map.panTo(new maps.LatLng(p.coords.latitude, p.coords.longitude))
+                // 장소 필터(병원·카페·식당)면 내 위치로 이동하는 즉시 주변 결과를 재검색한다 —
+                // 예전엔 이동만 하고 '이 지역 재검색'을 한 번 더 눌러야 결과가 떴다(한 번의 의도에 두 번 탭).
+                if (category === 'hospital' || category === 'cafe' || category === 'restaurant') {
+                  loadRef.current()
+                } else {
+                  onUserMoveRef.current() // 그 외(실종·즐겨찾기)는 재검색 버튼만 노출
+                }
               },
               undefined,
               { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }

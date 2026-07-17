@@ -103,15 +103,15 @@ describe('activeNextDue', () => {
     const r = JSON.stringify({ freq: 'month', interval: 1, mode: 'dom' })
     // 시작 2025-01-01, 다음 발생은 2/1. 오늘이 3/10이라도 미래로 건너뛰지 않고
     // 2/1(지난 예정)로 남긴다 — 아직 하지 않은 케어를 'overdue'로 계속 노출하기 위함.
-    expect(activeNextDue('2025-01-01', r, '2025-02-01', '2025-03-10')).toBe('2025-02-01')
+    expect(activeNextDue('2025-01-01', r, '2025-02-01')).toBe('2025-02-01')
   })
   it('예정일이 지나도 다음 회차로 넘어가지 않는다 (목록=상세 일치)', () => {
     const r = JSON.stringify({ freq: 'month', interval: 1, mode: 'dom' })
     // 6/16 복용·매월 반복. 오늘이 7/17이어도 다음 예정은 8/16이 아니라 7/16(지남)으로 표시.
-    expect(activeNextDue('2026-06-16', r, '2026-07-16', '2026-07-17')).toBe('2026-07-16')
+    expect(activeNextDue('2026-06-16', r, '2026-07-16')).toBe('2026-07-16')
   })
   it('반복이 아니면 저장된 값을 그대로', () => {
-    expect(activeNextDue('2025-01-01', null, '2025-02-01', '2025-03-10')).toBe('2025-02-01')
+    expect(activeNextDue('2025-01-01', null, '2025-02-01')).toBe('2025-02-01')
   })
 })
 

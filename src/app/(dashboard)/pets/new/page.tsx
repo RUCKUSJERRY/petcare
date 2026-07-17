@@ -208,7 +208,7 @@ export default function NewPetPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div id="field-birth_year">
                   <label className="text-sm font-medium text-gray-700 block mb-1">{t('birthYear')}</label>
-                  <input className={`input${errBorder('birth_year')}`} type="number" placeholder="2022" min="2000" max={new Date().getFullYear()}
+                  <input className={`input${errBorder('birth_year')}`} type="number" inputMode="numeric" placeholder="2022" min="2000" max={new Date().getFullYear()}
                     value={form.birth_year} onChange={e => set('birth_year', e.target.value)} aria-invalid={!!fieldErrors.birth_year} />
                 </div>
                 <div id="field-birth_month">
@@ -264,7 +264,7 @@ export default function NewPetPage() {
 
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">{t('weight')}</label>
-          <input className="input" type="number" placeholder={t('weightPlaceholder')} step="0.1" min="0"
+          <input className="input" type="number" inputMode="decimal" placeholder={t('weightPlaceholder')} step="0.1" min="0"
             value={form.weight_kg} onChange={e => set('weight_kg', e.target.value)} />
         </div>
 
