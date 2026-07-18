@@ -68,6 +68,12 @@ export function QuickRecordFab() {
   // 상태(요약 카드 미표시)에서는 홈에 기록 진입점이 전혀 없으므로 FAB을 노출한다(바텀시트에 아이 선택 포함).
   if (pathname === '/dashboard' && activeId) return null
 
+  // 아이 상세(/pets/[id])도 동일한 원탭 기록 UI(QuickLogBar+직접기록+스캔)를 카드로 인라인 제공하고,
+  // 이 페이지는 보고 있는 아이가 고정돼 있다. 여기서 FAB 시트를 열면 (선택 아이가 상세의 아이와
+  // 다르면) 엉뚱한 아이로 기록될 여지가 있고 진입점도 중복 — /dashboard 와 같은 취지로 숨긴다.
+  // 목록(/pets)·신규(/pets/new)는 인라인 기록이 없으므로 제외.
+  if (/^\/pets\/[^/]+$/.test(pathname) && pathname !== '/pets/new') return null
+
   const linkCls =
     'flex items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg py-2 text-xs font-medium hover:bg-gray-100 transition-colors'
 

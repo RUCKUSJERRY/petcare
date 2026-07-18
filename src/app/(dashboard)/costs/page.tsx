@@ -116,8 +116,8 @@ export default function CostsPage() {
           hint={t('emptyHint')}
           action={
             <button type="button" onClick={() => setShowAdd(true)}
-              className="inline-block text-sm text-primary-600 font-semibold">
-              {t('goRecord')}
+              className="inline-flex items-center gap-1 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold px-4 py-2 hover:bg-primary-100 transition-colors">
+              <span aria-hidden>＋</span> {t('addRecord')}
             </button>
           }
         />

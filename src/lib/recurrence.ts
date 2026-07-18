@@ -46,6 +46,11 @@ export function parseRule(s: string | null | undefined): RecurRule | null {
     const r = JSON.parse(s)
     if (!r || typeof r !== 'object') return null
     if (typeof r.freq !== 'string' || typeof r.interval !== 'number') return null
+    // freq 는 지원하는 4종(day/week/month/year)만 유효하다. 알 수 없는 값(구버전·손상된 데이터·
+    // 잘못된 임포트)이 들어오면 matches 의 switch 가 어떤 case 에도 걸리지 않아 undefined 를 반환,
+    // nextOccurrence 가 상한까지 헛돌다 null → 일정이 예정 목록·리마인더에서 사라진다
+    // (interval/week/month 가드와 같은 취지의 마지막 미검증 필드).
+    if (r.freq !== 'day' && r.freq !== 'week' && r.freq !== 'month' && r.freq !== 'year') return null
     // interval 은 1 이상이어야 한다. 0/음수/NaN 이면 matches 의 나머지 연산이 NaN 이 되어
     // 어떤 날짜에도 매칭되지 않고, nextOccurrence 가 상한까지 헛돌다 null → 일정이 사라진다.
     if (!Number.isFinite(r.interval) || r.interval < 1) return null

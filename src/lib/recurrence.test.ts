@@ -54,6 +54,13 @@ describe('parseRule (유효성)', () => {
   it('요일이 비어 있는 주간 규칙은 거부', () => {
     expect(parseRule(JSON.stringify({ freq: 'week', interval: 1, byweekday: [] }))).toBeNull()
   })
+  it('지원하지 않는 freq 는 거부 (매칭 안 돼 일정이 사라지는 것 방지)', () => {
+    // 구버전·손상된 데이터·잘못된 임포트로 알 수 없는 freq 가 들어와도 유효로 통과하면
+    // matches 가 어떤 날짜에도 매칭되지 않아 예정 목록·리마인더에서 조용히 사라진다.
+    expect(parseRule(JSON.stringify({ freq: 'hour', interval: 1 }))).toBeNull()
+    expect(parseRule(JSON.stringify({ freq: '', interval: 1 }))).toBeNull()
+    expect(parseRule(JSON.stringify({ freq: 'Daily', interval: 1 }))).toBeNull()
+  })
   it('빈 값·깨진 JSON 은 null', () => {
     expect(parseRule(null)).toBeNull()
     expect(parseRule('not json')).toBeNull()

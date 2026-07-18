@@ -40,6 +40,9 @@ export function QuickLogBar({
   const [toast, setToast] = useState<{ id: string; label: string; time: string } | null>(null)
   const [notice, setNotice] = useState(false)
   const [undoErr, setUndoErr] = useState(false)
+  // 원탭 저장 실패 시 조용히 넘기면 사용자는 탭이 안 먹은 줄 알고 다시 눌러 중복 기록되거나
+  // 앱이 멈춘 것으로 오해한다. 다른 쓰기 흐름(undoErr 등)과 동일하게 짧은 안내를 띄운다.
+  const [saveErr, setSaveErr] = useState(false)
   const [busy, setBusy] = useState<RecordCategory | null>(null)
   // 배변처럼 세부 종류를 골라야 하는 카테고리를 탭하면, 즉시 저장 대신 보기를 펼친다.
   const [subFor, setSubFor] = useState<RecordCategory | null>(null)
@@ -91,6 +94,7 @@ export function QuickLogBar({
   const log = async (cat: RecordCategory, title?: string) => {
     if (!petId) { setNotice(true); return }
     setNotice(false)
+    setSaveErr(false)
     setSubFor(null)
     setBusy(cat)
     const now = new Date()
@@ -101,7 +105,7 @@ export function QuickLogBar({
       .select('id')
       .single()
     setBusy(null)
-    if (error || !data) return
+    if (error || !data) { setSaveErr(true); return }
     setUndoErr(false)
     showToast(data.id as string, label, hhmm(now.toISOString()))
     invalidate()
@@ -205,6 +209,10 @@ export function QuickLogBar({
 
       {notice && (
         <p className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('needPet')}</p>
+      )}
+
+      {saveErr && (
+        <p role="status" className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('saveFailed')}</p>
       )}
 
       {toast && (

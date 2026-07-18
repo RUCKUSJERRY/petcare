@@ -62,7 +62,7 @@ export async function GET(req: Request) {
   //  있다. 앱 화면(computeUpcoming)은 전체 기록을 읽으므로 리마인더도 동일 기준을 쓴다.)
   const { data, error } = await admin
     .from('records')
-    .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, last_reminded_on, pet:pets(user_id, name)')
+    .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, last_reminded_on, created_at, pet:pets(user_id, name)')
     .in('pet_id', candidatePetIds)
 
   if (error) {
@@ -79,6 +79,7 @@ export async function GET(req: Request) {
     next_due_on: string | null
     recur_rule: string | null
     last_reminded_on: string | null
+    created_at: string | null
     pet: { user_id: string; name: string } | null
   }
   const allRows = (data ?? []) as unknown as Row[]
@@ -89,12 +90,18 @@ export async function GET(req: Request) {
   const rowById = new Map(allRows.map(r => [r.id, r]))
   // computeUpcoming/latestRecordPerLine 은 입력이 event_on 내림차순(최신 우선)임을 전제한다.
   // DB 조회 순서를 신뢰하지 말고 여기서 정렬해 라인별 '최신 기록'이 올바로 선택되게 한다.
+  // 같은 event_on 동점 시 created_at 내림차순으로 2차 정렬 — 일정 화면(schedule/page.tsx)이
+  // 쓰는 정렬과 동일하게 맞춰, 같은 날 여러 기록이 있어도 리마인더가 화면과 같은 '최신 기록'
+  // (=올바른 recur_rule/last_reminded_on)을 대표로 골라 중복·누락 발송을 막는다.
   const scheduleRows: ScheduleRow[] = allRows
+    .slice()
+    .sort((a, b) =>
+      b.event_on.localeCompare(a.event_on) ||
+      (b.created_at ?? '').localeCompare(a.created_at ?? ''))
     .map(r => ({
       id: r.id, pet_id: r.pet_id, category: r.category, title: r.title,
       event_on: r.event_on, next_due_on: r.next_due_on, recur_rule: r.recur_rule,
     }))
-    .sort((a, b) => b.event_on.localeCompare(a.event_on))
   const rows = computeUpcoming(scheduleRows)
     .filter(it => it.next_due_on === today || it.next_due_on === tomorrow)
     // force가 아니면 오늘 이미 리마인드한 라인은 제외(당일 중복 방지). 라인의 대표는 최신 기록.
