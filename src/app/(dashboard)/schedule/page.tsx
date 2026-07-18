@@ -312,7 +312,13 @@ export default function SchedulePage() {
           {/* 기본 동작(직접 기록)은 한 번에 열고, 스캔·내보내기는 보조 메뉴(⋯)로 분리 */}
           <div className="flex items-center gap-1.5 shrink-0" ref={menuRef}>
             <button
-              onClick={() => { setMenuOpen(false); setAddDate(null); setAddTemplate(null); setShowAdd(v => !v) }}
+              onClick={() => {
+                setMenuOpen(false); setAddDate(null); setAddTemplate(null)
+                const opening = !showAdd
+                setShowAdd(opening)
+                // 폼을 열 때는 상단으로 스크롤해 긴 입력폼 상단이 바로 보이게 한다(캘린더 추가 경로와 동일).
+                if (opening) window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
               className={cn('text-sm py-1.5 px-3', showAdd ? 'btn-secondary' : 'btn-primary')}>
               {showAdd ? tc('close') : t('addRecord')}
             </button>

@@ -142,7 +142,7 @@ export default function CarePage() {
       {pet && age && (
         <div className="flex items-center gap-2">
           <span className="font-bold text-gray-900">{pet.name}</span>
-          <span className="text-sm text-gray-400">{pet.breed?.name_ko} · {age.displayText}</span>
+          <span className="text-sm text-gray-400">{[pet.breed?.name_ko, age.displayText].filter(Boolean).join(' · ')}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lifeStageColor(stageLabel(age))}`}>
             {stageLabel(age)}
           </span>

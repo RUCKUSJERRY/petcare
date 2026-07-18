@@ -37,6 +37,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  // 저장 후 편집 폼이 조용히 닫히면 저장됐는지 확신이 안 든다 — 잠깐 '저장됨' 토스트로 확인시킨다.
+  const [saved, setSaved] = useState(false)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -55,6 +58,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
   }, [supabase])
+
+  // 저장 토스트 타이머 정리
+  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current) }, [])
 
   const { data: pet, refetch, isPending } = useQuery({
     queryKey: ['pet', params.id],
@@ -89,12 +95,12 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     if (pet) {
       setForm({
         name: pet.name,
-        breed_id: pet.breed_id,
+        breed_id: pet.breed_id ?? '',
         birth_year: pet.birth_year != null ? String(pet.birth_year) : '',
         birth_month: pet.birth_month != null ? String(pet.birth_month) : '',
         birth_day: pet.birth_day ? String(pet.birth_day) : '',
         adopted_on: pet.adopted_on ?? '',
-        gender: pet.gender,
+        gender: pet.gender ?? '',
         weight_kg: pet.weight_kg ? String(pet.weight_kg) : '',
       })
       setCareType(pet.care_type ?? 'own')
@@ -122,26 +128,19 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   }
 
   const handleSave = async () => {
-    // 신규 등록 폼과 동일하게 필수값을 검증한다.
-    // (검증이 없으면 이름 공란 저장·출생연도 공란 → parseInt('')=NaN 으로 저장 실패)
+    // 등록 폼과 동일하게 이름만 필수 — 품종·생년월일·성별은 선택(모를 수 있음).
+    // 빈 값은 null 로 저장한다(품종 FK·성별 CHECK 제약 위배 방지, parseInt('')=NaN 방지).
     if (!form.name.trim()) { setSaveError(t('errNameRequired')); return }
-    // 나이 미상이 아니면 출생연도를 검증한다.
-    if (!ageUnknown) {
-      const by = parseInt(form.birth_year, 10)
-      if (!Number.isFinite(by) || by < 1990 || by > new Date().getFullYear()) {
-        setSaveError(t('errBirthYearRequired')); return
-      }
-    }
     setSaving(true)
     setSaveError(null)
     const { error } = await supabase.from('pets').update({
       name: form.name,
-      breed_id: form.breed_id,
-      birth_year: ageUnknown ? null : parseInt(form.birth_year),
-      birth_month: ageUnknown ? null : parseInt(form.birth_month),
+      breed_id: form.breed_id || null,
+      birth_year: !ageUnknown && form.birth_year ? parseInt(form.birth_year) : null,
+      birth_month: !ageUnknown && form.birth_month ? parseInt(form.birth_month) : null,
       birth_day: ageUnknown || !form.birth_day ? null : parseInt(form.birth_day),
       adopted_on: form.adopted_on || null,
-      gender: form.gender,
+      gender: form.gender || null,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
       care_type: careType,
@@ -165,6 +164,10 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     // 공용 펫 목록 캐시도 갱신 (헤더/다른 화면 반영)
     queryClient.invalidateQueries({ queryKey: ['my-pets'] })
     setEditing(false)
+    // 저장 완료 확인 토스트 (잠깐 노출)
+    setSaved(true)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setSaved(false), 2000)
   }
 
   const handleDelete = async () => {
@@ -210,6 +213,12 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="px-4 py-6 space-y-5">
+      {/* 저장 완료 토스트 — 화면 하단 중앙에 잠깐 뜬다 */}
+      {saved && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] flex items-center gap-1.5 rounded-full bg-gray-900 text-white text-sm font-medium px-4 py-2 shadow-lg" role="status">
+          <span aria-hidden>✓</span> {t('saved')}
+        </div>
+      )}
       {/* 헤더.
           - 조회: 뒤로가기(BackButton) + 이름 + '수정' 진입 버튼.
           - 편집: 좌측 뒤로가기 화살표를 '편집 취소'로 재사용한다. 예전엔 좌측 뒤로가기(<)와
@@ -260,7 +269,10 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-100 text-teal-700">{t('fosterBadge')}</span>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-0.5">{pet.breed?.name_ko} · {age.displayText} · {pet.gender}</p>
+            {/* 품종·성별은 선택값이라 없을 수 있다 — 있는 항목만 ' · '로 이어 붙여 빈 구분자가 남지 않게 한다. */}
+            <p className="text-sm text-gray-500 mt-0.5">
+              {[pet.breed?.name_ko, age.displayText, pet.gender].filter(Boolean).join(' · ')}
+            </p>
             {pet.weight_kg && <p className="text-sm text-gray-400 mt-0.5">{pet.weight_kg}kg</p>}
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
               {pet.birth_month && pet.birth_day && (

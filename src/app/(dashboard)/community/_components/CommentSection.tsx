@@ -176,15 +176,16 @@ export function CommentSection({
                   {confirmDeleteId === c.id ? (
                     <>
                       <span className="text-xs text-gray-500">{t('deleteConfirmShort')}</span>
+                      {/* 파괴적 동작은 채운 빨강 알약으로 명확히 구분(취소와 헷갈리지 않게) */}
                       <button
                         onClick={() => remove(c.id)}
-                        className="text-xs text-red-500 font-semibold"
+                        className="text-xs font-semibold text-white bg-red-500 rounded-full px-2.5 py-1"
                       >
                         {tc('delete')}
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs text-gray-400"
+                        className="text-xs text-gray-500 px-1"
                       >
                         {tc('cancel')}
                       </button>

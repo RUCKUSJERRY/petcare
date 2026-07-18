@@ -75,13 +75,14 @@ export default function NewPetPage() {
     const { data: inserted, error: insErr } = await supabase.from('pets').insert({
       user_id: user.id,
       name,
-      breed_id: form.breed_id,
-      // 나이 미상이면 생년 정보는 저장하지 않는다.
-      birth_year: ageUnknown ? null : parseInt(form.birth_year),
-      birth_month: ageUnknown ? null : parseInt(form.birth_month),
+      // 선택 항목 — 미입력이면 null (품종은 FK/성별은 CHECK 제약이라 빈 문자열을 넣으면 안 된다).
+      breed_id: form.breed_id || null,
+      // 나이 미상이거나 값이 비면 생년 정보는 저장하지 않는다(빈 값의 parseInt=NaN 방지).
+      birth_year: !ageUnknown && form.birth_year ? parseInt(form.birth_year) : null,
+      birth_month: !ageUnknown && form.birth_month ? parseInt(form.birth_month) : null,
       birth_day: ageUnknown || !form.birth_day ? null : parseInt(form.birth_day),
       adopted_on: form.adopted_on || null,
-      gender: form.gender,
+      gender: form.gender || null,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       photo_url: photoUrl,
       species,
@@ -107,15 +108,12 @@ export default function NewPetPage() {
     if (fieldErrors[ek]) setFieldErrors(prev => ({ ...prev, [ek]: '' }))
   }
 
-  const FIELD_ORDER = ['name', 'breed', 'birth_year', 'birth_month', 'gender'] as const
+  // 등록 문턱을 낮춘다 — 이름만 필수. 품종·생년월일·성별은 구조/임보 등으로 모를 수 있어 모두 선택.
+  // (빈 값은 저장 시 null 로 넣는다. DB도 name 만 not null.)
+  const FIELD_ORDER = ['name'] as const
   const validate = (): Record<string, string> => {
     const errs: Record<string, string> = {}
     if (!form.name.trim()) errs.name = t('errNameRequired')
-    if (!form.breed_id) errs.breed = t('errBreedRequired')
-    // 나이 미상이면 생년 입력을 요구하지 않는다.
-    if (!ageUnknown && !form.birth_year) errs.birth_year = t('errBirthYearRequired')
-    if (!ageUnknown && !form.birth_month) errs.birth_month = t('errBirthMonthRequired')
-    if (!form.gender) errs.gender = t('errGenderRequired')
     return errs
   }
   // 오류 시 붉은 테두리 + 필드 하단 메시지 (input 전역 클래스 뒤에 붙여 우선 적용)

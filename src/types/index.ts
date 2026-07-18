@@ -22,13 +22,13 @@ export interface Pet {
   id: string
   user_id: string
   name: string
-  breed_id: string
+  breed_id: string | null       // 품종 미상 허용 — 선택
   species: Species
   birth_year: number | null     // 나이 미상(구조·임보) 허용 — 선택
   birth_month: number | null    // 나이 미상 허용 — 선택
   birth_day: number | null      // 생일 '일' (선택) — 생일 D-day 계산용
   adopted_on: string | null     // 입양일 YYYY-MM-DD (선택) — 함께한 날·입양 기념일
-  gender: Gender
+  gender: Gender | null          // 성별 미상 허용 — 선택
   weight_kg: number | null
   target_weight_kg: number | null
   photo_url: string | null

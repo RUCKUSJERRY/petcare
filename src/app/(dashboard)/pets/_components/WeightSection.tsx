@@ -199,17 +199,18 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               <span className="text-gray-400 w-24">{log.measured_on}</span>
               <span className="font-medium text-gray-800">{log.weight_kg}kg</span>
               {confirmDeleteId === log.id ? (
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-2.5">
                   <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
+                  {/* 파괴적 동작은 채운 빨강 알약으로 명확히 구분(취소와 헷갈리지 않게) */}
                   <button
                     onClick={() => remove(log.id)}
-                    className="text-xs text-red-500 font-semibold"
+                    className="text-xs font-semibold text-white bg-red-500 rounded-full px-2.5 py-1"
                   >
                     {tc('delete')}
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(null)}
-                    className="text-xs text-gray-400"
+                    className="text-xs text-gray-500 px-1"
                   >
                     {tc('cancel')}
                   </button>

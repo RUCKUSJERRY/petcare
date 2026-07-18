@@ -152,7 +152,7 @@ function PetRow({ pet }: { pet: Pet }) {
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-0.5">
-            {pet.breed?.name_ko} · {age.displayText} · {pet.gender}
+            {[pet.breed?.name_ko, age.displayText, pet.gender].filter(Boolean).join(' · ')}
           </p>
         </div>
         <svg className="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

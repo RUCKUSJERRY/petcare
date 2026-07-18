@@ -181,7 +181,7 @@ export default function NewPostPage() {
                 new Map(
                   pets
                     .filter(p => p.breed_id)
-                    .map(p => [p.breed_id, p.breed?.name_ko ?? ''])
+                    .map(p => [p.breed_id as string, p.breed?.name_ko ?? ''])
                 ).entries()
               ).map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>

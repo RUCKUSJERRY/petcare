@@ -71,7 +71,7 @@ export function SelectedPetSummary({
             </span>
           </div>
           <p className="text-sm text-white/80 mt-0.5 truncate">
-            {pet.breed?.name_ko} · {age.displayText}
+            {[pet.breed?.name_ko, age.displayText].filter(Boolean).join(' · ')}
           </p>
           {(birthdayUpcoming || together != null) && (
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
