@@ -61,6 +61,23 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
     qc.invalidateQueries({ queryKey: ['my-pets'] })
   }
 
+  // 체중 로그가 바뀌면 프로필 대표 몸무게(pets.weight_kg)를 '가장 최근 측정값'과 맞춘다.
+  // 몸무게 추적 탭에만 기록하면 프로필 카드·아이 목록의 몸무게가 옛값으로 남아 두 값이
+  // 조용히 어긋나던 문제를 없앤다. (지난 날짜를 backfill 해도 최신 측정값 기준으로 유지)
+  const syncProfileWeight = async () => {
+    const { data: latest } = await supabase
+      .from('weight_logs')
+      .select('weight_kg')
+      .eq('pet_id', petId)
+      .order('measured_on', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    await supabase.from('pets').update({ weight_kg: latest?.weight_kg ?? null }).eq('id', petId)
+    qc.invalidateQueries({ queryKey: ['pet', petId] })
+    qc.invalidateQueries({ queryKey: ['my-pets'] })
+  }
+
   const add = async () => {
     const w = parseFloat(form.weight_kg)
     if (!w || w <= 0) { setError(t('errInvalidWeight')); return }
@@ -75,6 +92,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
     setForm({ weight_kg: '', measured_on: todayKST() })
     setAdding(false)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
+    await syncProfileWeight()
   }
 
   const remove = async (id: string) => {
@@ -83,6 +101,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
     if (delErr) { setError(t('errDeleteFailed')); return }
     setConfirmDeleteId(null)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
+    await syncProfileWeight()
   }
 
   const latest = logs.length ? logs[logs.length - 1] : null

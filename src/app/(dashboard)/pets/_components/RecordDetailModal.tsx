@@ -28,6 +28,8 @@ export function RecordDetailModal({
   const [confirmDel, setConfirmDel] = useState(false)
   const [delError, setDelError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // 상세(진료·미용·식사) 로드 전에는 저장이 조용히 무시되므로, 로드 완료까지 저장 버튼을 잠근다.
+  const [ready, setReady] = useState(false)
   const formRef = useRef<RecordFormHandle>(null)
 
   const { data: record } = useQuery({
@@ -91,8 +93,8 @@ export function RecordDetailModal({
                 >🗑</button>
                 <button
                   onClick={() => formRef.current?.submit()}
-                  disabled={saving}
-                  className="btn-primary text-sm py-1.5 px-4"
+                  disabled={saving || !ready}
+                  className="btn-primary text-sm py-1.5 px-4 disabled:opacity-60"
                 >{saving ? tc('saving') : tc('save')}</button>
               </>
             )}
@@ -109,6 +111,7 @@ export function RecordDetailModal({
               record={record}
               embedded
               onSavingChange={setSaving}
+              onReadyChange={setReady}
               onDone={() => { afterChange(); onClose() }}
               onCancel={onClose}
             />

@@ -49,13 +49,17 @@ export default function NotificationsPage() {
     qc.invalidateQueries({ queryKey: ['notifications-unread'] })
   }
 
-  const open = async (n: NotificationItem) => {
-    if (!n.read) {
-      await supabase.from('notifications').update({ read: true }).eq('id', n.id)
-      qc.invalidateQueries({ queryKey: ['notifications'] })
-      qc.invalidateQueries({ queryKey: ['notifications-unread'] })
-    }
+  const open = (n: NotificationItem) => {
+    // 탭 즉시 이동한다. 읽음 처리는 사용자에게 보이지 않는 부수작업이라 왕복을 기다릴 필요가
+    // 없다 — 낙관적으로 목록/배지를 먼저 갱신하고 서버 쓰기는 백그라운드로 돌린다.
     if (n.post_id) router.push(`/community/${n.post_id}`)
+    if (!n.read) {
+      qc.setQueryData<NotificationItem[]>(['notifications'], prev =>
+        prev?.map(it => (it.id === n.id ? { ...it, read: true } : it)))
+      qc.setQueryData<number>(['notifications-unread'], c => Math.max(0, (c ?? 1) - 1))
+      supabase.from('notifications').update({ read: true }).eq('id', n.id)
+        .then(() => qc.invalidateQueries({ queryKey: ['notifications-unread'] }))
+    }
   }
 
   return (

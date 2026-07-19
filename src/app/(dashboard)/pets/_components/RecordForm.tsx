@@ -43,6 +43,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   embedded?: boolean
   /** 저장 진행 상태를 외부(헤더 버튼)에 알린다 */
   onSavingChange?: (saving: boolean) => void
+  /** 상세 로드 완료(=저장 가능) 여부를 외부(헤더 저장 버튼)에 알린다 */
+  onReadyChange?: (ready: boolean) => void
   onDone: () => void
   onCancel: () => void
 }>(function RecordForm({
@@ -54,6 +56,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   template,
   embedded = false,
   onSavingChange,
+  onReadyChange,
   onDone,
   onCancel,
 }, ref) {
@@ -81,7 +84,9 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [detail, setDetail] = useState<Record<string, string>>({})
   // 편집 시 상세 테이블 로드 완료 여부. 로드 전 저장하면 기존 상세가 빈 값으로 덮어써지므로 막는다.
-  const [detailLoaded, setDetailLoaded] = useState(false)
+  // 상세 테이블이 있는 기존 기록만 비동기 로드가 필요하다. 그 외(신규·상세없는 카테고리)는
+  // 처음부터 저장 가능 상태로 둬서, 저장 버튼이 순간적으로 비활성화되는 깜빡임을 막는다.
+  const [detailLoaded, setDetailLoaded] = useState(() => !record || !DETAIL_TABLE[record.category])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -236,6 +241,10 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   }
 
   useImperativeHandle(ref, () => ({ submit }))
+
+  // 상세 로드 완료(=저장 가능) 여부를 외부 헤더 저장 버튼에 반영 → 로드 전 저장이 조용히
+  // 무시되지 않게 버튼을 비활성화할 수 있다.
+  useEffect(() => { onReadyChange?.(detailLoaded) }, [detailLoaded, onReadyChange])
 
   const cancel = () => {
     // 새로 올린(미저장) 사진 정리
@@ -443,7 +452,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
       {error && <p className="text-sm text-red-500">{error}</p>}
       {/* 임베디드(모달)일 땐 저장 버튼을 모달 헤더에 둔다 → 하단 버튼 숨김 */}
       {!embedded && (
-        <button onClick={submit} disabled={saving} className="btn-primary w-full py-2 text-sm">
+        <button onClick={submit} disabled={saving || !detailLoaded} className="btn-primary w-full py-2 text-sm disabled:opacity-60">
           {saving ? tc('saving') : editing ? tc('edit') : tc('save')}
         </button>
       )}

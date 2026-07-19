@@ -387,7 +387,7 @@ export default function SchedulePage() {
                     </div>
                     <p className="text-sm font-semibold text-gray-900 truncate">{i.title}</p>
                   </div>
-                  <span className="text-xs text-gray-400 shrink-0">{i.event_on}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{i.event_on.replace(/-/g, '.')}</span>
                 </div>
               </button>
             ))

@@ -433,7 +433,13 @@ export default function MapPage() {
           {CATEGORIES.map(c => (
             <button
               key={c.key}
-              onClick={() => { setCategory(category === c.key ? null : c.key); setKeyword(''); setAppliedKeyword('') }}
+              onClick={() => {
+                // 이미 선택된 필터를 다시 누르면 '이 지역 다시 검색'으로 동작한다.
+                // (예전엔 선택 해제되어 마커가 전부 사라지고 '필터를 선택하세요' 빈 화면으로 떨어져,
+                //  새로고침을 기대하고 누른 사용자가 지도가 깨진 것으로 오인했다.)
+                if (category === c.key) { loadRef.current() }
+                else { setCategory(c.key); setKeyword(''); setAppliedKeyword('') }
+              }}
               className={cn(
                 'px-3 py-1.5 rounded-full text-sm font-medium shrink-0 shadow-md border transition-colors',
                 category === c.key

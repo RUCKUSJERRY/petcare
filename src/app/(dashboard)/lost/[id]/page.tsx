@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { timeAgo } from '@/lib/utils'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { LostPet, LostPetSighting } from '@/types'
 
 export default function LostDetailPage({ params }: { params: { id: string } }) {
@@ -20,6 +21,11 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [sightErr, setSightErr] = useState<string | null>(null)
+  // 상태 전환(찾음 종료 / 다시 찾는 중)은 실종 목록·지도에서 신고를 넣고 빼는 되돌리기 쉬운
+  // 실수라, 확인 모달 + 진행중 표시 + 실패 안내를 둔다.
+  const [statusAction, setStatusAction] = useState<null | 'found' | 'active'>(null)
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [statusErr, setStatusErr] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null))
@@ -67,8 +73,13 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
 
   const isAuthor = !!me && pet?.user_id === me
 
-  const markFound = async () => {
-    await supabase.from('lost_pets').update({ status: 'found' }).eq('id', params.id)
+  const applyStatus = async (status: 'found' | 'active') => {
+    setStatusBusy(true)
+    setStatusErr(null)
+    const { error } = await supabase.from('lost_pets').update({ status }).eq('id', params.id)
+    setStatusBusy(false)
+    if (error) { setStatusErr(t('statusUpdateError')); return }
+    setStatusAction(null)
     qc.invalidateQueries({ queryKey: ['lost-pet', params.id] })
     qc.invalidateQueries({ queryKey: ['lost-pets'] })
   }
@@ -147,9 +158,31 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
       />
 
       {isAuthor && pet.status === 'active' && (
-        <button onClick={markFound} className="w-full py-3 rounded-lg border border-green-300 text-green-600 text-sm font-semibold hover:bg-green-50">
+        <button onClick={() => { setStatusErr(null); setStatusAction('found') }}
+          className="w-full py-3 rounded-lg border border-green-300 text-green-600 text-sm font-semibold hover:bg-green-50">
           {t('markFound')}
         </button>
+      )}
+
+      {/* 종료된 신고도 실수/오탐일 수 있어, 작성자가 '다시 찾는 중'으로 되돌릴 수 있게 한다 */}
+      {isAuthor && pet.status === 'found' && (
+        <button onClick={() => { setStatusErr(null); setStatusAction('active') }}
+          className="w-full py-3 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50">
+          {t('revertToActive')}
+        </button>
+      )}
+
+      {statusErr && <p className="text-sm text-red-500 text-center">{statusErr}</p>}
+
+      {statusAction && (
+        <ConfirmModal
+          title={statusAction === 'found' ? t('markFoundConfirmTitle') : t('revertConfirmTitle')}
+          description={statusAction === 'found' ? t('markFoundConfirmDesc') : t('revertConfirmDesc')}
+          confirmLabel={statusAction === 'found' ? t('markFoundConfirm') : t('revertConfirm')}
+          busy={statusBusy}
+          onConfirm={() => applyStatus(statusAction)}
+          onCancel={() => setStatusAction(null)}
+        />
       )}
 
       <hr className="border-gray-100" />
