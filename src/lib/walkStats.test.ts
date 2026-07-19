@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { summarizeWalks, weeklyGoalProgress, type WalkLike, type WalkTotals } from './walkStats'
 
-// 기준: 2026-06-17(수). 그 주 월요일 = 2026-06-15.
-const NOW = new Date('2026-06-17T12:00:00')
+// 기준: 2026-06-17(수) KST. 그 주 월요일 = 2026-06-15.
+// 집계는 KST 기준이므로 타임존을 명시(+09:00)해 CI 시간대와 무관하게 결정적으로 검증한다.
+const NOW = new Date('2026-06-17T12:00:00+09:00')
 
 const walks: WalkLike[] = [
-  { started_at: '2026-06-17T08:00:00', distance_m: 1000, duration_s: 600 }, // 이번 주/달
-  { started_at: '2026-06-15T08:00:00', distance_m: 2000, duration_s: 1200 }, // 이번 주(월)/달
-  { started_at: '2026-06-08T08:00:00', distance_m: 3000, duration_s: 1800 }, // 지난 주/이번 달
-  { started_at: '2026-05-30T08:00:00', distance_m: 5000, duration_s: 3000 }, // 지난 달
-  { started_at: 'invalid', distance_m: 9999, duration_s: 9999 },             // 무시
+  { started_at: '2026-06-17T08:00:00+09:00', distance_m: 1000, duration_s: 600 }, // 이번 주/달
+  { started_at: '2026-06-15T08:00:00+09:00', distance_m: 2000, duration_s: 1200 }, // 이번 주(월)/달
+  { started_at: '2026-06-08T08:00:00+09:00', distance_m: 3000, duration_s: 1800 }, // 지난 주/이번 달
+  { started_at: '2026-05-30T08:00:00+09:00', distance_m: 5000, duration_s: 3000 }, // 지난 달
+  { started_at: 'invalid', distance_m: 9999, duration_s: 9999 },                    // 무시
 ]
 
 describe('summarizeWalks', () => {
@@ -43,6 +44,18 @@ describe('summarizeWalks', () => {
     expect(s.all.count).toBe(0)
     expect(s.weekly).toHaveLength(6)
     expect(s.maxWeekDistance).toBe(0)
+  })
+
+  it('KST 자정 직후 산책은 KST 기준 주/달로 잡힌다 (UTC 로 새면 지난 주로 오분류)', () => {
+    // 2026-06-15 00:30 KST(월) = 2026-06-14 15:30 UTC(일). UTC 로 묶으면 지난 주가 되지만,
+    // KST 기준으로는 이번 주(월요일 06-15) 이번 달에 정확히 들어가야 한다.
+    const s = summarizeWalks(
+      [{ started_at: '2026-06-15T00:30:00+09:00', distance_m: 1200, duration_s: 700 }],
+      NOW,
+    )
+    expect(s.thisWeek).toEqual({ count: 1, distance_m: 1200, duration_s: 700 })
+    expect(s.thisMonth.count).toBe(1)
+    expect(s.weekly[s.weekly.length - 1].distance_m).toBe(1200)
   })
 })
 

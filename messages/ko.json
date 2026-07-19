@@ -98,7 +98,9 @@
     "moreCount": "외 {count}건 더",
     "viewAll": "일정 전체 보기 →",
     "complete": "완료",
-    "completing": "처리…"
+    "completing": "처리…",
+    "doneDateLabel": "시행일",
+    "doneRecord": "기록"
   },
   "summary": {
     "detail": "상세",

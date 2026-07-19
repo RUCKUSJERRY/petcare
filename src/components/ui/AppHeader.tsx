@@ -67,15 +67,11 @@ export function AppHeader() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const toggle = (id: string) => {
-    // 아이가 1마리뿐이면 칩을 다시 눌러도 선택 해제하지 않는다. 해제되면 홈 요약 카드
-    // (아바타·다음 접종 알림·원탭 기록·체중)가 통째로 사라져 사용자가 화면이 깨진 것으로 오인한다.
-    // 다견일 때만 토글 해제를 허용해 '전체 아이' 보기로 돌아갈 수 있게 한다.
-    if (pets && pets.length === 1) {
-      setSelectedPetId(id)
-      return
-    }
-    setSelectedPetId(selectedPetId === id ? null : id)
+  const selectPet = (id: string) => {
+    // 이미 선택된 아이를 다시 눌러도 선택을 해제하지 않는다(칩 탭은 '선택 전환'만 담당).
+    // 예전엔 다견일 때 재탭으로 해제됐는데, 해제되면 홈 요약 카드(아바타·다음 접종 알림·원탭
+    // 기록·체중)가 통째로 사라져 사용자가 화면이 깨진 것으로 오인했다. 단·다견 동일하게 동작한다.
+    setSelectedPetId(id)
   }
 
   const hasPets = !!pets && pets.length > 0
@@ -105,7 +101,7 @@ export function AppHeader() {
               {pets!.map(pet => (
                 <button
                   key={pet.id}
-                  onClick={() => toggle(pet.id)}
+                  onClick={() => selectPet(pet.id)}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border',
                     selectedPetId === pet.id

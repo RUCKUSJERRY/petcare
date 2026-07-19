@@ -29,20 +29,31 @@ export interface WalkSummary {
 }
 
 const DAY = 24 * 60 * 60 * 1000
+// 앱 전반이 날짜를 KST 달력으로 표준화하는 것과 동일 취지로, 산책 주/월 버킷도 KST 기준으로
+// 계산한다. 예전엔 기기 로컬 시간대(getDay/getMonth/setHours)로 묶어, 서버(UTC)·해외 단말에서
+// 자정 부근 산책이 엉뚱한 주/달로 잡혀 '이번 주 목표 달성'이 뒤집힐 수 있었다.
+// KST 는 DST 가 없어 고정 +9h — 시각에 9시간을 더한 뒤 getUTC*/setUTC* 로 KST 벽시계를 읽는다.
+const KST_OFFSET = 9 * 60 * 60 * 1000
 
-/** 해당 시각이 속한 주의 월요일 00:00 (로컬 기준) */
-function weekStartOf(d: Date): Date {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  const dow = (x.getDay() + 6) % 7 // 월=0 ... 일=6
-  x.setDate(x.getDate() - dow)
+/** 절대시각 Date 를 'KST 벽시계를 UTC 필드에 담은' Date 로 옮긴다. 이후 getUTC/setUTC 계열로 읽는다. */
+function toKst(d: Date): Date {
+  return new Date(d.getTime() + KST_OFFSET)
+}
+
+/** 해당 시각(KST 벽시계 Date)이 속한 주의 월요일 00:00 (KST 기준) */
+function weekStartOf(kst: Date): Date {
+  const x = new Date(kst)
+  x.setUTCHours(0, 0, 0, 0)
+  const dow = (x.getUTCDay() + 6) % 7 // 월=0 ... 일=6
+  x.setUTCDate(x.getUTCDate() - dow)
   return x
 }
 
-function ymd(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
+/** KST 벽시계 Date 를 YYYY-MM-DD 로 */
+function ymd(kst: Date): string {
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(kst.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 
@@ -63,8 +74,9 @@ export function summarizeWalks(walks: WalkLike[], now: Date = new Date(), weeks 
   const thisMonth = empty()
   const all = empty()
 
-  const curWeekStart = weekStartOf(now)
-  const curMonth = now.getFullYear() * 12 + now.getMonth()
+  const curWeekStart = weekStartOf(toKst(now))
+  const curKst = toKst(now)
+  const curMonth = curKst.getUTCFullYear() * 12 + curKst.getUTCMonth()
 
   // 최근 weeks개 주 버킷 (월요일 시작) — 인덱스 0 = 가장 오래된 주
   const buckets: WeekBucket[] = []
@@ -77,12 +89,13 @@ export function summarizeWalks(walks: WalkLike[], now: Date = new Date(), weeks 
   }
 
   for (const w of walks) {
-    const t = new Date(w.started_at)
-    if (Number.isNaN(t.getTime())) continue
+    const raw = new Date(w.started_at)
+    if (Number.isNaN(raw.getTime())) continue
+    const t = toKst(raw)
     add(all, w)
 
     if (ymd(weekStartOf(t)) === ymd(curWeekStart)) add(thisWeek, w)
-    if (t.getFullYear() * 12 + t.getMonth() === curMonth) add(thisMonth, w)
+    if (t.getUTCFullYear() * 12 + t.getUTCMonth() === curMonth) add(thisMonth, w)
 
     const idx = startToIdx.get(ymd(weekStartOf(t)))
     if (idx != null) {
