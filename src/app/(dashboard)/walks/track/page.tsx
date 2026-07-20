@@ -38,6 +38,9 @@ export default function WalkTrackPage() {
   const [points, setPoints] = useState(0)       // 점 개수(표시용)
   const [geoError, setGeoError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // idle 단계 위치 준비 상태(null=확인 중, true=확인됨, false=실패). '시작 전에 GPS가 준비됐는지'를
+  // 눈으로 보여줘, 목록에서 넘어온 idle 화면이 불필요한 한 단계처럼 느껴지지 않게 한다.
+  const [locReady, setLocReady] = useState<boolean | null>(null)
 
   // 저장 폼
   const [petId, setPetId] = useState<string>('')
@@ -78,8 +81,16 @@ export default function WalkTrackPage() {
     })
     polylineRef.current.setMap(map)
     navigator.geolocation?.getCurrentPosition(
-      p => map.setCenter(new maps.LatLng(p.coords.latitude, p.coords.longitude)),
-      undefined,
+      p => {
+        const ll = new maps.LatLng(p.coords.latitude, p.coords.longitude)
+        map.setCenter(ll)
+        // idle 단계에서 현재 위치 마커를 미리 찍어 'GPS 준비됨'을 눈으로 확인하게 한다.
+        // (거리 계산 기준점 lastPosRef 는 여기서 건드리지 않는다 — start() 에서 새로 잡는다)
+        if (!meMarkerRef.current) meMarkerRef.current = new maps.Marker({ position: ll, map })
+        else meMarkerRef.current.setPosition(ll)
+        setLocReady(true)
+      },
+      () => setLocReady(false),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     )
   }, [])
@@ -172,6 +183,8 @@ export default function WalkTrackPage() {
     setGeoError(null)
     pathRef.current = []
     distRef.current = 0
+    // 거리 기준점을 새로 잡는다 — idle 마커로 잡힌 위치가 첫 구간에 잘못 더해지지 않게 한다.
+    lastPosRef.current = null
     runningMsRef.current = 0
     const now = Date.now()
     startedAtRef.current = now
@@ -302,6 +315,15 @@ export default function WalkTrackPage() {
               {paused
                 ? (autoPausedRef.current ? t('autoPausedHint') : t('pausedHint'))
                 : t('trackingStatus', { time: hhmm(startedAtRef.current), points })}
+            </span>
+          </div>
+        )}
+
+        {/* idle 위치 준비 상태 — 시작 전에 GPS가 잡혔는지 눈으로 알려준다 */}
+        {phase === 'idle' && !notice && (
+          <div className="absolute bottom-3 inset-x-3 z-10 flex items-center justify-center">
+            <span className="text-xs text-gray-600 bg-white/90 rounded-full px-3 py-1 shadow-sm">
+              {locReady === true ? t('idleReady') : locReady === false ? t('idleNoLoc') : t('idleLocating')}
             </span>
           </div>
         )}
