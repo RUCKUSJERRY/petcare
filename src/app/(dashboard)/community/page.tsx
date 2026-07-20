@@ -128,6 +128,15 @@ export default async function CommunityPage({
           <EmptyState
             icon="💬"
             title={q ? t('emptySearch', { q }) : mine ? t('emptyMine') : t('empty')}
+            // 검색·카테고리·'내 글' 필터 조합으로 막다른 결과가 나오면, 어떤 필터가 걸렸는지
+            // 헤매지 않도록 한 번에 전체 목록으로 돌아가는 링크를 준다(음식 화면과 동일 패턴).
+            action={
+              (q || activeCategory || mine) ? (
+                <Link href="/community" className="btn-primary text-sm py-1.5 px-4">
+                  {t('resetFilters')}
+                </Link>
+              ) : undefined
+            }
           />
         ) : (
           posts.map(post => (

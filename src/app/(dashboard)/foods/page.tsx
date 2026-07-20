@@ -221,12 +221,28 @@ export default function FoodsPage() {
         </div>
       )}
 
-      <input
-        className="input"
-        placeholder={t('searchPlaceholder')}
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
+      {/* 검색 입력 — 입력 중에도 한 번에 지울 수 있는 ✕ 버튼을 둔다(커뮤니티·일정 검색과 통일).
+          모바일에서 전체선택-삭제 없이 바로 초기화할 수 있어 마찰이 준다. */}
+      <div className="relative">
+        <input
+          className="input pr-9"
+          placeholder={t('searchPlaceholder')}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label={t('searchClear')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-2">
         {FILTERS.map(f => (

@@ -37,7 +37,10 @@ export function QuickLogBar({
   const t = useTranslations('quickLog')
   const supabase = createClient()
   const qc = useQueryClient()
-  const [toast, setToast] = useState<{ id: string; label: string; time: string } | null>(null)
+  // 되돌리기 토스트를 '스택'으로 둔다. 이 바의 목적은 밥→물→배변처럼 빠르게 연속 원탭하는 것인데,
+  // 토스트가 1개뿐이면 두 번째 기록이 첫 토스트를 덮어써 먼저 기록한 건을 더 이상 되돌릴 수 없었다.
+  // 최근 N건을 각각 되돌릴 수 있게 유지한다(각 토스트는 자기 타이머로 4초 뒤 사라진다).
+  const [toasts, setToasts] = useState<{ id: string; label: string; time: string }[]>([])
   const [notice, setNotice] = useState(false)
   const [undoErr, setUndoErr] = useState(false)
   // 원탭 저장 실패 시 조용히 넘기면 사용자는 탭이 안 먹은 줄 알고 다시 눌러 중복 기록되거나
@@ -46,9 +49,13 @@ export function QuickLogBar({
   const [busy, setBusy] = useState<RecordCategory | null>(null)
   // 배변처럼 세부 종류를 골라야 하는 카테고리를 탭하면, 즉시 저장 대신 보기를 펼친다.
   const [subFor, setSubFor] = useState<RecordCategory | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 토스트별 자동 소멸 타이머(id → timeout). 언마운트 시 일괄 정리한다.
+  const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+  useEffect(() => {
+    const map = timers.current
+    return () => { map.forEach(clearTimeout); map.clear() }
+  }, [])
 
   const { data: todayLogs = [] } = useQuery({
     queryKey: ['today-log', petId],
@@ -85,10 +92,31 @@ export function QuickLogBar({
     if (petId) qc.invalidateQueries({ queryKey: ['records', petId] })
   }
 
+  // 최근 되돌리기 토스트를 몇 개까지 쌓아둘지 — 연속 원탭을 각각 되돌릴 수 있게 하되,
+  // 화면을 덮지 않도록 상한을 둔다. 상한을 넘으면 가장 오래된 것부터 흘려보낸다.
+  const MAX_TOASTS = 4
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(x => x.id !== id))
+    const tm = timers.current.get(id)
+    if (tm) { clearTimeout(tm); timers.current.delete(id) }
+  }
+
   const showToast = (id: string, label: string, time: string) => {
-    setToast({ id, label, time })
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setToast(null), 4000)
+    setToasts(prev => {
+      const next = [...prev, { id, label, time }]
+      if (next.length > MAX_TOASTS) {
+        // 상한 초과분(가장 오래된 것)은 타이머까지 정리하고 버린다.
+        for (const d of next.slice(0, next.length - MAX_TOASTS)) {
+          const tm = timers.current.get(d.id)
+          if (tm) { clearTimeout(tm); timers.current.delete(d.id) }
+        }
+        return next.slice(next.length - MAX_TOASTS)
+      }
+      return next
+    })
+    const tm = setTimeout(() => removeToast(id), 4000)
+    timers.current.set(id, tm)
   }
 
   const log = async (cat: RecordCategory, title?: string) => {
@@ -122,12 +150,9 @@ export function QuickLogBar({
     log(cat)
   }
 
-  const undo = async () => {
-    if (!toast) return
-    const snapshot = toast
-    setToast(null)
+  const undo = async (snapshot: { id: string; label: string; time: string }) => {
     setUndoErr(false)
-    if (timer.current) clearTimeout(timer.current)
+    removeToast(snapshot.id)
     const { error } = await supabase.from('records').delete().eq('id', snapshot.id)
     if (error) {
       // 삭제 실패 시 토스트를 되살려 사용자가 다시 시도할 수 있게 한다(조용한 실패 방지)
@@ -215,18 +240,26 @@ export function QuickLogBar({
         <p role="status" className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('saveFailed')}</p>
       )}
 
-      {toast && (
-        <div className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${onP ? 'bg-white/20 text-white' : 'bg-gray-900 text-white'}`}>
-          <button
-            type="button"
-            onClick={() => onOpenDetail?.(toast.id)}
-            className="flex items-center gap-2 flex-1 min-w-0 text-left"
-          >
-            <span aria-hidden>{careCategoryIcon(toast.label)}</span>
-            <span className="flex-1 truncate">{t('logged', { label: toast.label })} · {toast.time}</span>
-            {onOpenDetail && <span aria-hidden className="opacity-60 shrink-0">›</span>}
-          </button>
-          <button onClick={undo} className="text-xs font-semibold underline shrink-0">{t('undo')}</button>
+      {/* 최근 원탭 기록 토스트(각각 되돌리기 가능) — 최신이 아래로 쌓인다 */}
+      {toasts.length > 0 && (
+        <div className="mt-2 space-y-1.5">
+          {toasts.map(item => (
+            <div
+              key={item.id}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${onP ? 'bg-white/20 text-white' : 'bg-gray-900 text-white'}`}
+            >
+              <button
+                type="button"
+                onClick={() => onOpenDetail?.(item.id)}
+                className="flex items-center gap-2 flex-1 min-w-0 text-left"
+              >
+                <span aria-hidden>{careCategoryIcon(item.label)}</span>
+                <span className="flex-1 truncate">{t('logged', { label: item.label })} · {item.time}</span>
+                {onOpenDetail && <span aria-hidden className="opacity-60 shrink-0">›</span>}
+              </button>
+              <button onClick={() => undo(item)} className="text-xs font-semibold underline shrink-0">{t('undo')}</button>
+            </div>
+          ))}
         </div>
       )}
 

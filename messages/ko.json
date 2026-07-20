@@ -229,7 +229,8 @@
     "deleting": "삭제 중...",
     "searchPlaceholder": "제목 검색",
     "searchClear": "검색 지우기",
-    "search": "검색"
+    "search": "검색",
+    "resetFilters": "필터 초기화"
   },
   "foods": {
     "title": "음식 안전 정보",
@@ -238,6 +239,7 @@
     "dog": "강아지",
     "cat": "고양이",
     "searchPlaceholder": "음식 이름 검색...",
+    "searchClear": "검색 지우기",
     "noResults": "검색 결과가 없어요",
     "noResultsHint": "검색어나 필터를 바꿔보세요.",
     "resetFilters": "필터 초기화",
