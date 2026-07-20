@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-07-16T05:47:34.717Z
+--  생성 시각: 2026-07-20T00:20:08.505Z
 -- =============================================================
 
 
@@ -183,14 +183,15 @@ create table if not exists public.map_favorites (
 );
 
 -- ── 02.1_table/notifications.sql ──
--- notifications : 커뮤니티 알림 (댓글/답글/좋아요)
+-- notifications : 커뮤니티 알림(댓글/답글/좋아요) + 실종 목격 제보 알림(sighting)
 create table if not exists public.notifications (
   id           uuid primary key default gen_random_uuid(),
   recipient_id uuid not null,
   actor_id     uuid not null,
-  type         text not null check (type in ('comment', 'like', 'reply')),
+  type         text not null check (type in ('comment', 'like', 'reply', 'sighting')),
   post_id      uuid,
   comment_id   uuid,
+  lost_pet_id  uuid,       -- sighting 알림의 대상 실종 신고 (커뮤니티 알림은 null)
   read         boolean not null default false,
   created_at   timestamptz not null default now()
 );
@@ -928,6 +929,32 @@ begin
 end;
 $$;
 
+-- ── 02.3_function/notify_on_sighting.sql ──
+-- notify_on_sighting : 실종 목격 제보 등록 시 신고자에게 알림 생성 (예외 안전)
+-- 실종은 앱에서 가장 시급한 이벤트라, 댓글/좋아요와 동일하게 in-app 알림을 남긴다.
+-- (폰 푸시는 web-push라 DB에서 못 보내므로, 클라이언트가 저장 직후 서버액션으로 별도 발송)
+create or replace function public.notify_on_sighting()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner_id uuid;
+begin
+  begin
+    select user_id into owner_id from public.lost_pets where id = new.lost_pet_id;
+    if owner_id is not null and owner_id <> new.user_id then
+      insert into public.notifications (recipient_id, actor_id, type, lost_pet_id)
+      values (owner_id, new.user_id, 'sighting', new.lost_pet_id);
+    end if;
+  exception when others then
+    null;
+  end;
+  return new;
+end;
+$$;
+
 -- ── 02.3_function/remove_like_notification.sql ──
 -- remove_like_notification : 좋아요 취소 시 해당 알림 제거 (예외 안전)
 create or replace function public.remove_like_notification()
@@ -1074,6 +1101,12 @@ drop trigger if exists trg_touch_health_guides on public.health_guides;
 create trigger trg_touch_health_guides before update on public.health_guides
   for each row execute function public.touch_updated_at();
 
+-- ── 02.4_trigger/lost_pet_sightings.sql ──
+-- lost_pet_sightings : 목격 제보 등록 시 신고자에게 알림 트리거
+drop trigger if exists trg_notify_sighting on public.lost_pet_sightings;
+create trigger trg_notify_sighting after insert on public.lost_pet_sightings
+  for each row execute function public.notify_on_sighting();
+
 -- ── 02.4_trigger/lost_pets.sql ──
 -- lost_pets : updated_at 자동 갱신 트리거
 drop trigger if exists trg_touch_lost on public.lost_pets;
@@ -1134,17 +1167,19 @@ create trigger trg_walk_like_del after delete on public.walk_likes
 -- └──────────────────────────────────────────────
 
 -- ── 02.5_view/notification_list.sql ──
--- notification_list : 알림 목록 뷰 (actor 프로필 + 게시글 제목, security_invoker)
+-- notification_list : 알림 목록 뷰 (actor 프로필 + 게시글 제목 + 실종 대상 이름, security_invoker)
 create or replace view public.notification_list
 with (security_invoker = on) as
 select
   n.*,
   pr.display_name as actor_name,
   pr.avatar_url   as actor_avatar,
-  p.title         as post_title
+  p.title         as post_title,
+  lp.name         as lost_pet_name
 from public.notifications n
-left join public.profiles pr on pr.id = n.actor_id
-left join public.posts    p  on p.id = n.post_id;
+left join public.profiles  pr on pr.id = n.actor_id
+left join public.posts     p  on p.id = n.post_id
+left join public.lost_pets lp on lp.id = n.lost_pet_id;
 
 -- ── 02.5_view/post_list.sql ──
 -- post_list : 게시글 목록 뷰 (작성자/견종/댓글 수 조인)

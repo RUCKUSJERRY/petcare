@@ -13,6 +13,7 @@ import { cn, formatWon, careCategoryIcon } from '@/lib/utils'
 import { aggregateCostStats, costYears, type CostRecord } from '@/lib/costStats'
 import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
 import { RecordFormModal } from '../pets/_components/RecordFormModal'
+import { QuickCostModal } from './_components/QuickCostModal'
 
 // 드릴다운 목록에 쓰기 위해 id·title 까지 포함한 비용 기록
 type CostRow = CostRecord & { pet_id: string; id: string; title: string }
@@ -25,9 +26,9 @@ export default function CostsPage() {
   const { selectedPetId } = useSelectedPet()
   const { data: myPets } = useMyPets()
   const [year, setYear] = useState<number | null>(null)
-  // 기록 추가 모달 — 예전엔 /schedule?add=1 로 이탈해 저장 후 비용 화면으로 못 돌아왔다.
-  // 이 화면 위 모달로 열어 저장 후 곧바로 비용 통계에 반영되게 한다.
-  const [showAdd, setShowAdd] = useState(false)
+  // 비용 추가 — 기본은 '금액+항목+날짜'만의 빠른 입력(quick), 장소·메모·사진·반복이 필요하면
+  // '자세히 입력'으로 전체 폼(detail)으로 전환한다. 예전엔 곧바로 전체 폼만 열려 마찰이 컸다.
+  const [addMode, setAddMode] = useState<null | 'quick' | 'detail'>(null)
   // 아이 범위(전체/특정)는 상단 헤더의 아이 칩 하나로 통일한다. 화면마다 중복 선택 UI를 두지
   // 않고 헤더 선택을 그대로 따른다(선택 없음=전체). 여기선 '현재 기준'만 라벨로 표기한다.
   const effectivePetId = selectedPetId
@@ -97,7 +98,7 @@ export default function CostsPage() {
           )}
           <button
             type="button"
-            onClick={() => setShowAdd(true)}
+            onClick={() => setAddMode('quick')}
             className="shrink-0 flex items-center gap-1 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold px-3 py-1.5 hover:bg-primary-100 transition-colors"
           >
             <span aria-hidden>＋</span> {t('addRecord')}
@@ -115,7 +116,7 @@ export default function CostsPage() {
           title={t('empty')}
           hint={t('emptyHint')}
           action={
-            <button type="button" onClick={() => setShowAdd(true)}
+            <button type="button" onClick={() => setAddMode('quick')}
               className="inline-flex items-center gap-1 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold px-4 py-2 hover:bg-primary-100 transition-colors">
               <span aria-hidden>＋</span> {t('addRecord')}
             </button>
@@ -239,15 +240,25 @@ export default function CostsPage() {
         <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} />
       )}
 
-      {/* 기록 추가 — 아이를 안 고른 '전체 보기'에서는 폼 안에서 대상 아이를 고른다.
+      {/* 비용 빠른 입력 — 금액+항목+날짜만. '자세히 입력'으로 전체 폼(detail)으로 전환 가능 */}
+      {addMode === 'quick' && (
+        <QuickCostModal
+          petId={effectivePetId}
+          onClose={() => setAddMode(null)}
+          onDone={() => setAddMode(null)}
+          onDetail={() => setAddMode('detail')}
+        />
+      )}
+
+      {/* 전체 기록 폼 — 아이를 안 고른 '전체 보기'에서는 폼 안에서 대상 아이를 고른다.
           저장 후 비용 통계(cost-records)를 즉시 갱신하고 모달을 닫는다. */}
-      {showAdd && (
+      {addMode === 'detail' && (
         <RecordFormModal
           petId={effectivePetId}
           allowPetSelect={!effectivePetId}
           title={t('addRecord')}
-          onClose={() => setShowAdd(false)}
-          onDone={() => { setShowAdd(false); qc.invalidateQueries({ queryKey: ['cost-records'] }) }}
+          onClose={() => setAddMode(null)}
+          onDone={() => { setAddMode(null); qc.invalidateQueries({ queryKey: ['cost-records'] }) }}
         />
       )}
     </div>

@@ -10,7 +10,13 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { timeAgo } from '@/lib/utils'
 import type { NotificationItem } from '@/types'
 
-const typeIcon: Record<string, string> = { comment: '💬', reply: '↩️', like: '❤️' }
+const typeIcon: Record<string, string> = { comment: '💬', reply: '↩️', like: '❤️', sighting: '📍' }
+
+/** 알림이 가리키는 대상 화면 (없으면 이동하지 않음) */
+const notificationTarget = (n: NotificationItem): string | null =>
+  n.type === 'sighting'
+    ? (n.lost_pet_id ? `/lost/${n.lost_pet_id}` : null)
+    : (n.post_id ? `/community/${n.post_id}` : null)
 
 export default function NotificationsPage() {
   const supabase = createClient()
@@ -21,6 +27,7 @@ export default function NotificationsPage() {
     comment: t('typeComment'),
     reply: t('typeReply'),
     like: t('typeLike'),
+    sighting: t('typeSighting'),
   }
 
   const { data: items = [], isLoading, isError } = useQuery({
@@ -52,7 +59,8 @@ export default function NotificationsPage() {
   const open = (n: NotificationItem) => {
     // 탭 즉시 이동한다. 읽음 처리는 사용자에게 보이지 않는 부수작업이라 왕복을 기다릴 필요가
     // 없다 — 낙관적으로 목록/배지를 먼저 갱신하고 서버 쓰기는 백그라운드로 돌린다.
-    if (n.post_id) router.push(`/community/${n.post_id}`)
+    const target = notificationTarget(n)
+    if (target) router.push(target)
     if (!n.read) {
       qc.setQueryData<NotificationItem[]>(['notifications'], prev =>
         prev?.map(it => (it.id === n.id ? { ...it, read: true } : it)))
@@ -103,8 +111,10 @@ export default function NotificationsPage() {
                   <span className="font-semibold">{n.actor_name ?? t('anonymous')}</span>
                   {typeText[n.type]}
                 </p>
-                {n.post_title && (
-                  <p className="text-xs text-gray-400 truncate mt-0.5">“{n.post_title}”</p>
+                {(n.type === 'sighting' ? n.lost_pet_name : n.post_title) && (
+                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                    “{n.type === 'sighting' ? n.lost_pet_name : n.post_title}”
+                  </p>
                 )}
                 <p className="text-xs text-gray-300 mt-0.5">{timeAgo(n.created_at)}</p>
               </div>

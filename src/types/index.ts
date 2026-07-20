@@ -177,7 +177,7 @@ export interface Comment {
 
 // ─── 알림 ────────────────────────────────────────────────────
 
-export type NotificationType = 'comment' | 'like' | 'reply'
+export type NotificationType = 'comment' | 'like' | 'reply' | 'sighting'
 
 /** notification_list 뷰: 알림 + actor 프로필 + 게시글 제목 */
 export interface NotificationItem {
@@ -187,12 +187,14 @@ export interface NotificationItem {
   type: NotificationType
   post_id: string | null
   comment_id: string | null
+  lost_pet_id: string | null
   read: boolean
   created_at: string
   // join
   actor_name: string | null
   actor_avatar: string | null
   post_title: string | null
+  lost_pet_name: string | null
 }
 
 // ─── 실종 반려동물 ───────────────────────────────────────────

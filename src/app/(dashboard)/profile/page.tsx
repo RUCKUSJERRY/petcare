@@ -134,9 +134,12 @@ export default function ProfilePage() {
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
+        {/* 저장 성공을 버튼 라벨 변화(잠깐 '저장됨')로만 알리면 놓치기 쉬워, 별도 상태 줄로도
+            분명히 알린다(스크린리더에도 role=status 로 안내). */}
+        {done && <p role="status" className="text-sm text-green-600 font-medium">✓ {t('saved')}</p>}
 
         <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
-          {saving ? tc('saving') : done ? t('saved') : t('saveButton')}
+          {saving ? tc('saving') : t('saveButton')}
         </button>
 
         {/* 프리미엄 진입점 */}

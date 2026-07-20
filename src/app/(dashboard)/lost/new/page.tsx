@@ -88,7 +88,13 @@ export default function NewLostPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pos) { setError(t('errorNoLocation')); return }
+    if (!pos) {
+      // 지도는 폼 위쪽에 있고 에러는 하단 제출부에 떠서, 무엇을 고쳐야 하는지 놓치기 쉽다.
+      // 위치를 못 정했으면 지도로 스크롤해 바로 지정하도록 유도한다.
+      setError(t('errorNoLocation'))
+      mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     setSaving(true); setError(null)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError(t('errorLoginRequired')); setSaving(false); return }

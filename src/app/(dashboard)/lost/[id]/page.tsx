@@ -10,6 +10,7 @@ import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { timeAgo } from '@/lib/utils'
 import { ShareButton } from '@/components/ui/ShareButton'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { notifyNewSighting } from '../_actions'
 import type { LostPet, LostPetSighting } from '@/types'
 
 export default function LostDetailPage({ params }: { params: { id: string } }) {
@@ -92,11 +93,17 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
     setSightErr(null)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSending(false); setSightErr(t('sightingErrLogin')); return }
-    const { error } = await supabase.from('lost_pet_sightings').insert({ lost_pet_id: params.id, user_id: user.id, content })
+    const { data: inserted, error } = await supabase
+      .from('lost_pet_sightings')
+      .insert({ lost_pet_id: params.id, user_id: user.id, content })
+      .select('id')
+      .single()
     setSending(false)
     if (error) { setSightErr(t('sightingErrFail')); return }
     setText('')
     qc.invalidateQueries({ queryKey: ['lost-sightings', params.id] })
+    // in-app 알림은 DB 트리거가 남기고, 폰 푸시만 서버액션으로 추가 발송(베스트 에포트).
+    if (inserted?.id) notifyNewSighting(inserted.id as string).catch(() => {})
   }
 
   if (!pet) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>

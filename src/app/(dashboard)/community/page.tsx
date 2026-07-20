@@ -58,16 +58,17 @@ export default async function CommunityPage({
 
   if (activeCategory) query = query.eq('category', activeCategory)
   if (mine && user) query = query.eq('user_id', user.id)
-  if (q) {
-    // PostgREST .or() 필터에서 구조 문자(쉼표/괄호/역슬래시)와 LIKE 와일드카드(%,_)는
-    // 검색을 깨뜨리거나 의도치 않은 조건 주입을 일으킬 수 있어 제거/무력화한다.
-    const safeQ = q.replace(/[,()\\]/g, ' ').replace(/[%_]/g, '').trim()
-    if (safeQ) query = query.or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
-  }
+  // PostgREST .or() 필터에서 구조 문자(쉼표/괄호/역슬래시)와 LIKE 와일드카드(%,_)는
+  // 검색을 깨뜨리거나 의도치 않은 조건 주입을 일으킬 수 있어 제거/무력화한다.
+  const safeQ = q ? q.replace(/[,()\\]/g, ' ').replace(/[%_]/g, '').trim() : ''
+  // 검색어를 입력했지만 특수문자만 남아 실제로 검색할 내용이 없으면, 전체 목록을 검색 결과처럼
+  // 내보내지 않고 '결과 없음'으로 처리한다. (예: "%%%" 검색 시 전체 글이 노출되던 문제)
+  const searchButEmpty = !!q && !safeQ
+  if (safeQ) query = query.or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
 
   query = query.range(offset, offset + PAGE_SIZE - 1)
 
-  const { data } = await query
+  const { data } = searchButEmpty ? { data: [] as PostListItem[] } : await query
   const posts = (data ?? []) as PostListItem[]
   const hasNext = posts.length === PAGE_SIZE
 

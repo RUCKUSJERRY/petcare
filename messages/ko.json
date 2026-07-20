@@ -271,6 +271,7 @@
     "revertConfirmDesc": "신고가 실종 목록과 지도에 다시 노출됩니다.",
     "revertConfirm": "되돌리기",
     "statusUpdateError": "처리에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    "sightingPushTitle": "🐾 {name} 목격 제보가 도착했어요",
     "metaFallbackTitle": "실종 신고 - 펫케어",
     "shareSearchingTitleMeta": "🐾 {name} 를 찾고 있어요{where}",
     "metaDefaultDescription": "실종된 반려동물을 찾고 있습니다. 목격하셨다면 도와주세요.",
@@ -496,7 +497,8 @@
     "anonymous": "익명의 보호자",
     "typeComment": "님이 댓글을 남겼어요",
     "typeReply": "님이 답글을 남겼어요",
-    "typeLike": "님이 회원님의 글을 좋아해요"
+    "typeLike": "님이 회원님의 글을 좋아해요",
+    "typeSighting": "님이 목격 제보를 남겼어요"
   },
   "invite": {
     "loading": "초대 정보를 불러오는 중...",
@@ -768,6 +770,7 @@
     "notifTypeComment": "님이 회원님의 글에 댓글을 남겼어요",
     "notifTypeReply": "님이 회원님의 댓글에 답글을 남겼어요",
     "notifTypeLike": "님이 회원님의 글을 좋아해요",
+    "notifTypeSighting": "님이 목격 제보를 남겼어요",
     "logout": "로그아웃",
     "back": "뒤로",
     "share": "공유",
@@ -968,7 +971,17 @@
     "addRecord": "기록 추가",
     "petBasis": "{name} 기준",
     "loadError": "비용 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
-    "disclaimer": "비용이 입력된 기록만 집계됩니다. 일정 화면에서 각 기록의 비용을 입력·수정할 수 있어요."
+    "disclaimer": "비용이 입력된 기록만 집계됩니다. 일정 화면에서 각 기록의 비용을 입력·수정할 수 있어요.",
+    "quickCostTitle": "비용 빠른 입력",
+    "quickCostPet": "대상 아이",
+    "quickCostAmount": "금액",
+    "quickCostWon": "원",
+    "quickCostCategory": "항목",
+    "quickCostDate": "날짜",
+    "quickCostDetail": "장소·메모·사진·반복까지 자세히 입력하기",
+    "quickCostAmountRequired": "금액을 입력해 주세요.",
+    "quickCostPetRequired": "대상 아이를 선택해 주세요.",
+    "quickCostSaveFailed": "저장에 실패했어요. 잠시 후 다시 시도해 주세요."
   },
   "affiliate": {
     "heading": "이런 상품은 어때요?",
