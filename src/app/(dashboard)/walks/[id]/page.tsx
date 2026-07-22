@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatDistance, formatDuration, formatPace } from '@/lib/utils'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { BackButton } from '@/components/ui/BackButton'
 import { ShareButton } from '@/components/ui/ShareButton'
 import { WalkSocial } from '../_components/WalkSocial'
 import { WalkPhotoCard } from '../_components/WalkPhotoCard'
@@ -28,6 +29,8 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
   const [uid, setUid] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
   const [busy, setBusy] = useState(false)
+  // 공유 토글·삭제 같은 쓰기 실패를 조용히 넘기지 않고 짧게 안내한다(앱 전반의 쓰기 흐름과 통일).
+  const [actionErr, setActionErr] = useState<string | null>(null)
   const fittedRef = useRef(false)
 
   useEffect(() => {
@@ -85,15 +88,23 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
   const toggleShare = async () => {
     if (!walk) return
     setBusy(true)
-    await supabase.from('walks').update({ is_public: !walk.is_public }).eq('id', walk.id)
+    setActionErr(null)
+    // 실패 시 이전 상태를 그대로 두면 사용자는 공유가 된/해제된 줄 오해한다 — 에러를 확인해 안내한다.
+    const { error } = await supabase.from('walks').update({ is_public: !walk.is_public }).eq('id', walk.id)
     setBusy(false)
+    if (error) { setActionErr(t('shareError')); return }
     refetch()
     qc.invalidateQueries({ queryKey: ['walks'] })
   }
 
   const handleDelete = async () => {
     if (!walk) return
-    await supabase.from('walks').delete().eq('id', walk.id)
+    setBusy(true)
+    setActionErr(null)
+    // 삭제 실패인데도 목록으로 보내면 사용자는 지워진 줄 알지만 기록이 되살아난다 — 실패를 확인한다.
+    const { error } = await supabase.from('walks').delete().eq('id', walk.id)
+    setBusy(false)
+    if (error) { setActionErr(t('deleteError')); setShowDelete(false); return }
     qc.invalidateQueries({ queryKey: ['walks'] })
     router.replace('/walks')
   }
@@ -105,11 +116,9 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="text-gray-400" aria-label={t('back')}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        {/* 공유 링크·푸시로 히스토리 없이 진입해도 목록으로 빠져나갈 수 있게 fallback 을 둔다
+            (다른 상세 화면과 동일 — 예전엔 raw router.back() 이라 막다른 길이 됐다). */}
+        <BackButton fallbackHref="/walks" />
         <h1 className="text-lg font-bold text-gray-900 truncate px-2">{walk?.title || t('walkFallback')}</h1>
         {walk?.is_public ? (
           <ShareButton
@@ -204,6 +213,7 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           >
             {t('deleteWalk')}
           </button>
+          {actionErr && <p role="status" className="text-sm text-red-500 text-center">{actionErr}</p>}
         </div>
       )}
 
@@ -221,6 +231,7 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
           description={t('deleteConfirm')}
           confirmLabel={tc('delete')}
           destructive
+          busy={busy}
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}
         />

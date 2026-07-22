@@ -314,7 +314,10 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{pet.species === 'cat' ? t('breedCat') : t('breedDog')}</label>
+            {/* 품종은 선택값(모를 수 있음) — 빈 옵션이 없으면 미지정 아이를 열었을 때 첫 품종이
+                선택된 듯 보이고 무심코 저장하면 엉뚱한 품종이 배정됐다. '모름' 옵션으로 되돌릴 수 있게 한다. */}
             <select className="input" value={form.breed_id} onChange={e => set('breed_id', e.target.value)}>
+              <option value="">{t('breedNone')}</option>
               {(allBreeds ?? []).filter(b => b.species === pet.species).map(b => (
                 <option key={b.id} value={b.id}>{b.name_ko}</option>
               ))}

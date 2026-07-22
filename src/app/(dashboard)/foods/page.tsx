@@ -25,13 +25,14 @@ function toFeedFactor(lifeStage: PetAge['lifeStage'] | undefined): 'neutered' | 
 
 /** 사료·간식 가이드 접이식 카드 */
 function FoodGuideCard({ guide }: { guide: FoodGuideTopic }) {
+  const t = useTranslations('foods')
   const [open, setOpen] = useState(false)
   return (
     <div className="card space-y-2 border-l-4 border-primary-400" style={{ borderRadius: '0 12px 12px 0' }}>
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2.5 text-left">
         <span className="text-2xl shrink-0" aria-hidden>{guide.icon}</span>
         <span className="flex-1 font-semibold text-gray-900">{guide.title}</span>
-        <span className="text-gray-400 text-sm shrink-0">{open ? '접기' : '열기'}</span>
+        <span className="text-gray-400 text-sm shrink-0">{open ? t('collapse') : t('expand')}</span>
       </button>
       {open && (
         <ul className="space-y-1.5 pt-1">

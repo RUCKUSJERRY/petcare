@@ -168,8 +168,11 @@ export default function WalkPage() {
         ))
       )}
 
-      {/* 하단 고정 제휴 배너(산책용품) */}
-      <StickyAffiliateBanner species={pets[0]?.species ?? 'dog'} context="walk" />
+      {/* 하단 고정 제휴 배너(산책용품) — 아직 아이를 등록하지 않아 '등록' 안내만 뜨는 화면에서는
+          광고를 띄우지 않는다(빈 상태 CTA를 가리지 않도록). */}
+      {petGuides.length > 0 && (
+        <StickyAffiliateBanner species={pets[0]?.species ?? 'dog'} context="walk" />
+      )}
     </div>
   )
 }

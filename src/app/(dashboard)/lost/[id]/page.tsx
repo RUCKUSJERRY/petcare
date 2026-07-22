@@ -6,6 +6,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import Link from 'next/link'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { timeAgo } from '@/lib/utils'
 import { ShareButton } from '@/components/ui/ShareButton'
@@ -32,7 +34,7 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null))
   }, [supabase])
 
-  const { data: pet } = useQuery({
+  const { data: pet, isPending } = useQuery({
     queryKey: ['lost-pet', params.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -106,7 +108,25 @@ export default function LostDetailPage({ params }: { params: { id: string } }) {
     if (inserted?.id) notifyNewSighting(inserted.id as string).catch(() => {})
   }
 
-  if (!pet) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>
+  // 로딩 중(isPending)과 조회가 끝났는데도 없음(삭제/잘못된 링크/권한없음)을 구분한다.
+  // 예전엔 두 경우 모두 '불러오는 중'만 떠서, 삭제된 신고에 진입하면 영원히 로딩처럼 보였다.
+  if (isPending) return <div className="px-4 py-6 text-gray-400">{t('loading')}</div>
+  if (!pet) return (
+    <div className="px-4 py-6 space-y-4">
+      <PageHeader title={t('reportTitle')} fallbackHref="/lost" />
+      <EmptyState
+        variant="error"
+        icon="🐾"
+        title={t('notFound')}
+        hint={t('notFoundHint')}
+        action={
+          <Link href="/lost" className="btn-primary text-sm py-1.5 px-4 inline-block">
+            {t('toList')}
+          </Link>
+        }
+      />
+    </div>
+  )
 
   return (
     <div className="px-4 py-6 space-y-4">
