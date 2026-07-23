@@ -29,6 +29,7 @@
     "leaveDesc": "지금 나가면 작성한 내용이 저장되지 않아요. 나갈까요?",
     "leaveConfirm": "나가기",
     "keepEditing": "계속 작성",
+    "retry": "다시 시도",
     "loginRequired": "세션이 만료됐어요. 다시 로그인해 주세요."
   },
   "quickRecord": {
@@ -90,7 +91,9 @@
     "collapse": "접기 ▲",
     "expand": "펼치기 ▼",
     "alertBadge": "알림 {count}",
-    "selectHint": "위에서 아이를 선택하면 오늘 기록·건강 요약을 한눈에 볼 수 있어요"
+    "selectHint": "위에서 아이를 선택하면 오늘 기록·건강 요약을 한눈에 볼 수 있어요",
+    "loadError": "우리 아이 정보를 불러오지 못했어요",
+    "loadErrorHint": "네트워크 상태를 확인하고 다시 시도해주세요."
   },
   "vaccAlerts": {
     "otherTitle": "다른 아이 일정",
@@ -558,6 +561,7 @@
     "latestMeasured": "최근 측정 {date}",
     "weightPlaceholder": "체중(kg)",
     "empty": "아직 기록이 없어요",
+    "deleteTitle": "체중 기록 삭제",
     "deleteConfirm": "삭제할까요?",
     "collapse": "접기",
     "showMore": "이전 기록 {count}건 더 보기",

@@ -12,6 +12,7 @@ import { ImagePicker } from '@/components/ui/ImagePicker'
 import { PetAvatar } from '@/components/ui/PetAvatar'
 import { deleteImageByUrl } from '@/lib/upload'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 import { WeightSection } from '../_components/WeightSection'
 import { PetMembers } from '../_components/PetMembers'
 import { QuickLogBar } from '../_components/QuickLogBar'
@@ -190,6 +191,21 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
+  // 편집 중 변경분이 있는데 하단 탭/FAB 등으로 이탈하면 수정 내용이 조용히 사라진다 —
+  // 작성 중이면 이탈 확인을 띄운다(커뮤니티 글쓰기와 동일한 가드). 원본 대비 변경이 있을 때만 dirty.
+  const dirty = editing && !saving && pet != null && (
+    form.name !== pet.name ||
+    form.breed_id !== (pet.breed_id ?? '') ||
+    form.birth_year !== (pet.birth_year != null ? String(pet.birth_year) : '') ||
+    form.birth_month !== (pet.birth_month != null ? String(pet.birth_month) : '') ||
+    form.birth_day !== (pet.birth_day ? String(pet.birth_day) : '') ||
+    form.adopted_on !== (pet.adopted_on ?? '') ||
+    form.gender !== (pet.gender ?? '') ||
+    form.weight_kg !== (pet.weight_kg ? String(pet.weight_kg) : '') ||
+    careType !== (pet.care_type ?? 'own') ||
+    ageUnknown !== (pet.birth_year == null) ||
+    photoUrl !== pet.photo_url
+  )
   // 로딩 중에는 스켈레톤을, 조회가 끝났는데도 없으면(삭제/권한없음) 안내를 보여준다.
   // (이전엔 두 경우 모두 '불러오는 중'만 떠서 없는 아이 진입 시 영원히 로딩처럼 보였다.)
   if (isPending) return <div className="px-4 py-6"><CardSkeletonList count={3} /></div>
@@ -478,6 +494,32 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {recModal === 'scan' && (
         <RecordsScanModal petId={params.id} onClose={() => { setRecModal(null); afterRecord() }} />
       )}
+
+      {/* 편집 중 이탈 확인 — 가드는 '편집 중'에만 마운트해 히스토리를 건드린다.
+          (조회 전용 화면인 상세에 상시 두면 직접 진입 시 뒤로가기 fallback 이 어긋난다) */}
+      {editing && <EditLeaveGuard dirty={dirty} />}
     </div>
+  )
+}
+
+/**
+ * 아이 수정 폼 이탈 가드 — 편집 중 변경분이 있을 때만 뒤로가기/새로고침에 확인을 띄운다.
+ * useUnsavedGuard 는 마운트 시 히스토리에 가드 항목을 쌓으므로, 편집 중일 때만 렌더링해
+ * 조회 모드의 뒤로가기(fallback 포함)에는 영향을 주지 않는다.
+ */
+function EditLeaveGuard({ dirty }: { dirty: boolean }) {
+  const tc = useTranslations('common')
+  const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
+  if (!promptLeave) return null
+  return (
+    <ConfirmModal
+      title={tc('leaveTitle')}
+      description={tc('leaveDesc')}
+      confirmLabel={tc('leaveConfirm')}
+      cancelLabel={tc('keepEditing')}
+      destructive
+      onConfirm={confirmLeave}
+      onCancel={cancelLeave}
+    />
   )
 }

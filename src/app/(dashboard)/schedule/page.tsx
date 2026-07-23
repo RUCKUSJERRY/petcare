@@ -70,6 +70,8 @@ export default function SchedulePage() {
   const [focusDate, setFocusDate] = useState<string | undefined>(undefined)
   const [showScan, setShowScan] = useState(false)
   const [scanNotice, setScanNotice] = useState(false)
+  // 내보내기 팝업 차단은 native alert() 대신 앱 톤의 인라인 안내로 알린다(다른 안내와 통일).
+  const [exportBlocked, setExportBlocked] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -184,6 +186,7 @@ export default function SchedulePage() {
   }
   const runExport = async () => {
     setExporting(true)
+    setExportBlocked(false)
     try {
       const petIds = selectedPetId ? [selectedPetId] : Array.from(new Set(history.map(h => h.pet_id)))
       let rows: ExportRecord[] = []
@@ -206,7 +209,7 @@ export default function SchedulePage() {
       const heading = selectedName ? t('exportHeadingPet', { name: selectedName }) : t('exportHeadingAll')
       // 프리미엄은 워터마크 없는 제출용 문서, 무료는 워터마크 포함(유료 가치 차등)
       const ok = openPrintWindow(buildRecordsHtml(heading, rows, { watermark: !isPremium }))
-      if (!ok) alert(t('exportPopupBlocked'))
+      if (!ok) setExportBlocked(true)
     } finally {
       setExporting(false)
     }
@@ -355,6 +358,15 @@ export default function SchedulePage() {
       )}
 
       {scanNotice && !selectedPetId && <p className="text-sm text-amber-600">{t('scanNeedPet')}</p>}
+
+      {exportBlocked && (
+        <div role="status" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <span aria-hidden>⚠️</span>
+          <p className="flex-1 text-sm text-amber-700">{t('exportPopupBlocked')}</p>
+          <button onClick={() => setExportBlocked(false)} aria-label={tc('close')}
+            className="text-amber-500 hover:text-amber-700 shrink-0">✕</button>
+        </div>
+      )}
 
       {showAdd && (
         <RecordForm

@@ -4,9 +4,11 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor, stageLabel } from '@/lib/utils'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import type { CareAlert, Pet } from '@/types'
 import { PetAvatar } from '@/components/ui/PetAvatar'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { SelectedPetSummary } from './SelectedPetSummary'
 import { VaccAlerts } from './VaccAlerts'
 import { WeightInsightCard } from './WeightInsightCard'
@@ -19,14 +21,36 @@ import { WeightInsightCard } from './WeightInsightCard'
 export function PetSection({
   pets,
   vaccAlerts,
+  loadError = false,
 }: {
   pets: Pet[]
   vaccAlerts: CareAlert[]
+  loadError?: boolean
 }) {
   const { selectedPetId, hydrated } = useSelectedPet()
   const t = useTranslations('petSection')
+  const tc = useTranslations('common')
+  const router = useRouter()
   // 선택된 아이가 있을 때 "다른 아이들" 목록은 기본 접힘 (영역 차지 최소화)
   const [othersOpen, setOthersOpen] = useState(false)
+
+  // 조회 실패 시에는 '첫 아이 등록' 온보딩 대신 에러 상태를 보여 다시 시도하게 한다.
+  // (아이가 있는데도 온보딩이 떠 혼란을 주던 문제 방지)
+  if (loadError && pets.length === 0) {
+    return (
+      <EmptyState
+        variant="error"
+        icon="🐾"
+        title={t('loadError')}
+        hint={t('loadErrorHint')}
+        action={
+          <button onClick={() => router.refresh()} className="btn-primary text-sm py-1.5 px-4">
+            {tc('retry')}
+          </button>
+        }
+      />
+    )
+  }
 
   if (pets.length === 0) {
     const features = [

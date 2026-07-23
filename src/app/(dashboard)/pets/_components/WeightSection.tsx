@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { todayKST } from '@/lib/utils'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { WeightLog } from '@/types'
 
 export function WeightSection({ petId, defaultOpen = false }: { petId: string; defaultOpen?: boolean }) {
@@ -16,6 +17,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [showAll, setShowAll] = useState(false)
   const [form, setForm] = useState({
     weight_kg: '',
@@ -97,8 +99,11 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
 
   const remove = async (id: string) => {
     setError(null)
+    setDeleting(true)
     const { error: delErr } = await supabase.from('weight_logs').delete().eq('id', id)
-    if (delErr) { setError(t('errDeleteFailed')); return }
+    setDeleting(false)
+    // 실패 시 확인 모달을 닫고 상단에 에러를 노출한다(모달 뒤에 가려지지 않도록).
+    if (delErr) { setConfirmDeleteId(null); setError(t('errDeleteFailed')); return }
     setConfirmDeleteId(null)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
     await syncProfileWeight()
@@ -217,32 +222,14 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
             <div key={log.id} className="flex items-center text-sm py-1">
               <span className="text-gray-400 w-24">{log.measured_on}</span>
               <span className="font-medium text-gray-800">{log.weight_kg}kg</span>
-              {confirmDeleteId === log.id ? (
-                <div className="ml-auto flex items-center gap-2.5">
-                  <span className="text-xs text-gray-500">{t('deleteConfirm')}</span>
-                  {/* 파괴적 동작은 채운 빨강 알약으로 명확히 구분(취소와 헷갈리지 않게) */}
-                  <button
-                    onClick={() => remove(log.id)}
-                    className="text-xs font-semibold text-white bg-red-500 rounded-full px-2.5 py-1"
-                  >
-                    {tc('delete')}
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteId(null)}
-                    className="text-xs text-gray-500 px-1"
-                  >
-                    {tc('cancel')}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDeleteId(log.id)}
-                  className="ml-auto text-xs text-gray-400 hover:text-red-500 px-2 py-1 -my-1 rounded"
-                  aria-label={`${log.measured_on} ${log.weight_kg}kg ${tc('delete')}`}
-                >
-                  {tc('delete')}
-                </button>
-              )}
+              {/* 삭제 확인은 앱 공용 ConfirmModal 로 통일(예전엔 이 행만 인라인 텍스트 확인이었다). */}
+              <button
+                onClick={() => setConfirmDeleteId(log.id)}
+                className="ml-auto text-xs text-gray-400 hover:text-red-500 px-2 py-1 -my-1 rounded"
+                aria-label={`${log.measured_on} ${log.weight_kg}kg ${tc('delete')}`}
+              >
+                {tc('delete')}
+              </button>
             </div>
           ))}
           {logs.length > 5 && (
@@ -254,6 +241,18 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
             </button>
           )}
         </div>
+      )}
+
+      {confirmDeleteId && (
+        <ConfirmModal
+          title={t('deleteTitle')}
+          description={t('deleteConfirm')}
+          confirmLabel={tc('delete')}
+          destructive
+          busy={deleting}
+          onConfirm={() => remove(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </div>
   )

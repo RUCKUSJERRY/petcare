@@ -25,6 +25,9 @@ export default async function DashboardPage() {
     supabase.from('post_list').select('*').order('created_at', { ascending: false }).limit(3),
   ])
   const pets = petsRes.data
+  // 조회 실패(RLS/네트워크)로 data 가 null 이면, 아이가 있는 사용자에게도 '첫 아이 등록'
+  // 온보딩이 떠 버린다 — 성공(빈 배열)과 실패(null+error)를 구분해 에러 상태를 전달한다.
+  const petsLoadError = !!petsRes.error
   const petIds = (pets ?? []).map((p: Pet) => p.id)
 
   // 30일 이내 예정 + 지난 건강 관리 알림 (접종·심장사상충·구충 등 모든 카테고리)
@@ -84,7 +87,7 @@ export default async function DashboardPage() {
   return (
     <div className="px-4 py-6 space-y-6">
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
-      <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} />
+      <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} loadError={petsLoadError} />
 
       {/* 프리미엄 업셀 (무료 사용자만, 닫기 가능) */}
       <PremiumUpsellCard />
