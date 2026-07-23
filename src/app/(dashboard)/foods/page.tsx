@@ -93,6 +93,9 @@ export default function FoodsPage() {
   const t = useTranslations('foods')
   const { selectedPetId } = useSelectedPet()
 
+  // 화면 안에서 '음식 안전(검색·안전도)' 과 '급여 가이드(계산기·사료 정보)' 를 세그먼트로 나눠,
+  // 급여 가이드가 긴 음식 목록 아래로 밀려 스크롤해야만 보이던 문제를 없앤다. 한 탭이면 바로 열린다.
+  const [view, setView] = useState<'safety' | 'guide'>('safety')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('전체')
   const [category, setCategory] = useState<CategoryFilter>('전체')
@@ -198,7 +201,24 @@ export default function FoodsPage() {
 
       <SectionTabs section="info" />
 
-      {/* 펫이 없거나 1마리일 때만 종 탭 직접 노출 */}
+      {/* 화면 내 세그먼트: 음식 안전 ↔ 급여 가이드. 급여 가이드가 목록 맨 아래에 묻히지 않도록 상단에 둔다. */}
+      <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1">
+        {([['safety', t('tabSafety')], ['guide', t('tabGuide')]] as const).map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            aria-pressed={view === v}
+            className={cn(
+              'flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors',
+              view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500'
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* 펫이 없거나 1마리일 때만 종 탭 직접 노출 (두 화면 모두 종 기준이 필요) */}
       {showSpeciesTabs && (
         <div className="flex gap-2">
           {([['dog', `🐶 ${t('dog')}`], ['cat', `🐱 ${t('cat')}`]] as const).map(([sp, label]) => (
@@ -222,6 +242,8 @@ export default function FoodsPage() {
         </div>
       )}
 
+      {view === 'safety' && (
+      <>
       {/* 검색 입력 — 입력 중에도 한 번에 지울 수 있는 ✕ 버튼을 둔다(커뮤니티·일정 검색과 통일).
           모바일에서 전체선택-삭제 없이 바로 초기화할 수 있어 마찰이 준다. */}
       <div className="relative">
@@ -333,18 +355,23 @@ export default function FoodsPage() {
           })}
         </div>
       )}
+      </>
+      )}
 
-      {/* 사료·급여 가이드 (급여량 계산기 + 사료/간식 정보) */}
-      <section className="space-y-2 pt-2">
-        <h2 className="text-sm font-semibold text-gray-700">{t('feedGuideTitle')}</h2>
+      {/* 사료·급여 가이드 (급여량 계산기 + 사료/간식 정보) — 세그먼트에서 '급여 가이드' 선택 시 바로 노출 */}
+      {view === 'guide' && (
+      <section className="space-y-2">
+        <p className="text-sm text-gray-500 leading-relaxed">{t('guideLead')}</p>
         <FeedCalculator
           key={calcPet?.id ?? species}
           species={species}
           defaultWeight={calcPet?.weight_kg ?? null}
           defaultFactor={toFeedFactor(calcAge?.lifeStage)}
+          defaultOpen
         />
         {foodGuidesForSpecies(species).map(g => <FoodGuideCard key={g.id} guide={g} />)}
       </section>
+      )}
 
       <div className="text-xs text-gray-400 leading-relaxed bg-gray-50 rounded-lg p-3 mt-2">
         {t('disclaimer')}

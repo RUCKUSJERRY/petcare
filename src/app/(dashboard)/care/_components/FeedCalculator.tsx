@@ -28,17 +28,20 @@ export function FeedCalculator({
   species,
   defaultWeight,
   defaultFactor = 'neutered',
+  defaultOpen = false,
 }: {
   species: Species
   defaultWeight?: number | null
   defaultFactor?: FactorKey
+  /** 급여 가이드 전용 화면처럼 계산기가 첫 화면 중심일 때 펼친 상태로 시작한다. */
+  defaultOpen?: boolean
 }) {
   const t = useTranslations('feed')
   const [weight, setWeight] = useState(defaultWeight ? String(defaultWeight) : '')
   const [factor, setFactor] = useState<FactorKey>(defaultFactor)
   const [kcalPer100g, setKcalPer100g] = useState('350')
   const [meals, setMeals] = useState(2)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
 
   const w = parseFloat(weight)
   const density = parseFloat(kcalPer100g)
