@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-07-20T00:20:08.505Z
+--  생성 시각: 2026-07-24T23:35:22.921Z
 -- =============================================================
 
 
@@ -321,6 +321,10 @@ do $$ begin
       add constraint profiles_plan_check check (plan in ('free', 'premium'));
   end if;
 end $$;
+
+-- 데일리 케어 팁 푸시 옵트인(기본 false)과 당일 중복 발송 방지 플래그 (재실행 안전)
+alter table public.profiles add column if not exists tip_push_enabled boolean not null default false;
+alter table public.profiles add column if not exists tip_push_last_on date;
 
 -- ── 02.1_table/push_subscriptions.sql ──
 -- push_subscriptions : 웹 푸시 구독 정보 (브라우저별 endpoint/키)

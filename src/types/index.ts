@@ -139,6 +139,10 @@ export interface Profile {
   plan: 'free' | 'premium'
   premium_until: string | null
   created_at: string
+  /** 데일리 케어 팁 푸시 옵트인 (기본 false) */
+  tip_push_enabled?: boolean
+  /** 당일 팁 푸시 중복 방지 플래그(YYYY-MM-DD) */
+  tip_push_last_on?: string | null
 }
 
 export interface Post {

@@ -10,6 +10,7 @@ import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 import { BackButton } from '@/components/ui/BackButton'
 import { PushToggle } from '@/components/ui/PushToggle'
+import { TipPushToggle } from '@/components/ui/TipPushToggle'
 import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
 import Link from 'next/link'
@@ -171,8 +172,9 @@ export default function ProfilePage() {
         )}
 
         {/* 알림 설정 */}
-        <div className="border-t border-gray-100 pt-4">
+        <div className="border-t border-gray-100 pt-4 space-y-4">
           <PushToggle />
+          <TipPushToggle />
         </div>
 
         {/* 사용 안내 다시 보기 */}

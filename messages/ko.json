@@ -772,6 +772,8 @@
     "onboardingCommunityDesc": "다른 보호자들과 정보를 나누고 고민을 함께 풀어가요.",
     "pushTitle": "푸시 알림",
     "pushDesc": "새 댓글·답글·좋아요 알림을 받아요",
+    "tipPushTitle": "오늘의 케어 팁 알림",
+    "tipPushDesc": "매일 저녁, 관리 팁을 하나씩 알려드려요 (푸시 알림을 켜야 도착해요)",
     "pushToggleLabel": "푸시 알림 토글",
     "pushUnsupported": "지원 안 함",
     "pushSendTest": "테스트 알림 보내기",
