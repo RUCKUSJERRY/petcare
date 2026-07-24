@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, daysUntil, todayKST } from '@/lib/utils'
+import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, togetherMilestone, daysUntil, todayKST } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
@@ -53,6 +53,8 @@ export function SelectedPetSummary({
   const nextBirthday = nextAnniversary(pet.birth_month, pet.birth_day)
   const birthdayUpcoming = nextBirthday && daysUntil(nextBirthday, today) <= 30
   const together = daysTogether(pet.adopted_on)
+  // 함께한 지 100·200·300…일이 다가오면(또는 오늘이면) 축하 배지로 정서적 재방문 계기를 준다.
+  const milestone = togetherMilestone(together)
   const nextVacc = vaccAlerts
     .filter(v => v.pet_id === pet.id)
     .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
@@ -73,11 +75,19 @@ export function SelectedPetSummary({
           <p className="text-sm text-white/80 mt-0.5 truncate">
             {[pet.breed?.name_ko, age.displayText].filter(Boolean).join(' · ')}
           </p>
-          {(birthdayUpcoming || together != null) && (
+          {(birthdayUpcoming || together != null || milestone) && (
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {birthdayUpcoming && (
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
                   {t('birthdayBadge', { dday: ddayBadge(nextBirthday!, today).text })}
+                </span>
+              )}
+              {/* 함께한 날 이정표 축하 배지 — 밝게 강조해 눈에 띄게 */}
+              {milestone && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white text-primary-700 font-bold">
+                  {milestone.dday === 0
+                    ? t('milestoneToday', { days: milestone.milestone })
+                    : t('milestoneDday', { days: milestone.milestone, dday: milestone.dday })}
                 </span>
               )}
               {together != null && (

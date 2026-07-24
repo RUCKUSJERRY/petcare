@@ -80,6 +80,9 @@
     "communityRecent": "커뮤니티 최근 글",
     "write": "글쓰기 →"
   },
+  "dailyTip": {
+    "title": "💡 오늘의 케어 팁"
+  },
   "petSection": {
     "heroTitle": "우리 아이를 등록해볼까요?",
     "heroDesc": "아이를 등록하면 견종·나이에 꼭 맞는<br></br>음식·건강·활동 정보를 받아볼 수 있어요.",
@@ -109,6 +112,8 @@
     "detail": "상세",
     "birthdayBadge": "🎂 생일 {dday}",
     "together": "함께한 지 {days}일째",
+    "milestoneToday": "🎉 함께한 지 {days}일!",
+    "milestoneDday": "🎉 {days}일까지 D-{dday}",
     "recordSection": "📝 기록하기",
     "recordMore": "전체",
     "guideSection": "📚 맞춤 가이드",

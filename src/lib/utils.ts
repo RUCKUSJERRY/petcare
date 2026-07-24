@@ -84,6 +84,22 @@ export function daysTogether(adoptedOn: string | null | undefined): number | nul
 }
 
 /**
+ * 함께한 날 기준 다가오는 100일 단위 이정표(100·200·300…일).
+ * "곧 100일" 같은 정서적 재방문 계기를 주기 위해, withinDays 이내로 다가온 이정표만 반환한다.
+ * dday=0 이면 오늘이 그 이정표. 이정표가 멀면 null(배지 미노출).
+ */
+export function togetherMilestone(
+  together: number | null | undefined,
+  withinDays = 14,
+): { milestone: number; dday: number } | null {
+  if (together == null || together < 1) return null
+  const next = Math.ceil(together / 100) * 100
+  const dday = next - together // 0=오늘, 양수=남은 일수
+  if (dday < 0 || dday > withinDays) return null
+  return { milestone: next, dday }
+}
+
+/**
  * 나이 단계별 색상 클래스 (Tailwind)
  */
 export function lifeStageColor(stage: PetAge['lifeStage'] | '미상'): string {

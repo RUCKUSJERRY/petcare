@@ -19,6 +19,7 @@ import {
   formatWon,
   nextAnniversary,
   daysTogether,
+  togetherMilestone,
   todayKST,
   shiftDateTime,
   isoToLocalTime,
@@ -200,6 +201,31 @@ describe('nextAnniversary / daysTogether', () => {
   it('미래/없음은 null', () => {
     expect(daysTogether('2026-06-10')).toBeNull()
     expect(daysTogether(null)).toBeNull()
+  })
+})
+
+describe('togetherMilestone', () => {
+  it('오늘이 100일 단위면 dday 0으로 축하', () => {
+    expect(togetherMilestone(100)).toEqual({ milestone: 100, dday: 0 })
+    expect(togetherMilestone(300)).toEqual({ milestone: 300, dday: 0 })
+    expect(togetherMilestone(1000)).toEqual({ milestone: 1000, dday: 0 })
+  })
+  it('이정표가 14일 이내로 다가오면 남은 일수를 반환', () => {
+    expect(togetherMilestone(95)).toEqual({ milestone: 100, dday: 5 })
+    expect(togetherMilestone(186)).toEqual({ milestone: 200, dday: 14 })
+  })
+  it('이정표가 멀면 null(배지 미노출)', () => {
+    expect(togetherMilestone(101)).toBeNull() // 다음 200일까지 99일
+    expect(togetherMilestone(150)).toBeNull()
+    expect(togetherMilestone(185)).toBeNull() // 15일 남음 > 14
+  })
+  it('withinDays 조절 가능', () => {
+    expect(togetherMilestone(185, 20)).toEqual({ milestone: 200, dday: 15 })
+  })
+  it('null·0·음수는 null', () => {
+    expect(togetherMilestone(null)).toBeNull()
+    expect(togetherMilestone(0)).toBeNull()
+    expect(togetherMilestone(-5)).toBeNull()
   })
 })
 

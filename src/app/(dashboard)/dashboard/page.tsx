@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
+import { DailyTipCard } from './_components/DailyTipCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
 
@@ -88,6 +89,11 @@ export default async function DashboardPage() {
     <div className="px-4 py-6 space-y-6">
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} loadError={petsLoadError} />
+
+      {/* 오늘의 케어 팁 — 매일 바뀌는 짧은 관리 팁으로 재방문·체류 유도 (아이 등록 후 노출) */}
+      {pets && pets.length > 0 && (
+        <DailyTipCard species={mealSpecies} dateStr={todayStr} />
+      )}
 
       {/* 프리미엄 업셀 (무료 사용자만, 닫기 가능) */}
       <PremiumUpsellCard />
