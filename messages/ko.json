@@ -114,6 +114,7 @@
     "together": "함께한 지 {days}일째",
     "milestoneToday": "🎉 함께한 지 {days}일!",
     "milestoneDday": "🎉 {days}일까지 D-{dday}",
+    "streakBadge": "🔥 {days}일 연속 기록",
     "recordSection": "📝 기록하기",
     "recordMore": "전체",
     "guideSection": "📚 맞춤 가이드",

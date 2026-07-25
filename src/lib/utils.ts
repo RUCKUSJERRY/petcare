@@ -100,6 +100,32 @@ export function togetherMilestone(
 }
 
 /**
+ * 생활기록 '연속 기록일(streak)'을 계산한다.
+ * 하루에 한 건이라도 기록이 있으면 그 날은 '기록한 날'로 친다.
+ *
+ * - 오늘 기록이 있으면 오늘부터, 없으면 어제부터 거슬러 올라가며 연속으로 기록한 날 수를 센다.
+ *   (자정이 지나 아직 오늘 기록 전이어도 어제까지의 연속을 유지 — 하루의 유예를 준다.)
+ * - 오늘도 어제도 기록이 없으면 연속이 끊긴 것으로 보고 0.
+ * - Date.now()·타임존에 의존하지 않도록 '오늘'(KST YYYY-MM-DD)을 인자로 받아 결정적으로 계산한다.
+ *
+ * @param dates '기록한 날'의 날짜 문자열(YYYY-MM-DD) 집합 또는 반복가능 객체(중복·순서 무관)
+ * @param today 기준 '오늘' (KST YYYY-MM-DD)
+ */
+export function computeLogStreak(dates: Iterable<string>, today: string): number {
+  const set = dates instanceof Set ? dates : new Set(dates)
+  if (set.size === 0) return 0
+  // 연속의 시작점: 오늘 기록이 있으면 오늘, 없으면 어제(유예). 둘 다 없으면 끊김.
+  let cursor = set.has(today) ? today : addDays(today, -1)
+  if (!set.has(cursor)) return 0
+  let streak = 0
+  while (set.has(cursor)) {
+    streak++
+    cursor = addDays(cursor, -1)
+  }
+  return streak
+}
+
+/**
  * 나이 단계별 색상 클래스 (Tailwind)
  */
 export function lifeStageColor(stage: PetAge['lifeStage'] | '미상'): string {

@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { timeAgo, categoryColor, todayKST, addDays, daysUntil } from '@/lib/utils'
+import { timeAgo, categoryColor, todayKST, addDays, daysUntil, computeLogStreak } from '@/lib/utils'
+import { DAILY_LOG_SET } from '@/lib/records'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { getSmartRecommendations, type CareDueItem } from '@/lib/affiliate'
 import { getTranslations } from 'next-intl/server'
@@ -34,6 +35,9 @@ export default async function DashboardPage() {
   // 30일 이내 예정 + 지난 건강 관리 알림 (접종·심장사상충·구충 등 모든 카테고리)
   // 라인별 최신 기록 → 다음 예정일 산출은 일정 화면과 동일한 공용 로직(computeUpcoming)을 쓴다.
   let vaccAlerts: CareAlert[] = []
+  // 아이별 '연속 기록일(streak)' — 매일 재방문·기록을 유도하는 리텐션 지표.
+  // 위 records 조회 결과를 재사용해(추가 쿼리 없이) 생활기록 카테고리의 날짜 집합에서 계산한다.
+  const streakByPet: Record<string, number> = {}
   if (petIds.length > 0) {
     const { data } = await supabase
       .from('records')
@@ -43,13 +47,27 @@ export default async function DashboardPage() {
       // 같은 날짜 동점 시 '최신 기록' 선택을 결정적으로 — 일정 화면과 동일 규칙(computeUpcoming)
       .order('created_at', { ascending: false })
 
-    vaccAlerts = computeUpcoming((data ?? []) as ScheduleRow[])
+    const rows = (data ?? []) as ScheduleRow[]
+
+    vaccAlerts = computeUpcoming(rows)
       .filter(u => u.next_due_on <= soon)
       .map((u): CareAlert => ({
         pet_id: u.pet_id, category: u.category, title: u.title,
         next_due_on: u.next_due_on, record_id: u.record_id, recur_rule: u.recur_rule,
       }))
       .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))
+
+    // 생활기록(식사·배변·투약 등)이 있는 날짜만 모아 아이별 연속일을 센다.
+    const logDatesByPet = new Map<string, Set<string>>()
+    for (const r of rows) {
+      if (!DAILY_LOG_SET.has(r.category)) continue
+      let set = logDatesByPet.get(r.pet_id)
+      if (!set) { set = new Set(); logDatesByPet.set(r.pet_id, set) }
+      set.add(r.event_on)
+    }
+    for (const pid of petIds) {
+      streakByPet[pid] = computeLogStreak(logDatesByPet.get(pid) ?? new Set(), todayStr)
+    }
   }
 
   // 기록 기반 맞춤 제휴 추천 — 임박한 케어 일정 + 꾸준한 식사 기록을 신호로 사용
@@ -88,7 +106,7 @@ export default async function DashboardPage() {
   return (
     <div className="px-4 py-6 space-y-6">
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
-      <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} loadError={petsLoadError} />
+      <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} streakByPet={streakByPet} loadError={petsLoadError} />
 
       {/* 오늘의 케어 팁 — 매일 바뀌는 짧은 관리 팁으로 재방문·체류 유도 (아이 등록 후 노출) */}
       {pets && pets.length > 0 && (

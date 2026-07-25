@@ -21,10 +21,13 @@ import { WeightInsightCard } from './WeightInsightCard'
 export function PetSection({
   pets,
   vaccAlerts,
+  streakByPet = {},
   loadError = false,
 }: {
   pets: Pet[]
   vaccAlerts: CareAlert[]
+  /** 아이별 생활기록 연속일(홈 요약 카드의 🔥 배지에 사용) */
+  streakByPet?: Record<string, number>
   loadError?: boolean
 }) {
   const { selectedPetId, hydrated } = useSelectedPet()
@@ -104,7 +107,7 @@ export function PetSection({
   return (
     <div className="space-y-3">
       {/* 선택된 아이 요약 카드 */}
-      <SelectedPetSummary pets={pets} vaccAlerts={vaccAlerts} />
+      <SelectedPetSummary pets={pets} vaccAlerts={vaccAlerts} streakByPet={streakByPet} />
 
       {/* 선택된 아이의 체중 추세 인사이트 (로그 2건 이상일 때만) */}
       {hasSelection && selectedPetId && <WeightInsightCard petId={selectedPetId} />}

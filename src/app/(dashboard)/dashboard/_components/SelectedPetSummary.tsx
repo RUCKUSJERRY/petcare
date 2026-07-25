@@ -22,9 +22,12 @@ import type { CareAlert, Pet } from '@/types'
 export function SelectedPetSummary({
   pets,
   vaccAlerts,
+  streakByPet = {},
 }: {
   pets: Pet[]
   vaccAlerts: CareAlert[]
+  /** 아이별 생활기록 연속일 — 🔥 배지로 재방문·기록 습관을 유도 */
+  streakByPet?: Record<string, number>
 }) {
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
@@ -55,6 +58,8 @@ export function SelectedPetSummary({
   const together = daysTogether(pet.adopted_on)
   // 함께한 지 100·200·300…일이 다가오면(또는 오늘이면) 축하 배지로 정서적 재방문 계기를 준다.
   const milestone = togetherMilestone(together)
+  // 생활기록 연속일 — 2일 이상일 때만 🔥 배지로 강조(1일은 동기부여 약함). 매일 기록 습관을 유도.
+  const streak = streakByPet[pet.id] ?? 0
   const nextVacc = vaccAlerts
     .filter(v => v.pet_id === pet.id)
     .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
@@ -75,8 +80,14 @@ export function SelectedPetSummary({
           <p className="text-sm text-white/80 mt-0.5 truncate">
             {[pet.breed?.name_ko, age.displayText].filter(Boolean).join(' · ')}
           </p>
-          {(birthdayUpcoming || together != null || milestone) && (
+          {(birthdayUpcoming || together != null || milestone || streak >= 2) && (
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              {/* 연속 기록일 — 따뜻한 앰버 톤 '불꽃' 배지로 다른 칩과 구분해 눈에 띄게 */}
+              {streak >= 2 && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-300 text-amber-900 font-bold">
+                  {t('streakBadge', { days: streak })}
+                </span>
+              )}
               {birthdayUpcoming && (
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
                   {t('birthdayBadge', { dday: ddayBadge(nextBirthday!, today).text })}

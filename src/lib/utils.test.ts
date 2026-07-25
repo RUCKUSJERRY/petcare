@@ -20,6 +20,7 @@ import {
   nextAnniversary,
   daysTogether,
   togetherMilestone,
+  computeLogStreak,
   todayKST,
   shiftDateTime,
   isoToLocalTime,
@@ -226,6 +227,37 @@ describe('togetherMilestone', () => {
     expect(togetherMilestone(null)).toBeNull()
     expect(togetherMilestone(0)).toBeNull()
     expect(togetherMilestone(-5)).toBeNull()
+  })
+})
+
+describe('computeLogStreak', () => {
+  const T = '2026-07-25'
+  it('오늘 포함 연속 기록일을 센다', () => {
+    expect(computeLogStreak(['2026-07-25', '2026-07-24', '2026-07-23'], T)).toBe(3)
+  })
+  it('오늘 기록이 없어도 어제까지 연속이면 유지(하루 유예)', () => {
+    expect(computeLogStreak(['2026-07-24', '2026-07-23'], T)).toBe(2)
+  })
+  it('오늘·어제 모두 없으면 0(연속 끊김)', () => {
+    expect(computeLogStreak(['2026-07-23', '2026-07-22'], T)).toBe(0)
+  })
+  it('중간에 빠진 날이 있으면 그 이전은 세지 않는다', () => {
+    // 25·24 연속, 23은 빠짐 → 22 이전은 무시
+    expect(computeLogStreak(['2026-07-25', '2026-07-24', '2026-07-22', '2026-07-21'], T)).toBe(2)
+  })
+  it('오늘만 기록하면 1', () => {
+    expect(computeLogStreak(['2026-07-25'], T)).toBe(1)
+  })
+  it('중복 날짜·순서 무관, Set 도 허용', () => {
+    expect(computeLogStreak(['2026-07-24', '2026-07-25', '2026-07-25', '2026-07-24'], T)).toBe(2)
+    expect(computeLogStreak(new Set(['2026-07-25', '2026-07-24']), T)).toBe(2)
+  })
+  it('빈 입력은 0', () => {
+    expect(computeLogStreak([], T)).toBe(0)
+    expect(computeLogStreak(new Set(), T)).toBe(0)
+  })
+  it('월 경계를 넘는 연속도 정확히 센다', () => {
+    expect(computeLogStreak(['2026-08-01', '2026-07-31', '2026-07-30'], '2026-08-01')).toBe(3)
   })
 })
 
