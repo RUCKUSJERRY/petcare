@@ -14,6 +14,7 @@ import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { FeedCalculator } from '../care/_components/FeedCalculator'
+import { BcsAssessment } from './_components/BcsAssessment'
 import type { BreedFoodRule, FoodItem, FoodSafety, PetAge, Species } from '@/types'
 
 /** 생애 단계 → 급여 계산기 기본 계수 */
@@ -369,7 +370,12 @@ export default function FoodsPage() {
           defaultFactor={toFeedFactor(calcAge?.lifeStage)}
           defaultOpen
         />
-        {foodGuidesForSpecies(species).map(g => <FoodGuideCard key={g.id} guide={g} />)}
+        {foodGuidesForSpecies(species).map(g =>
+          // 체형(BCS)은 정적 안내 대신 단계형 자가진단 카드로 대체 — 갈비뼈·허리·복부 3문항 진단
+          g.id === 'body-condition'
+            ? <BcsAssessment key={g.id} />
+            : <FoodGuideCard key={g.id} guide={g} />,
+        )}
       </section>
       )}
 
