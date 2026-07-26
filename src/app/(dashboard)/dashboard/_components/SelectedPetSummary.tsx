@@ -9,10 +9,10 @@ import Link from 'next/link'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
-import { RecordFormModal } from '@/app/(dashboard)/pets/_components/RecordFormModal'
-import { RecordsScanModal } from '@/app/(dashboard)/pets/_components/RecordsScanModal'
-import { WeightSection } from '@/app/(dashboard)/pets/_components/WeightSection'
+import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntryModals'
 import { PetAvatar } from '@/components/ui/PetAvatar'
+import { AchievementShareButton } from '@/components/ui/AchievementShareButton'
+import { pickShareableAchievement } from '@/lib/achievement'
 import type { CareAlert, Pet } from '@/types'
 
 /**
@@ -31,7 +31,6 @@ export function SelectedPetSummary({
 }) {
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
-  const tc = useTranslations('common')
   const qc = useQueryClient()
   const [detailId, setDetailId] = useState<string | null>(null)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 홈 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
@@ -60,6 +59,8 @@ export function SelectedPetSummary({
   const milestone = togetherMilestone(together)
   // 생활기록 연속일 — 2일 이상일 때만 🔥 배지로 강조(1일은 동기부여 약함). 매일 기록 습관을 유도.
   const streak = streakByPet[pet.id] ?? 0
+  // 지금 자랑할 만한 성취(이정표 당일·연속 3일+)가 있으면 이미지 카드로 공유할 수 있게 한다.
+  const shareable = pickShareableAchievement({ streak, milestone })
   const nextVacc = vaccAlerts
     .filter(v => v.pet_id === pet.id)
     .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))[0]
@@ -105,6 +106,15 @@ export function SelectedPetSummary({
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
                   {t('together', { days: together })}
                 </span>
+              )}
+              {/* 성취 나눔 — 이정표 당일·연속 3일+ 일 때 이미지 카드로 공유 */}
+              {shareable && (
+                <AchievementShareButton
+                  icon={shareable.icon}
+                  headline={shareable.headline}
+                  petName={pet.name}
+                  className="bg-white/20 text-white hover:bg-white/30"
+                />
               )}
             </div>
           )}
@@ -166,45 +176,15 @@ export function SelectedPetSummary({
       <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} />
     )}
 
-    {/* 상세 입력 모달 — 현재 화면 위에 떠서 저장 후 원래 자리로 복귀 (QuickRecordFab 과 동일) */}
-    {modal === 'scan' && (
-      <RecordsScanModal petId={pet.id} onClose={() => { setModal(null); afterRecord() }} />
-    )}
-    {/* 직접 기록: 헤더 저장 버튼이 임베드 폼을 구동하는 공용 모달(이중 헤더 제거) */}
-    {modal === 'manual' && (
-      <RecordFormModal
-        petId={pet.id}
-        title={t('recordManual')}
-        onClose={() => setModal(null)}
-        onDone={() => { setModal(null); afterRecord() }}
-      />
-    )}
-    {modal === 'weight' && (
-      <div
-        className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center"
-        onClick={() => setModal(null)}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] overflow-y-auto p-4"
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-bold text-gray-900">{t('weight')}</p>
-            <button
-              type="button"
-              onClick={() => setModal(null)}
-              aria-label={tc('close')}
-              className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
-            >
-              ✕
-            </button>
-          </div>
-          <WeightSection petId={pet.id} defaultOpen />
-        </div>
-      </div>
-    )}
+    {/* 상세 입력 모달(체중·직접·스캔) — 현재 화면 위에 떠서 저장 후 원래 자리로 복귀 (공용 컴포넌트) */}
+    <RecordEntryModals
+      petId={pet.id}
+      modal={modal}
+      manualTitle={t('recordManual')}
+      weightTitle={t('weight')}
+      onClose={() => setModal(null)}
+      onSaved={() => { setModal(null); afterRecord() }}
+    />
     </>
   )
 }
