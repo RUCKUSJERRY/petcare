@@ -18,8 +18,7 @@ import { PetMembers } from '../_components/PetMembers'
 import { QuickLogBar } from '../_components/QuickLogBar'
 import { RecordFeed } from '../_components/RecordFeed'
 import { RecordDetailModal } from '../_components/RecordDetailModal'
-import { RecordFormModal } from '../_components/RecordFormModal'
-import { RecordsScanModal } from '../_components/RecordsScanModal'
+import { RecordEntryModals } from '../_components/RecordEntryModals'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BackButton } from '@/components/ui/BackButton'
@@ -483,17 +482,14 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {detailId && (
         <RecordDetailModal recordId={detailId} onClose={() => setDetailId(null)} onChanged={afterRecord} />
       )}
-      {recModal === 'manual' && (
-        <RecordFormModal
-          petId={params.id}
-          title={t('recordManual')}
-          onClose={() => setRecModal(null)}
-          onDone={() => { setRecModal(null); afterRecord() }}
-        />
-      )}
-      {recModal === 'scan' && (
-        <RecordsScanModal petId={params.id} onClose={() => { setRecModal(null); afterRecord() }} />
-      )}
+      {/* 직접입력·스캔 모달 — 공용 컴포넌트(체중은 이 화면에선 상단 인라인 섹션으로 상시 노출) */}
+      <RecordEntryModals
+        petId={params.id}
+        modal={recModal}
+        manualTitle={t('recordManual')}
+        onClose={() => setRecModal(null)}
+        onSaved={() => { setRecModal(null); afterRecord() }}
+      />
 
       {/* 편집 중 이탈 확인 — 가드는 '편집 중'에만 마운트해 히스토리를 건드린다.
           (조회 전용 화면인 상세에 상시 두면 직접 진입 시 뒤로가기 fallback 이 어긋난다) */}

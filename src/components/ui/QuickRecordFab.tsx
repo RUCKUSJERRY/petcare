@@ -10,9 +10,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { cn } from '@/lib/utils'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
-import { RecordFormModal } from '@/app/(dashboard)/pets/_components/RecordFormModal'
-import { RecordsScanModal } from '@/app/(dashboard)/pets/_components/RecordsScanModal'
-import { WeightSection } from '@/app/(dashboard)/pets/_components/WeightSection'
+import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntryModals'
 
 // FAB를 항상 숨길 화면 — 자체 하단 컨트롤이 있는 몰입형 화면
 const HIDDEN_PREFIXES = ['/map', '/walks/track']
@@ -184,44 +182,16 @@ export function QuickRecordFab() {
         </div>
       )}
 
-      {/* 상세 입력 모달 — 현재 화면 위에 떠서 저장 후 원래 자리로 복귀한다 */}
-      {modal === 'scan' && activeId && (
-        <RecordsScanModal petId={activeId} onClose={() => { setModal(null); afterRecord() }} />
-      )}
-      {/* 직접 기록: 헤더 저장 버튼이 임베드 폼을 구동하는 공용 모달(이중 헤더 제거) */}
-      {modal === 'manual' && activeId && (
-        <RecordFormModal
+      {/* 상세 입력 모달(체중·직접·스캔) — 현재 화면 위에 떠서 저장 후 원래 자리로 복귀 (공용 컴포넌트) */}
+      {activeId && (
+        <RecordEntryModals
           petId={activeId}
-          title={t('manual')}
+          modal={modal}
+          manualTitle={t('manual')}
+          weightTitle={t('weight')}
           onClose={() => setModal(null)}
-          onDone={() => { setModal(null); afterRecord() }}
+          onSaved={() => { setModal(null); afterRecord() }}
         />
-      )}
-      {modal === 'weight' && activeId && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center"
-          onClick={() => setModal(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] overflow-y-auto p-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-bold text-gray-900">{t('weight')}</p>
-              <button
-                type="button"
-                onClick={() => setModal(null)}
-                aria-label={tc('close')}
-                className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-            <WeightSection petId={activeId} defaultOpen />
-          </div>
-        </div>
       )}
     </>
   )
