@@ -14,6 +14,12 @@ import { WalkPhotoComposer } from '../_components/WalkPhotoComposer'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { deleteImageByUrl } from '@/lib/upload'
 import { useInterstitialAd } from '@/hooks/useInterstitialAd'
+import {
+  saveWalkSession,
+  loadWalkSession,
+  clearWalkSession,
+  type WalkSession,
+} from '@/lib/walkSession'
 
 type Phase = 'idle' | 'tracking' | 'finished'
 
@@ -52,6 +58,8 @@ export default function WalkTrackPage() {
   // 추적 중 오탭으로 종료되거나, 작성 중인 산책이 날아가는 것을 막는 확인 모달
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  // 앱이 실수로 종료됐다가 다시 들어왔을 때, 저장돼 있던 진행 중 산책(복구 후보)
+  const [recovered, setRecovered] = useState<WalkSession | null>(null)
 
   const mapsRef = useRef<any>(null)
   const mapObjRef = useRef<any>(null)
@@ -119,6 +127,37 @@ export default function WalkTrackPage() {
     map.panTo(latlng)
   }
 
+  // 복구/지도 로딩 지연에 대비해, 현재까지의 경로 전체를 다시 그린다.
+  const redrawPath = () => {
+    const maps = mapsRef.current
+    const map = mapObjRef.current
+    if (!maps || !map || pathRef.current.length === 0) return
+    polylineRef.current?.setPath(pathRef.current.map(p => new maps.LatLng(p[0], p[1])))
+    const last = pathRef.current[pathRef.current.length - 1]
+    const latlng = new maps.LatLng(last[0], last[1])
+    if (!meMarkerRef.current) meMarkerRef.current = new maps.Marker({ position: latlng, map })
+    else meMarkerRef.current.setPosition(latlng)
+    map.setCenter(latlng)
+  }
+
+  // 진행 중 산책을 기기에 저장한다. 현재 진행 구간까지 닫아 elapsedMs 에 반영하므로,
+  // 복구 시에는 '일시정지' 상태에서 이어가면 되고 앱이 꺼져 있던 시간은 포함되지 않는다.
+  const persist = () => {
+    if (startedAtRef.current === 0) return
+    const now = Date.now()
+    const elapsedMs = runningMsRef.current + (segStartRef.current != null ? now - segStartRef.current : 0)
+    saveWalkSession({
+      v: 1,
+      startedAt: startedAtRef.current,
+      elapsedMs,
+      distance: distRef.current,
+      path: pathRef.current,
+      lastPos: lastPosRef.current,
+      petId,
+      savedAt: now,
+    })
+  }
+
   const updateElapsed = () => {
     const now = Date.now()
     const ms = runningMsRef.current + (segStartRef.current != null ? now - segStartRef.current : 0)
@@ -132,6 +171,7 @@ export default function WalkTrackPage() {
     autoPausedRef.current = auto
     setPaused(true)
     updateElapsed()
+    persist()
   }
 
   const doResume = () => {
@@ -140,6 +180,7 @@ export default function WalkTrackPage() {
     lastMoveRef.current = Date.now()
     autoPausedRef.current = false
     setPaused(false)
+    persist()
   }
 
   const onPosition = (pos: GeolocationPosition) => {
@@ -173,6 +214,31 @@ export default function WalkTrackPage() {
     pathRef.current.push([lat, lng])
     setPoints(pathRef.current.length)
     drawPoint(lat, lng)
+    persist()
+  }
+
+  // 타이머 + 위치 감시 시작 — 새 산책 시작(start)과 복구 이어가기(resumeRecovered)에서 공용으로 쓴다.
+  const beginWatch = () => {
+    let tick = 0
+    timerRef.current = setInterval(() => {
+      updateElapsed()
+      // 일정 시간 움직임이 없으면 자동 일시정지
+      if (segStartRef.current != null && Date.now() - lastMoveRef.current > AUTO_PAUSE_MS) {
+        doPause(true)
+      }
+      // 제자리 등으로 새 좌표가 안 들어와도 진행 시간이 최신으로 저장되도록 주기적으로 저장(약 4초).
+      if (++tick % 8 === 0) persist()
+    }, 500)
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      onPosition,
+      err => {
+        // 권한 거부뿐 아니라 신호 없음(POSITION_UNAVAILABLE)·타임아웃(TIMEOUT)도 안내한다.
+        // (예전엔 이 두 경우를 삼켜서, 실내 등으로 위치를 못 잡으면 0.00km 산책이 아무 설명 없이
+        //  기록되던 문제가 있었다.) 유효한 위치가 잡히면 onPosition 에서 이 안내를 해제한다.
+        setGeoError(err.code === err.PERMISSION_DENIED ? t('errPermission') : t('errLocationLost'))
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
   }
 
   const start = () => {
@@ -181,6 +247,8 @@ export default function WalkTrackPage() {
       return
     }
     setGeoError(null)
+    setRecovered(null)
+    clearWalkSession() // 새로 시작하면 남아있던 복구본은 버린다.
     pathRef.current = []
     distRef.current = 0
     // 거리 기준점을 새로 잡는다 — idle 마커로 잡힌 위치가 첫 구간에 잘못 더해지지 않게 한다.
@@ -193,23 +261,34 @@ export default function WalkTrackPage() {
     autoPausedRef.current = false
     setDistance(0); setPoints(0); setElapsed(0); setPaused(false)
     setPhase('tracking')
-    timerRef.current = setInterval(() => {
-      updateElapsed()
-      // 일정 시간 움직임이 없으면 자동 일시정지
-      if (segStartRef.current != null && Date.now() - lastMoveRef.current > AUTO_PAUSE_MS) {
-        doPause(true)
-      }
-    }, 500)
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      onPosition,
-      err => {
-        // 권한 거부뿐 아니라 신호 없음(POSITION_UNAVAILABLE)·타임아웃(TIMEOUT)도 안내한다.
-        // (예전엔 이 두 경우를 삼켜서, 실내 등으로 위치를 못 잡으면 0.00km 산책이 아무 설명 없이
-        //  기록되던 문제가 있었다.) 유효한 위치가 잡히면 onPosition 에서 이 안내를 해제한다.
-        setGeoError(err.code === err.PERMISSION_DENIED ? t('errPermission') : t('errLocationLost'))
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    )
+    beginWatch()
+  }
+
+  // 저장돼 있던 진행 중 산책을 '일시정지' 상태로 복원해 이어서 기록한다.
+  const resumeRecovered = () => {
+    const s = recovered
+    if (!s) return
+    if (!navigator.geolocation) { setGeoError(t('errNoGeo')); return }
+    setGeoError(null)
+    setRecovered(null)
+    pathRef.current = s.path.slice()
+    distRef.current = s.distance
+    // 거리 기준점은 새로 잡는다(null) — 앱이 꺼져 있던 동안의 이동이 재개 첫 좌표에서
+    // 직선 거리로 한꺼번에 더해져 거리가 부풀려지는 걸 막는다. (start() 와 동일한 처리)
+    lastPosRef.current = null
+    runningMsRef.current = s.elapsedMs
+    startedAtRef.current = s.startedAt
+    segStartRef.current = null // 일시정지 상태로 복원(앱이 꺼져 있던 시간은 진행 시간에 넣지 않는다)
+    lastMoveRef.current = Date.now()
+    autoPausedRef.current = false
+    if (s.petId) setPetId(s.petId)
+    setDistance(s.distance)
+    setPoints(s.path.length)
+    setElapsed(Math.floor(s.elapsedMs / 1000))
+    setPaused(true)
+    setPhase('tracking')
+    redrawPath()
+    beginWatch()
   }
 
   const stopWatch = () => {
@@ -233,9 +312,35 @@ export default function WalkTrackPage() {
     const now = new Date()
     setTitle(t('defaultTitle', { m: now.getMonth() + 1, d: now.getDate() }))
     setPhase('finished')
+    persist()
   }
 
   useEffect(() => () => stopWatch(), [])
+
+  // 마운트 시 이전에 저장돼 있던 진행 중 산책이 있으면 복구를 제안한다.
+  useEffect(() => {
+    const s = loadWalkSession(Date.now())
+    if (s) setRecovered(s)
+  }, [])
+
+  // 복구가 지도 로딩보다 먼저 일어났을 수 있으므로, 지도가 준비되고 추적 중이면 경로를 다시 그린다.
+  useEffect(() => {
+    if (phase === 'tracking' && mapStatus === 'ready') redrawPath()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapStatus, phase])
+
+  // 추적 중 새로고침·닫기 시 브라우저 기본 경고를 띄운다(데스크톱). 모바일에선 복구로 보완된다.
+  useEffect(() => {
+    if (phase !== 'tracking') return
+    const handler = (e: BeforeUnloadEvent) => {
+      persist()
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
 
   const save = async () => {
     setSaving(true)
@@ -262,11 +367,13 @@ export default function WalkTrackPage() {
       setGeoError(t('errSaveRetry'))
       return
     }
+    clearWalkSession() // 저장 완료 → 복구본 정리
     router.replace(`/walks/${(data as { id: string }).id}`)
   }
 
   const doDiscard = () => {
     setConfirmDiscard(false)
+    clearWalkSession() // 폐기 → 복구본 정리
     // 저장하지 않고 폐기 → 업로드된 사진도 정리
     if (photoUrl) deleteImageByUrl(photoUrl)
     router.replace('/walks')
@@ -451,6 +558,21 @@ export default function WalkTrackPage() {
           destructive
           onConfirm={doDiscard}
           onCancel={() => setConfirmDiscard(false)}
+        />
+      )}
+
+      {/* 앱이 꺼졌다 다시 들어온 경우 — 진행 중이던 산책 이어가기 제안 */}
+      {recovered && phase === 'idle' && (
+        <ConfirmModal
+          title={t('recoverTitle')}
+          description={t('recoverDesc', {
+            distance: formatDistance(recovered.distance),
+            time: formatDuration(Math.floor(recovered.elapsedMs / 1000)),
+          })}
+          confirmLabel={t('recoverResume')}
+          cancelLabel={t('recoverDismiss')}
+          onConfirm={resumeRecovered}
+          onCancel={() => setRecovered(null)}
         />
       )}
     </div>
