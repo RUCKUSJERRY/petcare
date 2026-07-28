@@ -42,6 +42,9 @@ export function RecordDetailModal({
 
   const afterChange = () => {
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    // 비용 통계(costs 화면)도 이 모달로 금액을 수정·삭제할 수 있으므로 함께 무효화한다.
+    // (예전엔 costs 화면에서 금액 수정/삭제 후에도 월·항목 집계가 옛값으로 남았다.)
+    qc.invalidateQueries({ queryKey: ['cost-records'] })
     if (record) {
       qc.invalidateQueries({ queryKey: ['records', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['today-log', record.pet_id] })
@@ -103,7 +106,7 @@ export function RecordDetailModal({
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {!record ? (
-            <p className="text-sm text-gray-400 text-center py-8">{tc('saving')}</p>
+            <p className="text-sm text-gray-400 text-center py-8">{tc('loading')}</p>
           ) : (
             <RecordForm
               ref={formRef}

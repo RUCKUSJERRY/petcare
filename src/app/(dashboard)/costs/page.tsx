@@ -21,6 +21,7 @@ type Drill = { kind: 'month'; month: number } | { kind: 'category'; category: st
 
 export default function CostsPage() {
   const t = useTranslations('costs')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const qc = useQueryClient()
   const { selectedPetId } = useSelectedPet()
@@ -36,6 +37,9 @@ export default function CostsPage() {
   // 월/항목 막대를 누르면 해당 내역을 아래에 펼친다 (탭하면 상세/수정 모달)
   const [drill, setDrill] = useState<Drill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
+  // 저장 후 모달이 조용히 닫히면 저장됐는지 확신이 안 든다 — 짧은 완료 토스트로 확인시킨다.
+  const [justSaved, setJustSaved] = useState(false)
+  const showSavedToast = () => { setJustSaved(true); setTimeout(() => setJustSaved(false), 2000) }
 
   // 비용이 입력된 기록만 (RLS가 내가 구성원인 아이만 반환)
   const { data: records = [], isLoading, isError } = useQuery({
@@ -245,7 +249,7 @@ export default function CostsPage() {
         <QuickCostModal
           petId={effectivePetId}
           onClose={() => setAddMode(null)}
-          onDone={() => setAddMode(null)}
+          onDone={() => { setAddMode(null); showSavedToast() }}
           onDetail={() => setAddMode('detail')}
         />
       )}
@@ -258,8 +262,15 @@ export default function CostsPage() {
           allowPetSelect={!effectivePetId}
           title={t('addRecord')}
           onClose={() => setAddMode(null)}
-          onDone={() => { setAddMode(null); qc.invalidateQueries({ queryKey: ['cost-records'] }) }}
+          onDone={() => { setAddMode(null); qc.invalidateQueries({ queryKey: ['cost-records'] }); showSavedToast() }}
         />
+      )}
+
+      {/* 저장 완료 토스트 — 화면 하단 중앙에 잠깐 뜬다 (앱 공용 저장 토스트와 동일 패턴) */}
+      {justSaved && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[80] flex items-center gap-1.5 rounded-full bg-gray-900 text-white text-sm font-medium px-4 py-2 shadow-lg" role="status">
+          <span aria-hidden>✓</span> {tc('saved')}
+        </div>
       )}
     </div>
   )

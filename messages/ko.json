@@ -25,6 +25,8 @@
     "close": "닫기",
     "more": "더보기",
     "edit": "수정",
+    "loading": "불러오는 중...",
+    "saved": "저장됐어요",
     "leaveTitle": "작성 중인 내용이 있어요",
     "leaveDesc": "지금 나가면 작성한 내용이 저장되지 않아요. 나갈까요?",
     "leaveConfirm": "나가기",

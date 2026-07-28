@@ -237,6 +237,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record-feed', effectivePetId] })
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
+    // 비용이 포함된 기록이면 비용 통계(costs 화면)도 갱신 대상 — 조건 없이 무효화해 정합성 유지.
+    qc.invalidateQueries({ queryKey: ['cost-records'] })
     onDone()
   }
 

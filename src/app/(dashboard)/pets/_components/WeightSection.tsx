@@ -15,6 +15,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
   const qc = useQueryClient()
   const [adding, setAdding] = useState(defaultOpen)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -93,6 +94,9 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
     if (insErr) { setError(t('errSaveFailed')); return }
     setForm({ weight_kg: '', measured_on: todayKST() })
     setAdding(false)
+    // 저장 후 폼이 조용히 닫히면 저장됐는지 확신이 안 든다 — 짧은 완료 토스트로 확인시킨다.
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
     qc.invalidateQueries({ queryKey: ['weight_logs', petId] })
     await syncProfileWeight()
   }
@@ -240,6 +244,13 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
               {showAll ? t('collapse') : t('showMore', { count: logs.length - 5 })}
             </button>
           )}
+        </div>
+      )}
+
+      {/* 저장 완료 토스트 — 화면 하단 중앙에 잠깐 뜬다 (앱 공용 저장 토스트와 동일 패턴) */}
+      {saved && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] flex items-center gap-1.5 rounded-full bg-gray-900 text-white text-sm font-medium px-4 py-2 shadow-lg" role="status">
+          <span aria-hidden>✓</span> {tc('saved')}
         </div>
       )}
 

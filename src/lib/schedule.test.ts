@@ -91,4 +91,31 @@ describe('computeUpcoming', () => {
     expect(out[0].record_id).toBe('new')
     expect(out[0].next_due_on).toBe('2026-07-30')
   })
+
+  it('비제품 라인: 예정 없는 최신 기록이 예정 있는 예전 기록을 덮어 지우지 않는다', () => {
+    // 회귀 방지: 7/1 진료(재검 7/20 예정) 다음 7/10 진료(일회성, 예정 없음)를 기록해도
+    // 7/20 재검이 사라지지 않고 그대로 예정에 남아야 한다. (최신 기록은 예정이 없어 드롭되지만,
+    // 라인이 통째로 비면 예정이 남은 예전 기록 1건을 되살린다.)
+    const rows: ScheduleRow[] = [
+      { id: 'newer', pet_id: 'p1', category: '진료', title: '구토', event_on: '2026-07-10', next_due_on: null, recur_rule: null },
+      { id: 'older', pet_id: 'p1', category: '진료', title: '외이염', event_on: '2026-07-01', next_due_on: '2026-07-20', recur_rule: null },
+    ]
+    const out = computeUpcoming(rows)
+    expect(out).toHaveLength(1)
+    expect(out[0].record_id).toBe('older')
+    expect(out[0].next_due_on).toBe('2026-07-20')
+  })
+
+  it('되살리기는 제품 라인(제목별)을 중복 생성하지 않는다', () => {
+    // 접종은 제목까지 라인 키에 포함되므로, 예전 회차의 지난 next_due_on 이 새 예정으로
+    // 중복 노출되면 안 된다. (최신 회차 1건만 예정)
+    const rows: ScheduleRow[] = [
+      { id: 'shot2', pet_id: 'p1', category: '접종', title: '광견병', event_on: '2026-01-10', next_due_on: '2027-01-10', recur_rule: null },
+      { id: 'shot1', pet_id: 'p1', category: '접종', title: '광견병', event_on: '2025-01-10', next_due_on: '2026-01-10', recur_rule: null },
+    ]
+    const out = computeUpcoming(rows)
+    expect(out).toHaveLength(1)
+    expect(out[0].record_id).toBe('shot2')
+    expect(out[0].next_due_on).toBe('2027-01-10')
+  })
 })

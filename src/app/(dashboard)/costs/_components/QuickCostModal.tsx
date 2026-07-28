@@ -32,7 +32,13 @@ export function QuickCostModal({
 
   const [selPet, setSelPet] = useState<string | null>(petId ?? (pets.length === 1 ? pets[0].id : null))
   const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState<RecordCategory>('진료')
+  // 직전에 쓴 항목을 기본값으로 — 매번 같은 지출(예: 사료)을 넣는데 항목을 다시 고르는 마찰을 줄인다.
+  // 저장된 값이 유효한 카테고리일 때만 사용하고, 없으면 '진료'로 폴백한다.
+  const [category, setCategory] = useState<RecordCategory>(() => {
+    if (typeof window === 'undefined') return '진료'
+    const last = window.localStorage.getItem('petcare_last_cost_category')
+    return last && (RECORD_CATEGORIES as readonly string[]).includes(last) ? (last as RecordCategory) : '진료'
+  })
   const [date, setDate] = useState(todayKST())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +69,8 @@ export function QuickCostModal({
     })
     setSaving(false)
     if (insErr) { setError(t('quickCostSaveFailed')); return }
+    // 다음 빠른 입력의 기본 항목으로 재사용 (반복 지출 입력 마찰 완화)
+    try { window.localStorage.setItem('petcare_last_cost_category', category) } catch { /* 저장 실패는 무시 */ }
     qc.invalidateQueries({ queryKey: ['cost-records'] })
     qc.invalidateQueries({ queryKey: ['record-feed', targetPet] })
     qc.invalidateQueries({ queryKey: ['records', targetPet] })

@@ -14,7 +14,7 @@ import { PetAvatar } from './PetAvatar'
 
 export function AppHeader() {
   const t = useTranslations('header')
-  const { selectedPetId, setSelectedPetId } = useSelectedPet()
+  const { selectedPetId, setSelectedPetId, hydrated } = useSelectedPet()
   const supabase = createClient()
   const queryClient = useQueryClient()
   const pathname = usePathname()
@@ -22,10 +22,10 @@ export function AppHeader() {
   const profileActive = pathname.startsWith('/profile')
 
   const { data: pets } = useMyPets()
-  // 아이가 1마리뿐일 때의 자동 선택을 마운트당 1회만 수행 (수동 해제는 존중)
+  // 첫 아이 자동 선택을 마운트당 1회만 수행 (수동 해제는 존중)
   const autoSelected = useRef(false)
 
-  // 자가 복구 + 1마리 자동 선택
+  // 자가 복구 + 첫 아이 자동 선택
   useEffect(() => {
     if (!pets) return
     // 선택된 아이가 삭제되는 등으로 목록에 없으면 선택 해제
@@ -33,12 +33,15 @@ export function AppHeader() {
       setSelectedPetId(null)
       return
     }
-    // 아이가 1마리뿐이면 자동 선택 — 매번 칩을 탭하지 않아도 원탭 기록·스캔·체중이 바로 동작
-    if (!selectedPetId && !autoSelected.current && pets.length === 1) {
+    // localStorage 복원(hydrated) 전에는 기본 선택하지 않는다 — 저장된 선택을 pets[0]로
+    // 덮어써 깜빡이는 것을 막는다. 복원 후에도 선택이 없으면 첫 아이를 자동 선택한다.
+    // (기존엔 1마리일 때만 자동 선택돼, 다견 사용자는 첫 진입 시 홈 요약카드·원탭 기록이
+    //  통째로 비어 칩을 탭해야 화면이 '켜지는' 문제가 있었다. 단·다견 동일하게 동작한다.)
+    if (hydrated && !selectedPetId && !autoSelected.current && pets.length >= 1) {
       autoSelected.current = true
       setSelectedPetId(pets[0].id)
     }
-  }, [pets, selectedPetId, setSelectedPetId])
+  }, [pets, selectedPetId, setSelectedPetId, hydrated])
 
   // 실시간 알림: 내 알림이 생성/변경되면 배지·목록 즉시 갱신
   useEffect(() => {

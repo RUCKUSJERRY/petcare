@@ -61,6 +61,7 @@ export function latestRecordPerLine<T extends { pet_id: string; category: Record
  */
 export function computeUpcoming(rowsSortedByEventDesc: ScheduleRow[]): UpcomingItem[] {
   const items: UpcomingItem[] = []
+  const seenLines = new Set<string>()
   for (const r of latestRecordPerLine(rowsSortedByEventDesc)) {
     const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on)
     if (!due) continue
@@ -73,6 +74,32 @@ export function computeUpcoming(rowsSortedByEventDesc: ScheduleRow[]): UpcomingI
       next_due_on: due,
       recur_rule: r.recur_rule,
     })
+    seenLines.add(scheduleLineKey(r.pet_id, r.category, r.title))
+  }
+
+  // 라인 단위 최신 기록만 채택하면, 비제품 카테고리(진료·건강검진 등 제목을 구분하지 않는 라인)에서
+  // "다음 예정일이 있는 예전 기록"이 "예정일 없는 더 최근 기록"에 밀려 통째로 사라진다.
+  //   예) 7/1 진료(재검 7/20 예정) → 7/10 진료(일회성, 예정 없음) 기록 시 7/20 재검이 목록·캘린더·
+  //       홈 알림·리마인더에서 모두 증발.
+  // 이를 보완: 반복이 아닌(recur_rule 없는) 기록 중 저장된 next_due_on 이 남아 있는데, 그 라인이
+  // 위에서 한 번도 채택되지 못했다면(=예정이 통째로 드롭된 라인) 가장 최근 기록 1건을 되살린다.
+  // 라인 키로 중복을 막으므로 제품·반복 라인(제목까지 키에 포함)에는 영향을 주지 않는다.
+  for (const r of rowsSortedByEventDesc) {
+    if (r.recur_rule || !r.next_due_on) continue
+    const key = scheduleLineKey(r.pet_id, r.category, r.title)
+    if (seenLines.has(key)) continue
+    const due = activeNextDue(r.event_on, r.recur_rule, r.next_due_on)
+    if (!due) continue
+    items.push({
+      record_id: r.id,
+      pet_id: r.pet_id,
+      category: r.category,
+      title: r.title,
+      last_on: r.event_on,
+      next_due_on: due,
+      recur_rule: r.recur_rule,
+    })
+    seenLines.add(key)
   }
   return items
 }

@@ -201,6 +201,8 @@ export function RecordsScanModal({
       qc.invalidateQueries({ queryKey: ['today-timeline', null] })
       qc.invalidateQueries({ queryKey: ['record-feed', petId] })
       qc.invalidateQueries({ queryKey: ['record-feed', null] })
+      // 스캔 기록은 진료비 등 비용을 포함할 수 있으므로 비용 통계도 갱신한다.
+      qc.invalidateQueries({ queryKey: ['cost-records'] })
     }
 
     if (partial) {

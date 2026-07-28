@@ -20,14 +20,26 @@ export async function toggleLike(postId: string, like: boolean): Promise<{ error
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'unauthorized' }
 
-  const { error } = like
-    ? await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id })
-    : await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
-
-  if (error) return { error: error.message }
+  // 좋아요는 멱등(idempotent)하게 처리한다. 클라이언트의 liked 상태가 DB와 어긋나(다른 탭에서
+  // 이미 눌렀거나 이전 토글이 반쯤 적용된 경우) 중복 insert 하면 PK((post_id,user_id)) 충돌로
+  // 에러가 나고, LikeButton 이 하트를 '해제'로 되돌려 실제 상태와 반대로 표시되던 문제가 있었다.
+  // → 좋아요는 upsert(중복 무시), 취소는 delete(없는 행이어도 에러 아님)로 항상 올바른 상태로 수렴.
+  let newlyLiked = false
+  if (like) {
+    const { data, error } = await supabase
+      .from('post_likes')
+      .upsert({ post_id: postId, user_id: user.id }, { onConflict: 'post_id,user_id', ignoreDuplicates: true })
+      .select()
+    if (error) return { error: error.message }
+    // 실제로 행이 새로 삽입됐을 때만 '신규 좋아요' — 중복 토글에는 푸시를 보내지 않는다.
+    newlyLiked = (data?.length ?? 0) > 0
+  } else {
+    const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
+    if (error) return { error: error.message }
+  }
 
   // 좋아요(신규)일 때 글 작성자에게 푸시 (본인 제외)
-  if (like) {
+  if (newlyLiked) {
     const { data: post } = await supabase.from('posts').select('user_id, title').eq('id', postId).maybeSingle()
     const p = post as { user_id: string; title: string } | null
     if (p && p.user_id !== user.id) {
