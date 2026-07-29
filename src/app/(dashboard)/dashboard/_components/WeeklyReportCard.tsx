@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
@@ -63,12 +64,13 @@ export function WeeklyReportCard() {
           <h2 className="font-bold text-gray-900">{t('title')}</h2>
           <p className="text-xs text-gray-400 mt-0.5 truncate">{t('subtitle', { name: pet.name })}</p>
         </div>
-        <div className="shrink-0 text-right">
-          <span className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 bg-primary-50 rounded-full px-2.5 py-1">
+        {/* 레벨 배지를 누르면 성취 컬렉션으로 — 게임화 몰입(뱃지 모으기) 동선 */}
+        <Link href="/achievements" className="shrink-0 text-right group">
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 bg-primary-50 group-hover:bg-primary-100 rounded-full px-2.5 py-1 transition-colors">
             <span aria-hidden>⭐</span>{t('levelLabel', { level: level.level })}
           </span>
-          <p className="text-[11px] font-semibold text-gray-500 mt-1">{level.title}</p>
-        </div>
+          <p className="text-[11px] font-semibold text-gray-500 mt-1">{level.title} ›</p>
+        </Link>
       </div>
 
       {/* 레벨 진행바 */}

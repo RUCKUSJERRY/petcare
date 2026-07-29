@@ -14,6 +14,21 @@
     "activeDays": "이번 주 {days}일 함께 기록했어요",
     "activeDaysZero": "이번 주 첫 기록을 남겨볼까요?"
   },
+  "achievements": {
+    "title": "성취",
+    "subtitle": "{name}와 함께 쌓은 기록",
+    "levelTitle": "성장 레벨",
+    "levelBadge": "Lv.{level}",
+    "nextLevel": "다음 레벨까지 {points}점",
+    "maxLevel": "최고 레벨 달성!",
+    "badgeProgress": "{earned}/{total} 획득",
+    "catRecord": "기록",
+    "catWalk": "산책",
+    "catTogether": "함께한 날",
+    "locked": "미획득",
+    "needPet": "아이를 선택하면 성취를 볼 수 있어요",
+    "link": "성취 보기"
+  },
   "nav": {
     "home": "홈",
     "info": "정보",
