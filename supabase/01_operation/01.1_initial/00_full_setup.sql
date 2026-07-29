@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-07-26T16:12:15.069Z
+--  생성 시각: 2026-07-29T14:45:51.367Z
 -- =============================================================
 
 
@@ -329,6 +329,10 @@ alter table public.profiles add column if not exists tip_push_last_on date;
 -- 연속 기록(streak) 리마인더 푸시 옵트인(기본 false)과 당일 중복 발송 방지 플래그 (재실행 안전)
 alter table public.profiles add column if not exists streak_push_enabled boolean not null default false;
 alter table public.profiles add column if not exists streak_push_last_on date;
+
+-- 주간 리포트 푸시 옵트인(기본 false)과 주 1회 중복 발송 방지 플래그 (재실행 안전)
+alter table public.profiles add column if not exists weekly_report_push_enabled boolean not null default false;
+alter table public.profiles add column if not exists weekly_report_push_last_on date;
 
 -- ── 02.1_table/push_subscriptions.sql ──
 -- push_subscriptions : 웹 푸시 구독 정보 (브라우저별 endpoint/키)

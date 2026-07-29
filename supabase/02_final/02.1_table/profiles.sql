@@ -26,3 +26,7 @@ alter table public.profiles add column if not exists tip_push_last_on date;
 -- 연속 기록(streak) 리마인더 푸시 옵트인(기본 false)과 당일 중복 발송 방지 플래그 (재실행 안전)
 alter table public.profiles add column if not exists streak_push_enabled boolean not null default false;
 alter table public.profiles add column if not exists streak_push_last_on date;
+
+-- 주간 리포트 푸시 옵트인(기본 false)과 주 1회 중복 발송 방지 플래그 (재실행 안전)
+alter table public.profiles add column if not exists weekly_report_push_enabled boolean not null default false;
+alter table public.profiles add column if not exists weekly_report_push_last_on date;

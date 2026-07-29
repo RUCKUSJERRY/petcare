@@ -798,6 +798,8 @@
     "tipPushDesc": "매일 저녁, 관리 팁을 하나씩 알려드려요 (푸시 알림을 켜야 도착해요)",
     "streakPushTitle": "연속 기록 리마인더",
     "streakPushDesc": "연속 기록이 끊기기 전에 저녁에 알려드려요 (푸시 알림을 켜야 도착해요)",
+    "weeklyPushTitle": "주간 리포트 알림",
+    "weeklyPushDesc": "매주 일요일 저녁, 이번 주 활동 요약을 보내드려요 (푸시 알림을 켜야 도착해요)",
     "pushToggleLabel": "푸시 알림 토글",
     "pushUnsupported": "지원 안 함",
     "pushSendTest": "테스트 알림 보내기",
