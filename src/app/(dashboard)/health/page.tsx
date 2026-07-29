@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, guideMatchScore, lifeStageColor, stageLabel } from '@/lib/utils'
+import { healthChecklistFor } from '@/lib/healthChecklist'
 import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
@@ -93,6 +94,35 @@ export default function HealthPage() {
                 {stageLabel(age)}
               </span>
             </div>
+
+            {/* 생애주기별 건강 체크리스트 — 이 시기에 챙기면 좋은 예방·관찰 포인트(정적 큐레이션) */}
+            {(() => {
+              const checklist = healthChecklistFor(pet.species, stageLabel(age))
+              return (
+                <div className="card space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden>✅</span>
+                    <span className="font-bold text-sm text-gray-900">{t('checklistTitle')}</span>
+                  </div>
+                  {checklist.summary && <p className="text-xs text-gray-500">{checklist.summary}</p>}
+                  <ul className="space-y-2">
+                    {checklist.items.map((it, i) => (
+                      <li key={i} className="flex gap-2.5">
+                        <span className="text-lg leading-none shrink-0" aria-hidden>{it.icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800">{it.title}</p>
+                          <p className="text-xs text-gray-500 leading-relaxed">{it.detail}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })()}
+
+            {guides.length > 0 && (
+              <p className="text-xs font-semibold text-gray-400 pt-1">{t('guidesTitle')}</p>
+            )}
 
             {guides.length === 0 ? (
               <div className="card text-sm text-gray-400 py-4 text-center">

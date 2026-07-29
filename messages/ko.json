@@ -445,7 +445,9 @@
     "noPets": "반려동물을 먼저 등록해주세요",
     "registerPet": "반려동물 등록하기",
     "noGuides": "현재 나이에 해당하는 가이드가 없어요",
-    "petBasis": "{name} 기준"
+    "petBasis": "{name} 기준",
+    "checklistTitle": "이 시기 건강 체크리스트",
+    "guidesTitle": "맞춤 건강 정보"
   },
   "careGuide": {
     "title": "생활 관리 가이드",
