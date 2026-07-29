@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { timeAgo, categoryColor, todayKST, addDays, daysUntil, computeLogStreak } from '@/lib/utils'
-import { DAILY_LOG_SET } from '@/lib/records'
+import { DAILY_LOG_CATEGORIES } from '@/lib/records'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { getSmartRecommendations, type CareDueItem } from '@/lib/affiliate'
 import { getTranslations } from 'next-intl/server'
@@ -11,6 +11,10 @@ import { DailyTipCard } from './_components/DailyTipCard'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
+
+// 연속 기록 계산 시 거슬러 올라갈 최대 창(일). streak-reminder cron 과 동일 기준 —
+// 이보다 긴 연속은 이 값으로 제한되지만 홈 배지 목적엔 충분하고, 조회 행 수를 합리적으로 제한한다.
+const STREAK_WINDOW_DAYS = 60
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -37,20 +41,29 @@ export default async function DashboardPage() {
   // 라인별 최신 기록 → 다음 예정일 산출은 일정 화면과 동일한 공용 로직(computeUpcoming)을 쓴다.
   let vaccAlerts: CareAlert[] = []
   // 아이별 '연속 기록일(streak)' — 매일 재방문·기록을 유도하는 리텐션 지표.
-  // 위 records 조회 결과를 재사용해(추가 쿼리 없이) 생활기록 카테고리의 날짜 집합에서 계산한다.
   const streakByPet: Record<string, number> = {}
   if (petIds.length > 0) {
-    const { data } = await supabase
-      .from('records')
-      .select('id, pet_id, category, title, event_on, next_due_on, recur_rule')
-      .in('pet_id', petIds)
-      .order('event_on', { ascending: false })
-      // 같은 날짜 동점 시 '최신 기록' 선택을 결정적으로 — 일정 화면과 동일 규칙(computeUpcoming)
-      .order('created_at', { ascending: false })
+    // 예정 알림: 모든 기록을 통째로 불러오지 않고, 필요한 최소 상위집합(라인별 최신 + 미완료 후속
+    // 예정)만 RPC 로 받아 computeUpcoming 에 넣는다. computeUpcoming 이 여전히 최종 판정의 단일 출처.
+    const { data: upData, error: upErr } = await supabase.rpc('pet_upcoming_rows', { p_pet_ids: petIds })
+    let upRows: (ScheduleRow & { created_at: string })[]
+    if (upErr) {
+      // RPC 미적용(마이그레이션 018 반영 전) 등으로 실패하면, 예전처럼 전체 조회로 안전하게
+      // 폴백해 알림 누락을 막는다. (배포-마이그레이션 순서에 무관하게 동작)
+      const { data } = await supabase
+        .from('records')
+        .select('id, pet_id, category, title, event_on, next_due_on, recur_rule, created_at')
+        .in('pet_id', petIds)
+        .order('event_on', { ascending: false })
+        .order('created_at', { ascending: false })
+      upRows = (data ?? []) as (ScheduleRow & { created_at: string })[]
+    } else {
+      // computeUpcoming 은 event_on 내림차순(동점 시 created_at 내림차순) 정렬을 전제한다.
+      upRows = ((upData ?? []) as (ScheduleRow & { created_at: string })[])
+        .sort((a, b) => b.event_on.localeCompare(a.event_on) || b.created_at.localeCompare(a.created_at))
+    }
 
-    const rows = (data ?? []) as ScheduleRow[]
-
-    vaccAlerts = computeUpcoming(rows)
+    vaccAlerts = computeUpcoming(upRows)
       .filter(u => u.next_due_on <= soon)
       .map((u): CareAlert => ({
         pet_id: u.pet_id, category: u.category, title: u.title,
@@ -58,10 +71,16 @@ export default async function DashboardPage() {
       }))
       .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on))
 
-    // 생활기록(식사·배변·투약 등)이 있는 날짜만 모아 아이별 연속일을 센다.
+    // 연속 기록: 생활기록 카테고리만, 최근 STREAK_WINDOW_DAYS 로 범위를 좁혀 조회(무제한 방지).
+    // 이보다 긴 연속은 이 창으로 제한되지만 홈 배지 목적엔 충분(streak-reminder cron 과 동일 기준).
+    const { data: logData } = await supabase
+      .from('records')
+      .select('pet_id, event_on')
+      .in('pet_id', petIds)
+      .in('category', DAILY_LOG_CATEGORIES)
+      .gte('event_on', addDays(todayStr, -STREAK_WINDOW_DAYS))
     const logDatesByPet = new Map<string, Set<string>>()
-    for (const r of rows) {
-      if (!DAILY_LOG_SET.has(r.category)) continue
+    for (const r of (logData ?? []) as { pet_id: string; event_on: string }[]) {
       let set = logDatesByPet.get(r.pet_id)
       if (!set) { set = new Set(); logDatesByPet.set(r.pet_id, set) }
       set.add(r.event_on)
