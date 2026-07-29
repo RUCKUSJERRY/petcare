@@ -25,9 +25,9 @@ export function EmptyState({
 }) {
   const resolvedIcon = icon ?? (variant === 'error' ? '⚠️' : '📭')
   return (
-    <div className={`card text-center py-12 text-gray-400 space-y-2 ${className}`}>
+    <div className={`card text-center py-12 text-gray-500 space-y-2 ${className}`}>
       <div className="text-4xl" aria-hidden>{resolvedIcon}</div>
-      <p className={variant === 'error' ? 'text-red-400' : ''}>{title}</p>
+      <p className={variant === 'error' ? 'text-red-500' : ''}>{title}</p>
       {hint && <p className="text-xs px-6">{hint}</p>}
       {action && <div className="pt-1">{action}</div>}
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useAppSettings } from '@/hooks/useAppSettings'
+import { useStickyBanner } from '@/contexts/StickyBannerContext'
 import {
   buildAffiliateUrl,
   getAffiliateProducts,
@@ -41,6 +42,7 @@ export function StickyAffiliateBanner({
 }) {
   const t = useTranslations('affiliate')
   const { bannerDismissMs } = useAppSettings()
+  const { setVisible } = useStickyBanner()
   const [dismissed, setDismissed] = useState(true) // SSR 깜빡임 방지: 마운트 후 결정
   const key = `petcare:affDismissAt:${context}`
 
@@ -50,6 +52,15 @@ export function StickyAffiliateBanner({
 
   const products = getAffiliateProducts(species, context)
   const product = products[0]
+  const visible = !!product && !dismissed
+
+  // 배너가 실제로 화면에 뜨는지를 전역에 알려, FAB이 겹치지 않게 위로 올라가도록 한다.
+  // 언마운트 시(화면 이동)엔 반드시 false 로 되돌려 다른 화면의 FAB 위치를 원복한다.
+  useEffect(() => {
+    setVisible(visible)
+    return () => setVisible(false)
+  }, [visible, setVisible])
+
   if (!product || dismissed) return null
 
   const close = () => { window.localStorage.setItem(key, String(Date.now())); setDismissed(true) }

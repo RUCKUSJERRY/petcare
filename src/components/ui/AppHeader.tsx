@@ -105,6 +105,9 @@ export function AppHeader() {
                 <button
                   key={pet.id}
                   onClick={() => selectPet(pet.id)}
+                  // 선택 상태를 색으로만 표시하면 색각 이상·스크린리더 사용자가 '지금 어떤 아이가
+                  // 선택됐는지'(앱 전체 범위를 좌우하는 상태)를 알 수 없다 — aria-pressed 로 노출한다.
+                  aria-pressed={selectedPetId === pet.id}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border',
                     selectedPetId === pet.id
@@ -121,7 +124,7 @@ export function AppHeader() {
               <Link
                 href="/pets/new"
                 aria-label={t('addPetAria')}
-                className="shrink-0 w-7 h-7 rounded-full border border-dashed border-gray-300 text-gray-400 flex items-center justify-center text-base leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
+                className="shrink-0 w-7 h-7 rounded-full border border-dashed border-gray-300 text-gray-500 flex items-center justify-center text-base leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
               >
                 +
               </Link>
@@ -142,7 +145,7 @@ export function AppHeader() {
             'w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-colors',
             profileActive
               ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
-              : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+              : 'border-gray-200 text-gray-500 hover:bg-gray-50'
           )}
           aria-label={t('profile')}
         >

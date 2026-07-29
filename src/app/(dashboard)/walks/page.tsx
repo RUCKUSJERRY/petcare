@@ -78,30 +78,33 @@ function WalksContent() {
   const setTab = (v: Tab) =>
     router.replace(v === 'shared' ? '/walks?tab=shared' : '/walks', { scroll: false })
 
-  const { data: mine = [], isLoading: mineLoading } = useQuery({
+  const { data: mine = [], isLoading: mineLoading, isError: mineError } = useQuery({
     queryKey: ['walks', 'mine'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return [] as WalkRow[]
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('walks')
         .select('*, pet:pets(name)')
         .eq('user_id', user.id)
         .order('started_at', { ascending: false })
+      // 에러를 던져 isError 로 표면화 — 네트워크/RLS 실패가 '기록 없음'으로 오인되지 않도록.
+      if (error) throw error
       return (data ?? []) as WalkRow[]
     },
   })
 
-  const { data: shared = [], isLoading: sharedLoading } = useQuery({
+  const { data: shared = [], isLoading: sharedLoading, isError: sharedError } = useQuery({
     queryKey: ['walks', 'shared'],
     queryFn: async () => {
       // profiles 임베드는 이 프로젝트에서 불안정 → 본문만 받고 작성자/댓글수는 수동 조회
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('walks')
         .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(50)
+      if (error) throw error
       const rows = (data ?? []) as WalkRow[]
       if (rows.length === 0) return rows
 
@@ -130,6 +133,7 @@ function WalksContent() {
 
   const list = tab === 'mine' ? mine : shared
   const loading = tab === 'mine' ? mineLoading : sharedLoading
+  const isError = tab === 'mine' ? mineError : sharedError
 
   return (
     <div className="px-4 py-6 space-y-4">
@@ -167,6 +171,8 @@ function WalksContent() {
 
       {loading ? (
         <CardSkeletonList count={3} />
+      ) : isError ? (
+        <EmptyState variant="error" title={t('loadError')} />
       ) : list.length === 0 ? (
         <EmptyState icon="🦮" title={tab === 'mine' ? t('emptyMine') : t('emptyShared')} />
       ) : (

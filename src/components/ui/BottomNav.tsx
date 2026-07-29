@@ -33,7 +33,7 @@ export function BottomNav() {
   const t = useTranslations('nav')
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
+    <nav aria-label={t('label')} className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
       <div className="max-w-lg mx-auto flex">
         {navItems.map(item => {
           const isActive =
@@ -52,7 +52,7 @@ export function BottomNav() {
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'relative flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-xs transition-colors',
-                isActive ? 'text-primary-600 font-semibold' : 'text-gray-400'
+                isActive ? 'text-primary-600 font-semibold' : 'text-gray-500'
               )}
             >
               {/* 활성 표시: 상단 인디케이터 바 */}

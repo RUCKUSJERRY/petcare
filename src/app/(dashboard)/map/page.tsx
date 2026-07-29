@@ -306,13 +306,17 @@ export default function MapPage() {
     placesRef.current = new maps.services.Places()
 
     // idle: 세션·재방문용 위치 저장 (자동 재검색은 하지 않음 → 카카오 쿼터 절약)
-    maps.event.addListener(map, 'idle', () => {
+    // 언마운트 시 정리할 수 있도록 핸들러를 이름으로 잡아 두고 cleanup 에서 removeListener 한다.
+    const onIdle = () => {
       const c = map.getCenter()
       lastMapState = { lat: c.getLat(), lng: c.getLng(), level: map.getLevel() }
       writeStoredCenter(lastMapState)
-    })
-    maps.event.addListener(map, 'dragend', () => onUserMoveRef.current())
-    maps.event.addListener(map, 'zoom_changed', () => onUserMoveRef.current())
+    }
+    const onDragEnd = () => onUserMoveRef.current()
+    const onZoomChanged = () => onUserMoveRef.current()
+    maps.event.addListener(map, 'idle', onIdle)
+    maps.event.addListener(map, 'dragend', onDragEnd)
+    maps.event.addListener(map, 'zoom_changed', onZoomChanged)
 
     // 저장된 위치가 전혀 없는 '최초 진입'에서만 현재 위치를 잡는다. 위치가 확정될 때까지
     // '내 위치 확인 중' 오버레이로 기본값(서울시청)이 그대로 보이지 않게 가린다.
@@ -329,6 +333,15 @@ export default function MapPage() {
       )
     }
     loadRef.current()
+
+    // 언마운트 정리: 지도 리스너 제거 + 마커/라벨 해제 → 재진입 반복 시 detached 인스턴스·
+    // 리스너 클로저 누수를 막는다. (useKakaoMap 이 이 반환값을 cleanup 으로 호출)
+    return () => {
+      maps.event.removeListener(map, 'idle', onIdle)
+      maps.event.removeListener(map, 'dragend', onDragEnd)
+      maps.event.removeListener(map, 'zoom_changed', onZoomChanged)
+      clearMarkers()
+    }
   }, [])
 
   // 사용자 + 즐겨찾기 초기 로드

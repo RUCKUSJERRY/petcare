@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
+import { useStickyBanner } from '@/contexts/StickyBannerContext'
 import { cn } from '@/lib/utils'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
@@ -28,6 +29,7 @@ export function QuickRecordFab() {
   const pathname = usePathname()
   const { data: pets } = useMyPets()
   const { selectedPetId, setSelectedPetId, hydrated } = useSelectedPet()
+  const { visible: bannerVisible } = useStickyBanner()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
@@ -77,8 +79,13 @@ export function QuickRecordFab() {
 
   return (
     <>
-      {/* 플로팅 버튼 — 콘텐츠(max-w-lg) 우측 끝, 하단탭 위에 정렬 */}
-      <div className="fixed inset-x-0 bottom-[4.75rem] z-40 pointer-events-none">
+      {/* 플로팅 버튼 — 콘텐츠(max-w-lg) 우측 끝, 하단탭 위에 정렬.
+          하단 고정 제휴 배너가 떠 있는 화면에서는 배너 위로 올려 겹침(가격·닫기 가림)을 피한다.
+          (safe-area 를 함께 더해 노치 기기에서도 배너보다 항상 위에 오도록) */}
+      <div
+        className="fixed inset-x-0 bottom-[4.75rem] z-40 pointer-events-none"
+        style={bannerVisible ? { bottom: 'calc(8.5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
         <div className="max-w-lg mx-auto px-4 flex justify-end">
           <button
             type="button"

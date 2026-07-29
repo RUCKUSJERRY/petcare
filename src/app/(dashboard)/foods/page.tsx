@@ -105,13 +105,16 @@ export default function FoodsPage() {
   const initialized = useRef(false)
   const supabase = createClient()
 
-  const { data: foods, isLoading } = useQuery({
+  const { data: foods, isLoading, isError } = useQuery({
     queryKey: ['foods'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('food_items')
         .select('*, food_safety(*)')
         .order('name_ko')
+      // 에러를 던져 isError 로 표면화 — 음식 안전 조회는 실패가 '결과 없음'으로 오인되면
+      // 걱정하는 보호자를 오도할 수 있어(고위험) 실패를 명확히 구분한다.
+      if (error) throw error
       return (data ?? []) as FoodRow[]
     },
   })
@@ -163,9 +166,12 @@ export default function FoodsPage() {
     .map(f => ({ food: f, safety: f.food_safety.find(s => s.species === species) ?? null }))
     .filter(r => r.safety !== null) as { food: FoodRow; safety: FoodSafety }[]
 
+  // 검색어 정규화: 앞뒤 공백 제거 + 소문자화. 안전도 조회는 오탐이 곧 오도(誤導)라,
+  // 뒤 공백·대소문자 차이만으로 '결과 없음'이 떠 걱정하는 보호자를 오도하지 않게 한다.
+  const q = search.trim().toLowerCase()
   const filtered = rows.filter(({ food, safety }) => {
     const effectiveSafety = ruleMap.get(food.id)?.override_safety || safety.safety_level
-    const matchSearch = food.name_ko.includes(search)
+    const matchSearch = q === '' || food.name_ko.toLowerCase().includes(q)
     const matchFilter = filterMap[filter] === null || effectiveSafety === filterMap[filter]
     const matchCategory = category === '전체' || food.category === category
     return matchSearch && matchFilter && matchCategory
@@ -298,6 +304,8 @@ export default function FoodsPage() {
 
       {isLoading ? (
         <CardSkeletonList count={5} />
+      ) : isError ? (
+        <EmptyState variant="error" title={t('loadError')} />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🍽️"
