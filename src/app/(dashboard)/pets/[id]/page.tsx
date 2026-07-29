@@ -258,7 +258,15 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
         )}
         <h1 className="text-xl font-bold text-gray-900">{pet.name}</h1>
         {editing ? (
-          <span className="w-6 shrink-0" aria-hidden />
+          // 편집 폼이 길어(사진·이름·품종·나이·입양일·성별·체중) 저장 버튼이 최하단에만 있으면
+          // 스크롤해야 저장할 수 있다 — 헤더에도 항상 닿는 저장 버튼을 둔다(최하단 버튼과 동일 동작).
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="text-sm text-primary-600 font-semibold disabled:opacity-50 shrink-0"
+          >
+            {saving ? tc('saving') : tc('save')}
+          </button>
         ) : (
           <button
             onClick={() => { setEditing(true); setSaveError(null) }}

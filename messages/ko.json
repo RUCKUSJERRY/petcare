@@ -1,4 +1,19 @@
 {
+  "report": {
+    "title": "이번 주 리포트",
+    "subtitle": "최근 7일 {name}와의 기록",
+    "levelLabel": "Lv.{level}",
+    "nextLevel": "다음 레벨까지 {points}점",
+    "maxLevel": "최고 레벨 달성!",
+    "walks": "산책",
+    "walksUnit": "회",
+    "distance": "거리",
+    "records": "기록",
+    "recordsUnit": "건",
+    "spend": "지출",
+    "activeDays": "이번 주 {days}일 함께 기록했어요",
+    "activeDaysZero": "이번 주 첫 기록을 남겨볼까요?"
+  },
   "nav": {
     "home": "홈",
     "info": "정보",

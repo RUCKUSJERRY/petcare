@@ -8,6 +8,7 @@ import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
 import { DailyTipCard } from './_components/DailyTipCard'
+import { WeeklyReportCard } from './_components/WeeklyReportCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
 
@@ -108,6 +109,10 @@ export default async function DashboardPage() {
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} streakByPet={streakByPet} loadError={petsLoadError} />
 
+      {/* 이번 주 리포트 — 최근 7일 활동 요약 + 성장 레벨. 재방문·체류·게임화(리텐션) 유도.
+          선택된 아이 기준으로 클라이언트에서 조회(활동/누적이 0이면 스스로 숨김). */}
+      {pets && pets.length > 0 && <WeeklyReportCard />}
+
       {/* 오늘의 케어 팁 — 매일 바뀌는 짧은 관리 팁으로 재방문·체류 유도 (아이 등록 후 노출) */}
       {pets && pets.length > 0 && (
         <DailyTipCard species={mealSpecies} dateStr={todayStr} />
@@ -127,7 +132,8 @@ export default async function DashboardPage() {
         {pets && pets.length > 0 && (
           <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
         )}
-        <QuickTile href="/walks" icon="🦮" label={t('walksTitle')} />
+        {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로 */}
+        <QuickTile href="/walks/track" icon="🦮" label={t('walksTitle')} />
         <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
       </div>
 
