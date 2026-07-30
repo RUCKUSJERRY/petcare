@@ -88,7 +88,7 @@ export function AppHeader() {
           aria-label={t('myPetsAria')}
           aria-current={petsActive ? 'page' : undefined}
           className={cn(
-            'shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-base transition-colors',
+            'shrink-0 w-10 h-10 rounded-full border flex items-center justify-center text-base transition-colors',
             petsActive
               ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
               : 'border-gray-200 hover:bg-gray-50'
@@ -124,7 +124,7 @@ export function AppHeader() {
               <Link
                 href="/pets/new"
                 aria-label={t('addPetAria')}
-                className="shrink-0 w-7 h-7 rounded-full border border-dashed border-gray-300 text-gray-500 flex items-center justify-center text-base leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
+                className="shrink-0 w-9 h-9 rounded-full border border-dashed border-gray-300 text-gray-500 flex items-center justify-center text-lg leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
               >
                 +
               </Link>
@@ -142,7 +142,7 @@ export function AppHeader() {
           href="/profile"
           aria-current={profileActive ? 'page' : undefined}
           className={cn(
-            'w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-colors',
+            'w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition-colors',
             profileActive
               ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
               : 'border-gray-200 text-gray-500 hover:bg-gray-50'

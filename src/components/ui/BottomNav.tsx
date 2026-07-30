@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -23,6 +24,11 @@ const matchPath = (pathname: string, prefix: string) =>
 
 // 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화). 레거시 /info 허브도 포함.
 const INFO_SUBPATHS = ['/info', '/foods', '/health', '/walk', '/care']
+// 정보 탭이 '마지막으로 본 하위 화면'을 기억하도록 하는 실제 콘텐츠 경로.
+// 늘 /foods 로만 떨어지면 (예) 건강 정보를 보다 다른 탭에 갔다 돌아올 때 매번 2탭이 든다 —
+// 지도 탭이 마지막 위치를 기억하는 것과 동일한 취지로, 마지막 정보 화면으로 바로 보낸다.
+const INFO_CONTENT_PATHS = ['/foods', '/health', '/walk', '/care']
+const LAST_INFO_KEY = 'petcare:lastInfoPath'
 // 지도 탭에 묶이는 하위 페이지 (실종 신고/제보·산책하기는 지도 탭에서 진입)
 const MAP_SUBPATHS = ['/lost', '/walks']
 // 일정 탭에 묶이는 하위 페이지 (케어 비용은 기록/일정에서 파생 — 활성 탭이 없던 문제 해결)
@@ -31,6 +37,22 @@ const SCHEDULE_SUBPATHS = ['/costs']
 export function BottomNav() {
   const pathname = usePathname()
   const t = useTranslations('nav')
+
+  // 정보 탭의 목적지 — 마지막으로 본 정보 화면(localStorage). 하이드레이션 불일치를 피하려
+  // 기본값(/foods)으로 시작하고, 마운트 후/경로 변경 시에 저장·복원한다.
+  const [infoHref, setInfoHref] = useState('/foods')
+  useEffect(() => {
+    const current = INFO_CONTENT_PATHS.find(p => matchPath(pathname, p))
+    try {
+      if (current) {
+        window.localStorage.setItem(LAST_INFO_KEY, current)
+        setInfoHref(current)
+      } else {
+        const stored = window.localStorage.getItem(LAST_INFO_KEY)
+        if (stored && INFO_CONTENT_PATHS.includes(stored)) setInfoHref(stored)
+      }
+    } catch { /* localStorage 접근 불가 시 기본값 유지 */ }
+  }, [pathname])
 
   return (
     <nav aria-label={t('label')} className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
@@ -44,10 +66,12 @@ export function BottomNav() {
                 : item.href === '/schedule'
                   ? matchPath(pathname, '/schedule') || SCHEDULE_SUBPATHS.some(p => matchPath(pathname, p))
                   : matchPath(pathname, item.href)
+          // 정보 탭만 목적지를 '마지막으로 본 정보 화면'으로 바꾼다(나머지는 고정 경로).
+          const href = item.key === 'info' ? infoHref : item.href
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={item.key}
+              href={href}
               data-tour={item.tour}
               aria-current={isActive ? 'page' : undefined}
               className={cn(

@@ -108,10 +108,10 @@ export function NotificationBell() {
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          'relative w-8 h-8 rounded-full border flex items-center justify-center transition-colors',
+          'relative w-10 h-10 rounded-full border flex items-center justify-center transition-colors',
           active
             ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200 text-primary-600'
-            : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+            : 'border-gray-200 text-gray-500 hover:bg-gray-50'
         )}
         aria-label={unread > 0 ? t('notifBellCount', { count: unread }) : t('notifBell')}
         aria-haspopup="true"

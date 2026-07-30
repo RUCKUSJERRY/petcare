@@ -151,8 +151,9 @@ export default async function DashboardPage() {
         {pets && pets.length > 0 && (
           <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
         )}
-        {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로 */}
-        <QuickTile href="/walks/track" icon="🦮" label={t('walksTitle')} />
+        {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로.
+            autostart=1 로 넘겨, GPS가 준비됐고 복구할 세션이 없으면 idle 한 단계를 건너뛰고 자동 시작한다. */}
+        <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
         <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
       </div>
 

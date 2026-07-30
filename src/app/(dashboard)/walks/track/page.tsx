@@ -6,7 +6,7 @@ import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { useMyPets } from '@/hooks/useMyPets'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { formatDistance, formatDuration, formatPace, haversineMeters } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
@@ -31,6 +31,7 @@ const hhmm = (ms: number) =>
 
 export default function WalkTrackPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const t = useTranslations('walks')
   const tc = useTranslations('common')
@@ -79,6 +80,7 @@ export default function WalkTrackPage() {
   const segStartRef = useRef<number | null>(null) // 현재 진행 구간 시작(정지 중이면 null)
   const lastMoveRef = useRef<number>(0)        // 마지막으로 유의미하게 움직인 시각
   const autoPausedRef = useRef(false)          // 자동 일시정지 상태(움직이면 자동 재개)
+  const autoStartedRef = useRef(false)         // 홈 바로가기 자동 시작을 1회만 실행하기 위한 가드
 
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
     const map = new maps.Map(el, { center: new maps.LatLng(37.5665, 126.978), level: 3 })
@@ -322,6 +324,18 @@ export default function WalkTrackPage() {
     const s = loadWalkSession(Date.now())
     if (s) setRecovered(s)
   }, [])
+
+  // 홈 '산책' 바로가기(autostart=1)로 진입한 경우: GPS가 준비됐고(locReady) 복구할 세션·오류가
+  // 없으면 idle 한 단계를 건너뛰고 자동 시작한다. 광고 게이트는 그대로(requestAd 경유) 유지하고,
+  // 복구 후보가 있으면 자동 시작 대신 복구 모달을 먼저 보여준다. 가드 ref 로 1회만 실행.
+  useEffect(() => {
+    if (autoStartedRef.current) return
+    if (searchParams.get('autostart') !== '1') return
+    if (phase !== 'idle' || locReady !== true || recovered || geoError) return
+    autoStartedRef.current = true
+    requestAd(start)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, phase, locReady, recovered, geoError])
 
   // 복구가 지도 로딩보다 먼저 일어났을 수 있으므로, 지도가 준비되고 추적 중이면 경로를 다시 그린다.
   useEffect(() => {

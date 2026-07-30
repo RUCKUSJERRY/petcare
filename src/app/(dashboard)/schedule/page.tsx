@@ -325,6 +325,17 @@ export default function SchedulePage() {
               className={cn('text-sm py-1.5 px-3', showAdd ? 'btn-secondary' : 'btn-primary')}>
               {showAdd ? tc('close') : t('addRecord')}
             </button>
+            {/* 케어 비용은 기록에서 파생되지만 전용 하단탭이 없어 이전엔 ⋯ 안에 묻혀 발견성이 낮았다 —
+                기록 화면 액션 줄에 상시 아이콘 진입점을 둔다(선택 아이는 공용 컨텍스트로 유지). */}
+            {!showAdd && (
+              <Link
+                href="/costs"
+                aria-label={t('costs')}
+                className="btn-secondary text-sm py-1.5 px-2.5 leading-none shrink-0"
+              >
+                🧾
+              </Link>
+            )}
             {!showAdd && (
               <div className="relative">
                 <button
@@ -340,11 +351,7 @@ export default function SchedulePage() {
                       📷 {t('addScan')}
                     </button>
                     <div className="my-1 border-t border-gray-100" />
-                    {/* 기록의 비용을 모아 보는 케어 비용 화면으로 진입 (선택 아이는 공용 컨텍스트로 유지) */}
-                    <Link role="menuitem" href="/costs" onClick={() => setMenuOpen(false)}
-                      className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      🧾 {t('costs')}
-                    </Link>
+                    {/* 케어 비용은 액션 줄의 🧾 버튼으로 상시 노출 — 여기(⋯)서는 중복이라 제거 */}
                     <button role="menuitem" onClick={exportRecords} disabled={exporting}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
                       📄 {exporting ? t('exporting') : t('exportRecords')}

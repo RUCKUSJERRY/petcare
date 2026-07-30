@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { categoryColor, timeAgo } from '@/lib/utils'
 import type { PostCategory, PostListItem } from '@/types'
 import { SearchBar } from './_components/SearchBar'
+import { PostList } from './_components/PostList'
 import { FilterScroller } from '@/components/ui/FilterScroller'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -37,8 +37,6 @@ export default async function CommunityPage({
   const t = await getTranslations('community')
   const { data: { user } } = await supabase.auth.getUser()
 
-  const page = Math.max(1, parseInt(searchParams.page ?? '1') || 1)
-  const offset = (page - 1) * PAGE_SIZE
   const mine = searchParams.mine === 'true'
   const sort: SortKey = searchParams.sort === 'popular' ? 'popular' : 'latest'
   const q = (searchParams.q ?? '').trim()
@@ -66,11 +64,11 @@ export default async function CommunityPage({
   const searchButEmpty = !!q && !safeQ
   if (safeQ) query = query.or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
 
-  query = query.range(offset, offset + PAGE_SIZE - 1)
+  // 첫 페이지만 서버에서 렌더하고, 이후는 클라이언트(PostList)가 무한 스크롤로 이어붙인다.
+  query = query.range(0, PAGE_SIZE - 1)
 
   const { data } = searchButEmpty ? { data: [] as PostListItem[] } : await query
   const posts = (data ?? []) as PostListItem[]
-  const hasNext = posts.length === PAGE_SIZE
 
   // 검색바가 현재 필터를 유지하도록 base 파라미터 구성
   const baseParams: Record<string, string> = {}
@@ -122,9 +120,9 @@ export default async function CommunityPage({
         </div>
       </div>
 
-      {/* 목록 */}
-      <div className="px-4 space-y-3 mt-1">
-        {posts.length === 0 ? (
+      {/* 목록 — 첫 페이지는 서버 렌더, 이후는 PostList 가 무한 스크롤로 이어붙인다 */}
+      {posts.length === 0 ? (
+        <div className="px-4 mt-1">
           <EmptyState
             icon="💬"
             title={q ? t('emptySearch', { q }) : mine ? t('emptyMine') : t('empty')}
@@ -138,69 +136,19 @@ export default async function CommunityPage({
               ) : undefined
             }
           />
-        ) : (
-          posts.map(post => (
-            <Link key={post.id} href={`/community/${post.id}`} className="block">
-              <article className="card space-y-2 active:scale-[0.99] transition-transform">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColor(post.category)}`}>
-                    {post.category}
-                  </span>
-                  {post.breed_name && (
-                    <span className="text-xs text-gray-400">· {post.breed_name}</span>
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-gray-900 line-clamp-1">{post.title}</h2>
-                    <p className="text-sm text-gray-500 line-clamp-2 mt-0.5">{post.content}</p>
-                  </div>
-                  {post.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={post.image_url}
-                      alt=""
-                      className="w-16 h-16 rounded-lg object-cover shrink-0"
-                    />
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 text-xs text-gray-400 pt-1">
-                  <span>{post.author_name ?? t('anonymous')}</span>
-                  <span>{timeAgo(post.created_at)}</span>
-                  <span className="ml-auto flex items-center gap-3">
-                    <span>❤️ {post.like_count}</span>
-                    <span>💬 {post.comment_count}</span>
-                  </span>
-                </div>
-              </article>
-            </Link>
-          ))
-        )}
-      </div>
-
-      {/* 페이지네이션 */}
-      {(page > 1 || hasNext) && (
-        <div className="flex items-center justify-center gap-3 px-4 pt-4">
-          {page > 1 && (
-            <Link
-              href={buildUrl({ category: activeCategory, mine, sort, q, page: page - 1 })}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
-            >
-              {t('prev')}
-            </Link>
-          )}
-          <span className="text-sm text-gray-400">{t('pageLabel', { page })}</span>
-          {hasNext && (
-            <Link
-              href={buildUrl({ category: activeCategory, mine, sort, q, page: page + 1 })}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-medium"
-            >
-              {t('next')}
-            </Link>
-          )}
         </div>
+      ) : (
+        <PostList
+          // 필터/정렬/검색이 바뀌면 서버가 새 목록으로 리렌더 — key 로 클라이언트 상태를 확실히 초기화
+          key={`${activeCategory ?? 'all'}|${mine}|${sort}|${safeQ}`}
+          initialPosts={posts}
+          category={activeCategory}
+          mine={mine}
+          sort={sort}
+          safeQ={safeQ}
+          userId={user?.id ?? null}
+          pageSize={PAGE_SIZE}
+        />
       )}
     </div>
   )
