@@ -33,8 +33,11 @@ export function WeeklyReportCard() {
       const [walksRes, recordsRes, recCntRes, walkCntRes] = await Promise.all([
         supabase.from('walks').select('duration_s, distance_m')
           .eq('pet_id', selectedPetId!).gte('started_at', weekStartIso),
+        // event_on 은 사용자가 고르는 값이라 미래 날짜(예정 진료·미리 입력한 기록)일 수 있다.
+        // 상한(오늘)이 없으면 이번 주 지출·기록·함께한 날이 미래 기록으로 부풀려진다.
+        // (산책은 started_at 절대시각으로 이미 안전 — 기록 쪽만 상한을 건다.)
         supabase.from('records').select('category, cost, event_on')
-          .eq('pet_id', selectedPetId!).gte('event_on', weekStart),
+          .eq('pet_id', selectedPetId!).gte('event_on', weekStart).lte('event_on', today),
         // 누적 케어 포인트용 전체 건수(head 카운트라 가벼움)
         supabase.from('records').select('id', { count: 'exact', head: true }).eq('pet_id', selectedPetId!),
         supabase.from('walks').select('id', { count: 'exact', head: true }).eq('pet_id', selectedPetId!),

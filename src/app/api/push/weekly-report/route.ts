@@ -81,8 +81,11 @@ export async function GET(req: Request) {
   const [{ data: walks, error: walkErr }, { data: recs, error: recErr }] = await Promise.all([
     admin.from('walks').select('pet_id, duration_s, distance_m')
       .in('pet_id', allPetIds).gte('started_at', weekStartIso),
+    // event_on 은 사용자가 고르는 값이라 미래 날짜(예정 진료·미리 입력한 기록)일 수 있다.
+    // 상한(오늘)을 두지 않으면 이번 주 지출·기록·함께한 날이 미래 기록으로 부풀려진다.
+    // (산책은 started_at 절대시각으로 걸러 이미 안전 — 기록 쪽만 상한을 건다.)
     admin.from('records').select('pet_id, category, cost, event_on')
-      .in('pet_id', allPetIds).gte('event_on', weekStart),
+      .in('pet_id', allPetIds).gte('event_on', weekStart).lte('event_on', today),
   ])
   if (walkErr || recErr) {
     console.error('[weekly-report] activity select error:', walkErr ?? recErr)

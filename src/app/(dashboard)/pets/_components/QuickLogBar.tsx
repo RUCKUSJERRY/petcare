@@ -40,7 +40,7 @@ export function QuickLogBar({
   // 되돌리기 토스트를 '스택'으로 둔다. 이 바의 목적은 밥→물→배변처럼 빠르게 연속 원탭하는 것인데,
   // 토스트가 1개뿐이면 두 번째 기록이 첫 토스트를 덮어써 먼저 기록한 건을 더 이상 되돌릴 수 없었다.
   // 최근 N건을 각각 되돌릴 수 있게 유지한다(각 토스트는 자기 타이머로 4초 뒤 사라진다).
-  const [toasts, setToasts] = useState<{ id: string; label: string; time: string }[]>([])
+  const [toasts, setToasts] = useState<{ id: string; label: string; time: string; cat: RecordCategory }[]>([])
   const [notice, setNotice] = useState(false)
   const [undoErr, setUndoErr] = useState(false)
   // 원탭 저장 실패 시 조용히 넘기면 사용자는 탭이 안 먹은 줄 알고 다시 눌러 중복 기록되거나
@@ -102,9 +102,9 @@ export function QuickLogBar({
     if (tm) { clearTimeout(tm); timers.current.delete(id) }
   }
 
-  const showToast = (id: string, label: string, time: string) => {
+  const showToast = (id: string, label: string, time: string, cat: RecordCategory) => {
     setToasts(prev => {
-      const next = [...prev, { id, label, time }]
+      const next = [...prev, { id, label, time, cat }]
       if (next.length > MAX_TOASTS) {
         // 상한 초과분(가장 오래된 것)은 타이머까지 정리하고 버린다.
         for (const d of next.slice(0, next.length - MAX_TOASTS)) {
@@ -135,7 +135,7 @@ export function QuickLogBar({
     setBusy(null)
     if (error || !data) { setSaveErr(true); return }
     setUndoErr(false)
-    showToast(data.id as string, label, hhmm(now.toISOString()))
+    showToast(data.id as string, label, hhmm(now.toISOString()), cat)
     invalidate()
     onLogged?.()
   }
@@ -150,14 +150,14 @@ export function QuickLogBar({
     log(cat)
   }
 
-  const undo = async (snapshot: { id: string; label: string; time: string }) => {
+  const undo = async (snapshot: { id: string; label: string; time: string; cat: RecordCategory }) => {
     setUndoErr(false)
     removeToast(snapshot.id)
     const { error } = await supabase.from('records').delete().eq('id', snapshot.id)
     if (error) {
       // 삭제 실패 시 토스트를 되살려 사용자가 다시 시도할 수 있게 한다(조용한 실패 방지)
       setUndoErr(true)
-      showToast(snapshot.id, snapshot.label, snapshot.time)
+      showToast(snapshot.id, snapshot.label, snapshot.time, snapshot.cat)
       return
     }
     invalidate()
@@ -253,7 +253,7 @@ export function QuickLogBar({
                 onClick={() => onOpenDetail?.(item.id)}
                 className="flex items-center gap-2 flex-1 min-w-0 text-left"
               >
-                <span aria-hidden>{careCategoryIcon(item.label)}</span>
+                <span aria-hidden>{careCategoryIcon(item.cat)}</span>
                 <span className="flex-1 truncate">{t('logged', { label: item.label })} · {item.time}</span>
                 {onOpenDetail && <span aria-hidden className="opacity-60 shrink-0">›</span>}
               </button>
