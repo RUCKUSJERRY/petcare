@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { careCategoryIcon, todayKST } from '@/lib/utils'
 import { CATEGORY_GROUPS, CATEGORY_CONFIG } from '@/lib/records'
+import { logDailyRecord } from '@/lib/careActions'
 import type { RecordCategory } from '@/types'
 
 type TodayLog = { id: string; category: string; event_at: string | null }
@@ -125,17 +126,12 @@ export function QuickLogBar({
     setSaveErr(false)
     setSubFor(null)
     setBusy(cat)
-    const now = new Date()
     const label = title ?? cat
-    const { data, error } = await supabase
-      .from('records')
-      .insert({ pet_id: petId, category: cat, title: label, event_on: todayKST(), event_at: now.toISOString() })
-      .select('id')
-      .single()
+    const { id, at, error } = await logDailyRecord(supabase, petId, cat, label)
     setBusy(null)
-    if (error || !data) { setSaveErr(true); return }
+    if (error || !id) { setSaveErr(true); return }
     setUndoErr(false)
-    showToast(data.id as string, label, hhmm(now.toISOString()), cat)
+    showToast(id, label, hhmm(at.toISOString()), cat)
     invalidate()
     onLogged?.()
   }

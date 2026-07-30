@@ -39,3 +39,29 @@ export async function completeCareToday(
   })
   return { error: error ? error.message : null }
 }
+
+/**
+ * 원탭 생활기록(밥·물·배변·투약 등)을 "지금 시각"으로 한 건 추가한다.
+ * QuickLogBar 와 오늘의 돌봄 체크가 공유하는 단일 입력 경로(중복 방지).
+ * @returns id(성공 시 생성된 기록 id) · at(기록 시각 Date) · error(실패 메시지)
+ */
+export async function logDailyRecord(
+  supabase: SupabaseClient,
+  petId: string,
+  category: RecordCategory | string,
+  title?: string,
+): Promise<{ id: string | null; at: Date; error: string | null }> {
+  const now = new Date()
+  const { data, error } = await supabase
+    .from('records')
+    .insert({
+      pet_id: petId,
+      category,
+      title: title ?? String(category),
+      event_on: todayKST(),
+      event_at: now.toISOString(),
+    })
+    .select('id')
+    .single()
+  return { id: (data?.id as string) ?? null, at: now, error: error ? error.message : null }
+}

@@ -29,7 +29,8 @@ const STEPS: Step[] = [
     descKey: 'onboardingBellDesc',
   },
   {
-    selector: '[data-tour="schedule"]',
+    // 홈 '일정' 타일은 하단 탭과 중복이라 정리됨 — 투어는 상시 존재하는 하단 '일정' 탭을 짚는다.
+    selector: '[data-tour="nav-schedule"]',
     titleKey: 'onboardingScheduleTitle',
     descKey: 'onboardingScheduleDesc',
   },

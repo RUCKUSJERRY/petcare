@@ -145,6 +145,20 @@ export default function ProfilePage() {
           {saving ? tc('saving') : t('saveButton')}
         </button>
 
+        {/* 성취(레벨·뱃지) 진입점 — 홈 타일 외에 프로필에도 상시 진입점을 둬,
+            한동안 활동이 없던(홈 카드가 숨는) 사용자도 성취를 다시 볼 수 있게 한다. */}
+        <Link
+          href="/achievements"
+          className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-2xl shrink-0" aria-hidden>🏅</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-900">{t('achievements')}</div>
+            <div className="text-xs text-gray-400">{t('achievementsHint')}</div>
+          </div>
+          <span className="text-gray-300 shrink-0" aria-hidden>›</span>
+        </Link>
+
         {/* 프리미엄 진입점 */}
         <Link
           href="/premium"

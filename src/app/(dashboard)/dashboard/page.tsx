@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
+import { TodayChecklist } from './_components/TodayChecklist'
 import { DailyTipCard } from './_components/DailyTipCard'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
@@ -128,6 +129,11 @@ export default async function DashboardPage() {
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} streakByPet={streakByPet} loadError={petsLoadError} />
 
+      {/* 오늘의 돌봄 체크 — 매일 챙기는 핵심 4가지(밥·물·배변·산책)를 체크리스트로.
+          하루 습관 루프를 '목표 달성'으로 만들어 재방문·기록 지속(리텐션)을 유도한다.
+          선택된 아이가 있을 때만 스스로 노출된다(클라이언트). */}
+      {pets && pets.length > 0 && <TodayChecklist />}
+
       {/* 이번 주 리포트 — 최근 7일 활동 요약 + 성장 레벨. 재방문·체류·게임화(리텐션) 유도.
           선택된 아이 기준으로 클라이언트에서 조회(활동/누적이 0이면 스스로 숨김). */}
       {pets && pets.length > 0 && <WeeklyReportCard />}
@@ -143,18 +149,28 @@ export default async function DashboardPage() {
       {/* 기록 기반 맞춤 제휴 추천 (임박 일정·식사 루틴) */}
       <SmartAffiliateCard recs={smartRecs} />
 
-      {/* 바로가기 — 단일 목적 페이지를 한 줄에 압축해 스크롤·중복을 줄임 */}
+      {/* 바로가기 — 하단 탭에 이미 있는 목적지(일정·지도)를 다시 얹지 않고, '숨어 있어 찾기 어려운'
+          화면(성취·건강 체크리스트·비용)과 가장 잦은 의도(산책 지금 시작)를 홈에 노출한다.
+          (성취·건강·비용은 하단 탭 진입점이 없어 발견성이 낮았다.) */}
       <div className="grid grid-cols-2 gap-3">
-        {pets && pets.length > 0 && (
-          <QuickTile href="/schedule" icon="🗓️" label={t('scheduleTitle')} dataTour="schedule" />
+        {pets && pets.length > 0 ? (
+          <>
+            {/* 성취(레벨·뱃지)는 예전엔 주간 리포트 카드의 배지 하나로만 들어갈 수 있어
+                거의 발견되지 않았다 — 홈 타일로 상시 진입점을 준다(리텐션 시스템 노출). */}
+            <QuickTile href="/achievements" icon="🏅" label={t('achievementsTitle')} />
+            <QuickTile href="/health" icon="🩺" label={t('healthTitle')} />
+            <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
+            {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로.
+                autostart=1 로 넘겨, GPS가 준비됐고 복구할 세션이 없으면 idle 한 단계를 건너뛰고 자동 시작한다. */}
+            <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
+          </>
+        ) : (
+          // 아직 아이가 없으면 성취·건강·비용은 의미가 없어(아이 기준) 지도·산책만 노출한다.
+          <>
+            <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
+            <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
+          </>
         )}
-        {pets && pets.length > 0 && (
-          <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
-        )}
-        {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로.
-            autostart=1 로 넘겨, GPS가 준비됐고 복구할 세션이 없으면 idle 한 단계를 건너뛰고 자동 시작한다. */}
-        <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
-        <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
       </div>
 
       {/* 최근 커뮤니티 글 */}

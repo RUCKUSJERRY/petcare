@@ -98,8 +98,17 @@
     "scheduleDesc": "진료·접종·구충·미용·양치 등 다음 예정·경과 모아보기",
     "costsTitle": "케어 비용",
     "costsDesc": "진료·미용·접종 등 지출을 월별·항목별로 모아보기",
+    "achievementsTitle": "성취",
+    "healthTitle": "건강 체크",
     "communityRecent": "커뮤니티 최근 글",
     "write": "글쓰기 →"
+  },
+  "todayCare": {
+    "title": "오늘의 돌봄",
+    "progress": "{done}/{total} 챙김",
+    "allDone": "오늘 돌봄 완료! 🎉",
+    "addShort": "기록",
+    "addAria": "{label} 지금 기록하기"
   },
   "dailyTip": {
     "title": "💡 오늘의 케어 팁"
@@ -539,6 +548,8 @@
     "saved": "저장됐어요 ✓",
     "saveButton": "저장하기",
     "viewOnboarding": "사용 안내 다시 보기",
+    "achievements": "성취 컬렉션",
+    "achievementsHint": "성장 레벨과 모은 뱃지를 확인해요",
     "premium": "펫케어 프리미엄",
     "premiumHint": "광고 없이 더 쾌적하게 — 혜택 보기",
     "premiumActive": "프리미엄 이용 중 👑",
