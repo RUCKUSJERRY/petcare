@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
-import { categoryColor, timeAgo } from '@/lib/utils'
+import { categoryColor } from '@/lib/utils'
+import { TimeAgo } from '@/components/ui/TimeAgo'
 import type { PostCategory, PostListItem } from '@/types'
 
 type SortKey = 'latest' | 'popular'
@@ -127,7 +128,7 @@ export function PostList({
 
             <div className="flex items-center gap-3 text-xs text-gray-400 pt-1">
               <span>{post.author_name ?? t('anonymous')}</span>
-              <span>{timeAgo(post.created_at)}</span>
+              <TimeAgo iso={post.created_at} />
               <span className="ml-auto flex items-center gap-3">
                 <span>❤️ {post.like_count}</span>
                 <span>💬 {post.comment_count}</span>

@@ -181,6 +181,7 @@ export default function NewLostPage() {
                 <input
                   className="input flex-1"
                   placeholder={t('searchPlaceholder')}
+                  aria-label={t('searchPlaceholder')}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchAddress() } }}

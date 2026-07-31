@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { timeAgo } from '@/lib/utils'
+import { TimeAgo } from '@/components/ui/TimeAgo'
 import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { notifyNewComment } from '../_actions'
@@ -134,7 +134,7 @@ export function CommentSection({
             <span className="text-sm font-medium text-gray-900">
               {c.author?.display_name ?? t('anonymous')}
             </span>
-            <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
+            <TimeAgo iso={c.created_at} className="text-xs text-gray-400" />
             {isEdited(c) && <span className="text-xs text-gray-300">{t('edited')}</span>}
           </div>
 

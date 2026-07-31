@@ -237,6 +237,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record-feed', effectivePetId] })
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
+    // 홈 생활 패턴 카드(식사·물·배변 추이)도 새 기록 즉시 반영
+    qc.invalidateQueries({ queryKey: ['life-pattern', effectivePetId] })
     // 비용이 포함된 기록이면 비용 통계(costs 화면)도 갱신 대상 — 조건 없이 무효화해 정합성 유지.
     qc.invalidateQueries({ queryKey: ['cost-records'] })
     onDone()

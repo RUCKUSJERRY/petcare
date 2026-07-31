@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { SelectedPetSummary } from './SelectedPetSummary'
 import { VaccAlerts } from './VaccAlerts'
 import { WeightInsightCard } from './WeightInsightCard'
+import { LifePatternCard } from './LifePatternCard'
 
 /**
  * 홈의 펫 영역.
@@ -111,6 +112,9 @@ export function PetSection({
 
       {/* 선택된 아이의 체중 추세 인사이트 (로그 2건 이상일 때만) */}
       {hasSelection && selectedPetId && <WeightInsightCard petId={selectedPetId} />}
+
+      {/* 선택된 아이의 생활 패턴(식사·물·배변 추이 + 공백 이상 신호) — 기록이 충분할 때만 스스로 노출 */}
+      {hasSelection && selectedPetId && <LifePatternCard petId={selectedPetId} />}
 
       {hasSelection ? (
         // 선택된 아이가 있으면: 다른 아이들 목록 + 다른 아이 건강 일정을 함께 접기/펼치기

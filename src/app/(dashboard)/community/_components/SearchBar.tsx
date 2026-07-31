@@ -38,6 +38,7 @@ export function SearchBar({
       <input
         className="input pr-9"
         placeholder={t('searchPlaceholder')}
+        aria-label={t('searchPlaceholder')}
         value={q}
         onChange={e => setQ(e.target.value)}
       />

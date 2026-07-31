@@ -665,10 +665,7 @@
     "viewHistory": "이력",
     "historyHeading": "전체 기록 {count}건",
     "historyEmpty": "아직 입력한 기록이 없어요.",
-    "addSchedule": "+ 일정",
     "addRecord": "+ 기록",
-    "addMedical": "진료",
-    "addCare": "관리",
     "emptyPet": "{name}는 예정된 건강 일정이 없어요.",
     "emptyAll": "다음 예정일이 등록된 건강 기록이 없어요.",
     "emptyHint": "위 “+ 기록”을 눌러 진료·관리 기록과 다음 예정일을 등록해보세요.",
@@ -678,14 +675,10 @@
     "sectionSoon": "임박한 일정 (7일 이내) {count}",
     "sectionLater": "예정된 일정 {count}",
     "errNoPet": "등록된 아이가 없어요",
-    "errNoName": "항목명을 입력해주세요",
-    "errDueBeforeDone": "다음 예정일은 시행일 이후여야 해요",
     "errSaveFailed": "저장에 실패했어요",
     "addTitle": "일정 추가",
     "doneDate": "시행일",
     "nextDate": "다음 예정일",
-    "autoSuffix": "· 자동",
-    "clinicPlaceholder": "병원 (선택)",
     "weekdays": [
       "일",
       "월",
@@ -718,7 +711,6 @@
     "searchEmpty": "검색 결과가 없어요",
     "addScan": "사진/스캔",
     "scanNeedPet": "상단에서 아이를 먼저 선택한 뒤 스캔해주세요.",
-    "historyLabel": "지난 기록",
     "addTitleItem": "기록 추가",
     "exportRecords": "기록 내보내기",
     "costs": "케어 비용",
@@ -978,6 +970,13 @@
     "suddenDown": "직전 대비 {pct}% 급감 — 식이·건강 상태 확인을 권장해요",
     "reached": "목표 체중에 도달했어요 🎉",
     "viewDetail": "체중 상세 보기 →"
+  },
+  "lifePattern": {
+    "title": "생활 패턴",
+    "window": "최근 {days}일",
+    "gapAlert": "{category} 기록이 {days}일째 없어요 — 건강 상태를 살펴봐 주세요",
+    "today": "오늘",
+    "perDay": "평소"
   },
   "costs": {
     "title": "케어 비용",

@@ -257,6 +257,7 @@ export default function FoodsPage() {
         <input
           className="input pr-9"
           placeholder={t('searchPlaceholder')}
+          aria-label={t('searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />

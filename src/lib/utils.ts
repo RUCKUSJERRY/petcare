@@ -162,9 +162,12 @@ export function cn(...classes: (string | undefined | false | null)[]): string {
 
 /**
  * 상대 시간 표시 ("방금 전", "3시간 전", "2일 전", 그 이상은 날짜)
+ *
+ * `now` 를 주입할 수 있게 열어 둔다 — 클라이언트 하이드레이션 시 서버 HTML(그때의 Date.now())과
+ * 첫 렌더가 어긋나 하이드레이션 불일치가 나던 문제를, 호출부(TimeAgo)에서 시점을 고정해 없앤다.
  */
-export function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
+export function timeAgo(iso: string, now: number = Date.now()): string {
+  const diff = now - new Date(iso).getTime()
   const sec = Math.floor(diff / 1000)
   if (sec < 60) return '방금 전'
   const min = Math.floor(sec / 60)

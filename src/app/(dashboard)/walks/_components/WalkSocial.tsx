@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { timeAgo } from '@/lib/utils'
+import { TimeAgo } from '@/components/ui/TimeAgo'
 import type { WalkComment } from '@/types'
 import { useTranslations } from 'next-intl'
 
@@ -133,7 +133,7 @@ export function WalkSocial({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900">{c.author?.display_name ?? t('anonymousOwner')}</span>
-                  <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
+                  <TimeAgo iso={c.created_at} className="text-xs text-gray-400" />
                   {c.user_id === uid && (
                     <button onClick={() => removeComment(c.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">{tc('delete')}</button>
                   )}

@@ -90,7 +90,11 @@ export function QuickLogBar({
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
-    if (petId) qc.invalidateQueries({ queryKey: ['records', petId] })
+    if (petId) {
+      qc.invalidateQueries({ queryKey: ['records', petId] })
+      // 홈 생활 패턴 카드(최근 14일 추이·공백)도 새 기록 즉시 반영되도록 갱신
+      qc.invalidateQueries({ queryKey: ['life-pattern', petId] })
+    }
   }
 
   // 최근 되돌리기 토스트를 몇 개까지 쌓아둘지 — 연속 원탭을 각각 되돌릴 수 있게 하되,

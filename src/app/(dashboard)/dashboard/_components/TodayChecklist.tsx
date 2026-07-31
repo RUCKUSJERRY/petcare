@@ -70,6 +70,7 @@ export function TodayChecklist() {
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
     qc.invalidateQueries({ queryKey: ['weekly-report', selectedPetId] })
+    qc.invalidateQueries({ queryKey: ['life-pattern', selectedPetId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
   }
 

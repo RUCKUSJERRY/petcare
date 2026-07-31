@@ -275,7 +275,7 @@ export default function SchedulePage() {
 
       {/* 기록 검색 (과거 이력 포함) */}
       <div className="relative">
-        <input className="input pr-8" placeholder={t('searchPlaceholder')}
+        <input className="input pr-8" placeholder={t('searchPlaceholder')} aria-label={t('searchPlaceholder')}
           value={search} onChange={e => setSearch(e.target.value)} />
         {search && (
           <button onClick={() => setSearch('')}
