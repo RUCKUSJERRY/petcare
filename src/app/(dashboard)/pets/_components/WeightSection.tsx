@@ -37,6 +37,9 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
         .select('*')
         .eq('pet_id', petId)
         .order('measured_on', { ascending: true })
+        // 같은 날 여러 번 잰 경우의 정렬을 확정한다 — 마지막 원소(=최신)가 프로필 대표 몸무게
+        // 동기화(syncProfileWeight: measured_on desc, created_at desc)와 같은 값이 되도록.
+        .order('created_at', { ascending: true })
       return (data ?? []) as WeightLog[]
     },
   })

@@ -13,6 +13,7 @@ import { PushToggle } from '@/components/ui/PushToggle'
 import { TipPushToggle } from '@/components/ui/TipPushToggle'
 import { StreakPushToggle } from '@/components/ui/StreakPushToggle'
 import { WeeklyReportPushToggle } from '@/components/ui/WeeklyReportPushToggle'
+import { AnniversaryPushToggle } from '@/components/ui/AnniversaryPushToggle'
 import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
 import Link from 'next/link'
@@ -193,6 +194,7 @@ export default function ProfilePage() {
           <TipPushToggle />
           <StreakPushToggle />
           <WeeklyReportPushToggle />
+          <AnniversaryPushToggle />
         </div>
 
         {/* 사용 안내 다시 보기 */}

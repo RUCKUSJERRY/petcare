@@ -9,7 +9,7 @@ import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
-import { cn, formatWon, careCategoryIcon } from '@/lib/utils'
+import { cn, formatWon, careCategoryIcon, todayKST } from '@/lib/utils'
 import { aggregateCostStats, costYears, type CostRecord } from '@/lib/costStats'
 import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
 import { RecordFormModal } from '../pets/_components/RecordFormModal'
@@ -50,6 +50,8 @@ export default function CostsPage() {
         .select('id, pet_id, category, title, event_on, cost')
         .not('cost', 'is', null)
         .gt('cost', 0)
+        // 미래로 입력된(예정) 지출은 집계에서 제외 — 주간 리포트와 동일 기준(정합성)
+        .lte('event_on', todayKST())
         .order('event_on', { ascending: false })
       // 에러를 던져 isError로 표면화 — 네트워크 실패가 "기록 없음"으로 오인되지 않도록.
       if (error) throw error

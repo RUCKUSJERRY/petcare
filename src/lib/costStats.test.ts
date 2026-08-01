@@ -41,6 +41,17 @@ describe('aggregateCostStats', () => {
     expect(s.byCategory).toHaveLength(0)
     expect(s.maxMonthTotal).toBe(0)
   })
+
+  it('미래로 입력된(event_on > today) 기록은 합계에서 제외', () => {
+    const withFuture: CostRecord[] = [
+      { category: '진료', event_on: '2026-05-10', cost: 30000 }, // 과거 → 포함
+      { category: '미용', event_on: '2026-09-01', cost: 99999 }, // 미래(예정) → 제외
+    ]
+    const s = aggregateCostStats(withFuture, 2026, '2026-08-01')
+    expect(s.total).toBe(30000)
+    expect(s.count).toBe(1)
+    expect(s.byMonth[8].total).toBe(0) // 9월(미래) 반영 안 됨
+  })
 })
 
 describe('costYears', () => {
@@ -49,5 +60,9 @@ describe('costYears', () => {
   })
   it('비용 기록이 없으면 올해(KST 기준)', () => {
     expect(costYears([])).toEqual([Number(todayKST().slice(0, 4))])
+  })
+  it('미래로 입력된 기록만 있으면 그 연도는 목록에 넣지 않는다', () => {
+    const future: CostRecord[] = [{ category: '진료', event_on: '2027-01-01', cost: 10000 }]
+    expect(costYears(future, '2026-08-01')).toEqual([2026]) // 미래 2027 제외 → 올해로 폴백
   })
 })

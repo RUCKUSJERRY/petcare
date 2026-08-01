@@ -75,4 +75,22 @@ describe('computeWeightInsight', () => {
     ]
     expect(computeWeightInsight(logs, null).suddenChange).toBeNull()
   })
+
+  it('같은 날 두 번 잰 차이(식전/식후 등)는 급변 경고로 보지 않음', () => {
+    const logs = [
+      { weight_kg: 5.0, measured_on: '2026-01-01' },
+      { weight_kg: 5.5, measured_on: '2026-01-01' }, // 같은 날 +10% → 오경고 방지
+    ]
+    expect(computeWeightInsight(logs, null).suddenChange).toBeNull()
+  })
+
+  it('추세가 유지(flat)면 도달 예상일을 함께 띄우지 않는다(모순 방지)', () => {
+    const logs = [
+      { weight_kg: 5.000, measured_on: '2026-01-01' },
+      { weight_kg: 5.001, measured_on: '2026-01-08' }, // 사실상 유지지만 아주 미세하게 증가
+    ]
+    const r = computeWeightInsight(logs, 5.2) // 목표는 위(증가 방향과 일치)
+    expect(r.direction).toBe('flat')
+    expect(r.projectedGoalDate).toBeNull()
+  })
 })

@@ -66,9 +66,11 @@ export function computeWeightInsight(logs: WeightPoint[], goal: number | null): 
   const direction: TrendDirection =
     trendPerWeek == null || Math.abs(trendPerWeek) < FLAT_BAND ? 'flat' : trendPerWeek > 0 ? 'up' : 'down'
 
-  // 목표 도달 예상일 — 추세가 목표 방향과 일치할 때만
+  // 목표 도달 예상일 — 추세가 '유지'가 아니고(direction 과 모순 방지) 목표 방향과 일치할 때만.
+  // (direction 은 FLAT_BAND 로 유지 판정하는데, projectedGoalDate 가 raw perDay 만 보면
+  //  "유지"라면서 도달 예상일이 함께 뜨는 모순이 생긴다 — 판정 기준을 direction 으로 통일.)
   let projectedGoalDate: string | null = null
-  if (goal != null && perDay != null && perDay !== 0) {
+  if (goal != null && perDay != null && direction !== 'flat') {
     const remaining = goal - latest.weight_kg // 목표까지 (kg)
     const movingTowardGoal = Math.sign(remaining) === Math.sign(perDay)
     if (movingTowardGoal && Math.abs(remaining) > 0.01) {
@@ -85,7 +87,8 @@ export function computeWeightInsight(logs: WeightPoint[], goal: number | null): 
   if (sorted.length >= 2) {
     const prev = sorted[sorted.length - 2]
     const gapDays = (parseYMD(latest.measured_on).getTime() - parseYMD(prev.measured_on).getTime()) / DAY
-    if (prev.weight_kg > 0 && gapDays <= SUDDEN_MAX_GAP_DAYS) {
+    // 같은 날(gapDays===0) 두 번 잰 식전/식후 차이로 '급변' 오경고가 뜨지 않도록 하루 이상 간격만 본다.
+    if (prev.weight_kg > 0 && gapDays >= 1 && gapDays <= SUDDEN_MAX_GAP_DAYS) {
       const pct = (latest.weight_kg - prev.weight_kg) / prev.weight_kg
       if (Math.abs(pct) >= SUDDEN_PCT) suddenChange = { pct: +pct.toFixed(3), up: pct > 0 }
     }

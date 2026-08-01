@@ -26,6 +26,8 @@ export function WeightInsightCard({ petId }: { petId: string }) {
         .select('*')
         .eq('pet_id', petId)
         .order('measured_on', { ascending: true })
+        // 같은 날 여러 번 잰 경우의 정렬 확정 (WeightSection·프로필 동기화와 동일 기준).
+        .order('created_at', { ascending: true })
       return (data ?? []) as WeightLog[]
     },
   })
