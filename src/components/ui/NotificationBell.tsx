@@ -80,9 +80,12 @@ export function NotificationBell() {
 
   const markAllRead = async () => {
     // 로드된 목록(최대 50건)만이 아니라 내 안읽음 전체를 서버에서 읽음 처리한다.
-    // (RLS 로 내 알림만 대상 — 예전엔 로드된 id 만 갱신해 50건 초과이거나 목록이 아직
-    //  안 불러와진 상태에서 배지가 그대로 남았다.)
-    await supabase.from('notifications').update({ read: true }).eq('read', false)
+    // (예전엔 로드된 id 만 갱신해 50건 초과이거나 목록이 아직 안 불러와진 상태에서 배지가 그대로 남았다.)
+    // recipient_id 를 명시해 방어적으로 내 알림만 대상으로 한다 — RLS 만 믿지 않고(정책 회귀 시
+    // 남의 알림까지 읽음 처리되는 사고 방지), 본인 것만 갱신됨을 코드에서도 보장한다.
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('notifications').update({ read: true }).eq('recipient_id', user.id).eq('read', false)
     refresh()
   }
 

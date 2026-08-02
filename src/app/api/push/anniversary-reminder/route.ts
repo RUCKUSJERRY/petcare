@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
-import { cronAuthError } from '@/lib/cron'
+import { cronAuthError, kstDate } from '@/lib/cron'
 import { getAnniversaryPushActiveServer } from '@/lib/settings'
 import { anniversariesToday, formatAnniversaryPush, type AnniversaryPushItem } from '@/lib/anniversary'
 import { NextResponse } from 'next/server'
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   if (authErr) return authErr
 
   // 생일/입양일은 보호자 로컬(KST) 달력 기준 → 서버(UTC) cron 에서도 KST '오늘'을 쓴다.
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date())
+  const today = kstDate(0)
   // 테스트용: ?force=1 이면 당일 중복 방지(anniversary_push_last_on)를 무시하고 재발송
   const force = new URL(req.url).searchParams.get('force') === '1'
 

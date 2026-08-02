@@ -6,23 +6,41 @@ import { useEffect, useState } from 'react'
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
 /**
- * 주간 리포트 푸시 옵트인 토글 (기본 off).
- * 켜져 있어도 실제 발송은 푸시 알림(구독)이 켜져 있어야 도착한다 — 설명 문구로 안내한다.
- * 상태는 /api/push/weekly-pref (본인 profiles) 에서 읽고 쓴다. (StreakPushToggle 과 동일 패턴)
+ * 옵트인(기본 off) 푸시 채널 토글 (팁·연속기록·주간리포트·기념일 등 공통).
+ *
+ * 이 채널들은 동작이 완전히 동일하다 — 본인 profiles 의 pref 를 GET 으로 읽고, 스위치를 누르면
+ * POST 로 저장(낙관적 반영, 실패 시 되돌림)한다. 채널마다 다른 건 저장 엔드포인트와 표시 문구뿐이라,
+ * 예전엔 65줄짜리 토글 컴포넌트 4개가 거의 동일하게 복붙돼 있었다. 이 공용 컴포넌트로 일원화한다.
+ * (구독 자체를 켜는 PushToggle 은 로직이 달라 별도로 둔다.)
+ *
+ * 켜져 있어도 실제 발송은 푸시 알림(구독)이 켜져 있어야 도착한다 — 설명 문구(descKey)로 안내한다.
+ *
+ * @param endpoint /api/push/ 아래 pref 엔드포인트 경로 (예: 'tip-pref')
+ * @param titleKey ui 네임스페이스의 제목 i18n 키
+ * @param descKey  ui 네임스페이스의 설명 i18n 키
  */
-export function WeeklyReportPushToggle() {
+export function PrefPushToggle({
+  endpoint,
+  titleKey,
+  descKey,
+}: {
+  endpoint: string
+  titleKey: string
+  descKey: string
+}) {
   const t = useTranslations('ui')
+  const url = `/api/push/${endpoint}`
   const [enabled, setEnabled] = useState(false)
   const [busy, setBusy] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    fetch('/api/push/weekly-pref')
+    fetch(url)
       .then(r => (r.ok ? r.json() : { enabled: false }))
       .then(d => setEnabled(!!d.enabled))
       .catch(() => {})
       .finally(() => setLoaded(true))
-  }, [])
+  }, [url])
 
   // VAPID 키가 없으면(푸시 미설정) 토글도 노출하지 않음 (PushToggle 과 동일 기준)
   if (!VAPID_PUBLIC_KEY) return null
@@ -32,7 +50,7 @@ export function WeeklyReportPushToggle() {
     setBusy(true)
     setEnabled(next) // 낙관적 반영
     try {
-      const res = await fetch('/api/push/weekly-pref', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: next }),
@@ -48,15 +66,15 @@ export function WeeklyReportPushToggle() {
   return (
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-sm font-medium text-gray-700">{t('weeklyPushTitle')}</p>
-        <p className="text-xs text-gray-400">{t('weeklyPushDesc')}</p>
+        <p className="text-sm font-medium text-gray-700">{t(titleKey)}</p>
+        <p className="text-xs text-gray-400">{t(descKey)}</p>
       </div>
       <button
         onClick={toggle}
         disabled={busy || !loaded}
         className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${enabled ? 'bg-primary-500' : 'bg-gray-300'} disabled:opacity-60`}
         aria-pressed={enabled}
-        aria-label={t('weeklyPushTitle')}
+        aria-label={t(titleKey)}
       >
         <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${enabled ? 'left-6' : 'left-1'}`} />
       </button>

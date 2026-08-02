@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
-import { cronAuthError } from '@/lib/cron'
+import { cronAuthError, kstDate } from '@/lib/cron'
 import { getDailyTip } from '@/lib/dailyTip'
 import type { Species } from '@/types'
 import { NextResponse } from 'next/server'
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   if (authErr) return authErr
 
   // 서버 cron 은 UTC 로 동작하므로 KST 달력 기준 '오늘'을 계산(팁 선택·중복 방지 키 일치).
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date())
+  const today = kstDate(0)
   // 테스트용: ?force=1 이면 당일 중복 방지를 무시하고 재발송
   const force = new URL(req.url).searchParams.get('force') === '1'
 

@@ -1,8 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
-import { cronAuthError } from '@/lib/cron'
+import { cronAuthError, kstDate } from '@/lib/cron'
 import { computeWeeklyRecap, hasRecapActivity, type RecapRecord, type RecapWalk } from '@/lib/weeklyRecap'
-import { formatDistance, formatWon } from '@/lib/utils'
+import { formatDistance, formatWon, isoToKstDate } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -21,9 +21,6 @@ export async function GET(req: Request) {
   if (authErr) return authErr
 
   // 기록 날짜(event_on)는 작성자 로컬(KST) 달력 기준 → 서버(UTC) cron 에서도 KST 기준을 쓴다.
-  const kstDate = (offsetDays = 0) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
-      .format(new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000))
   const today = kstDate(0)
   const weekStart = kstDate(-6) // 오늘 포함 최근 7일
   const weekStartIso = `${weekStart}T00:00:00+09:00` // 산책 started_at(timestamptz) KST 경계
@@ -79,7 +76,7 @@ export async function GET(req: Request) {
 
   // 3) 최근 7일 산책·기록을 반려동물별로 모아둔다 (기간으로 걸러 가볍게 조회)
   const [{ data: walks, error: walkErr }, { data: recs, error: recErr }] = await Promise.all([
-    admin.from('walks').select('pet_id, duration_s, distance_m')
+    admin.from('walks').select('pet_id, duration_s, distance_m, started_at')
       .in('pet_id', allPetIds).gte('started_at', weekStartIso),
     // event_on 은 사용자가 고르는 값이라 미래 날짜(예정 진료·미리 입력한 기록)일 수 있다.
     // 상한(오늘)을 두지 않으면 이번 주 지출·기록·함께한 날이 미래 기록으로 부풀려진다.
@@ -92,9 +89,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: (walkErr ?? recErr)!.message }, { status: 500 })
   }
   const walksByPet = new Map<string, RecapWalk[]>()
-  for (const w of (walks ?? []) as ({ pet_id: string } & RecapWalk)[]) {
+  for (const w of (walks ?? []) as ({ pet_id: string; started_at: string } & RecapWalk)[]) {
     const list = walksByPet.get(w.pet_id) ?? []
-    list.push({ duration_s: w.duration_s, distance_m: w.distance_m })
+    // started_at(절대시각)을 KST 날짜로 변환해 '산책만 한 날'도 함께한 날 수에 포함되게 한다.
+    list.push({ duration_s: w.duration_s, distance_m: w.distance_m, dateKst: isoToKstDate(w.started_at) })
     walksByPet.set(w.pet_id, list)
   }
   const recsByPet = new Map<string, RecapRecord[]>()

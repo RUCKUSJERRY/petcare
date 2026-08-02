@@ -291,6 +291,14 @@ export function todayKST(): string {
   }).format(new Date())
 }
 
+/** ISO 타임스탬프(timestamptz)를 KST 달력 날짜 'YYYY-MM-DD' 로 변환.
+ *  (산책 started_at 등 절대시각을 기록의 event_on 과 같은 KST 날짜 기준으로 맞출 때 사용) */
+export function isoToKstDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(iso))
+}
+
 /** 날짜 문자열(YYYY-MM-DD)에 개월 수를 더해 반환 (시간대 영향 없이 UTC 기준 계산).
  *  월말 클램핑: 1/31 + 1개월은 2/31→3/3 으로 튀지 않고 2/28(윤년 2/29)로 맞춘다.
  *  (day 29~31 이 더 짧은 달에 떨어질 때 한 달을 건너뛰는 오버플로우 방지 — toss.addOneMonth 와 동일 규칙) */

@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
 import { careCategoryIcon, daysUntil } from '@/lib/utils'
-import { cronAuthError } from '@/lib/cron'
+import { cronAuthError, kstDate } from '@/lib/cron'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import type { RecordCategory } from '@/types'
 import { NextResponse } from 'next/server'
@@ -20,9 +20,6 @@ export async function GET(req: Request) {
 
   // 기록의 날짜(next_due_on 등)는 작성자 브라우저의 로컬(KST) 달력 날짜로 저장된다.
   // 서버 cron은 UTC로 동작하므로, 시차로 D-day가 하루 어긋나지 않도록 KST 기준 오늘/내일을 계산한다.
-  const kstDate = (offsetDays = 0) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
-      .format(new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000))
   const today = kstDate(0)
   const tomorrow = kstDate(1)
   // 테스트용: ?force=1 이면 당일 중복 방지(last_reminded_on)를 무시하고 재발송

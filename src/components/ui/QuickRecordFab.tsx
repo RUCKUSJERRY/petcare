@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import { useMyPets } from '@/hooks/useMyPets'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useStickyBanner } from '@/contexts/StickyBannerContext'
+import { useTour } from '@/contexts/TourContext'
 import { cn } from '@/lib/utils'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
@@ -30,6 +31,7 @@ export function QuickRecordFab() {
   const { data: pets } = useMyPets()
   const { selectedPetId, setSelectedPetId, hydrated } = useSelectedPet()
   const { visible: bannerVisible } = useStickyBanner()
+  const { tourActive } = useTour()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
@@ -63,16 +65,21 @@ export function QuickRecordFab() {
 
   const activeId = selectedPetId && petList.some(p => p.id === selectedPetId) ? selectedPetId : null
 
-  // 홈(/dashboard)에서는 선택한 아이 요약 카드에 동일한 빠른 기록이 이미 인라인으로 있으므로
-  // FAB이 중복 — 단, 아이가 선택된 경우에만 숨긴다. 다견 사용자가 아무 아이도 선택하지 않은
-  // 상태(요약 카드 미표시)에서는 홈에 기록 진입점이 전혀 없으므로 FAB을 노출한다(바텀시트에 아이 선택 포함).
-  if (pathname === '/dashboard' && activeId) return null
+  // 온보딩 투어 중에는 아래 '중복이라 숨김' 규칙을 건너뛴다 — 투어의 '＋기록' 단계가
+  // 이 FAB([data-tour="quick-record"])을 스포트라이트로 짚는데, 최초 투어는 첫 아이 등록 직후
+  // 홈/아이 상세에서 열려 정작 이 화면들에서 FAB이 숨어 단계가 건너뛰어졌다. 투어 종료 후엔 다시 숨는다.
+  if (!tourActive) {
+    // 홈(/dashboard)에서는 선택한 아이 요약 카드에 동일한 빠른 기록이 이미 인라인으로 있으므로
+    // FAB이 중복 — 단, 아이가 선택된 경우에만 숨긴다. 다견 사용자가 아무 아이도 선택하지 않은
+    // 상태(요약 카드 미표시)에서는 홈에 기록 진입점이 전혀 없으므로 FAB을 노출한다(바텀시트에 아이 선택 포함).
+    if (pathname === '/dashboard' && activeId) return null
 
-  // 아이 상세(/pets/[id])도 동일한 원탭 기록 UI(QuickLogBar+직접기록+스캔)를 카드로 인라인 제공하고,
-  // 이 페이지는 보고 있는 아이가 고정돼 있다. 여기서 FAB 시트를 열면 (선택 아이가 상세의 아이와
-  // 다르면) 엉뚱한 아이로 기록될 여지가 있고 진입점도 중복 — /dashboard 와 같은 취지로 숨긴다.
-  // 목록(/pets)·신규(/pets/new)는 인라인 기록이 없으므로 제외.
-  if (/^\/pets\/[^/]+$/.test(pathname) && pathname !== '/pets/new') return null
+    // 아이 상세(/pets/[id])도 동일한 원탭 기록 UI(QuickLogBar+직접기록+스캔)를 카드로 인라인 제공하고,
+    // 이 페이지는 보고 있는 아이가 고정돼 있다. 여기서 FAB 시트를 열면 (선택 아이가 상세의 아이와
+    // 다르면) 엉뚱한 아이로 기록될 여지가 있고 진입점도 중복 — /dashboard 와 같은 취지로 숨긴다.
+    // 목록(/pets)·신규(/pets/new)는 인라인 기록이 없으므로 제외.
+    if (/^\/pets\/[^/]+$/.test(pathname) && pathname !== '/pets/new') return null
+  }
 
   const linkCls =
     'flex items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg py-2 text-xs font-medium hover:bg-gray-100 transition-colors'

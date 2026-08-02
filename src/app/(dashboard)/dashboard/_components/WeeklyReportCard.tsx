@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
-import { addDays, formatDistance, formatWon, todayKST } from '@/lib/utils'
+import { addDays, formatDistance, formatWon, isoToKstDate, todayKST } from '@/lib/utils'
 import { computeWeeklyRecap, hasRecapActivity, type RecapRecord, type RecapWalk } from '@/lib/weeklyRecap'
 import { computeCareLevel, computeCarePoints } from '@/lib/careLevel'
 
@@ -31,7 +31,7 @@ export function WeeklyReportCard() {
       const weekStartIso = `${weekStart}T00:00:00+09:00` // 산책 started_at(timestamptz) KST 경계
 
       const [walksRes, recordsRes, recCntRes, walkCntRes] = await Promise.all([
-        supabase.from('walks').select('duration_s, distance_m')
+        supabase.from('walks').select('duration_s, distance_m, started_at')
           .eq('pet_id', selectedPetId!).gte('started_at', weekStartIso),
         // event_on 은 사용자가 고르는 값이라 미래 날짜(예정 진료·미리 입력한 기록)일 수 있다.
         // 상한(오늘)이 없으면 이번 주 지출·기록·함께한 날이 미래 기록으로 부풀려진다.
@@ -43,8 +43,10 @@ export function WeeklyReportCard() {
         supabase.from('walks').select('id', { count: 'exact', head: true }).eq('pet_id', selectedPetId!),
       ])
 
+      // started_at(절대시각)을 KST 날짜로 변환해 '산책만 한 날'도 함께한 날 수에 포함되게 한다.
+      const walkRows = (walksRes.data ?? []) as { duration_s: number; distance_m: number; started_at: string }[]
       const recap = computeWeeklyRecap(
-        (walksRes.data ?? []) as RecapWalk[],
+        walkRows.map(w => ({ duration_s: w.duration_s, distance_m: w.distance_m, dateKst: isoToKstDate(w.started_at) })) as RecapWalk[],
         (recordsRes.data ?? []) as RecapRecord[],
       )
       const points = computeCarePoints(recCntRes.count ?? 0, walkCntRes.count ?? 0)

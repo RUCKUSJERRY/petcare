@@ -11,6 +11,9 @@ import { DAILY_LOG_SET } from './records'
 export interface RecapWalk {
   duration_s: number
   distance_m: number
+  /** 산책한 날(KST 'YYYY-MM-DD'). 있으면 활동한 날 수(activeDays)에 포함한다.
+   *  (산책만 하고 생활기록이 없는 날도 '함께한 날'로 세기 위함 — 없으면 무시) */
+  dateKst?: string
 }
 
 /** 집계에 필요한 기록의 최소 형태 */
@@ -39,14 +42,18 @@ export interface WeeklyRecap {
 export function computeWeeklyRecap(walks: RecapWalk[], records: RecapRecord[]): WeeklyRecap {
   let distanceM = 0
   let durationS = 0
+  // '함께한 날' 집합 — 생활기록이 있는 날뿐 아니라 산책만 한 날도 포함한다.
+  // (예전엔 records 만 세어, 산책만 한 주에는 activeDays 가 0 이 되어 "0일 함께 기록했어요"
+  //  같은 잘못된 주간 리포트/푸시 문구가 나갔다.)
+  const days = new Set<string>()
   for (const w of walks) {
     distanceM += w.distance_m
     durationS += w.duration_s
+    if (w.dateKst) days.add(w.dateKst)
   }
 
   let logCount = 0
   let spend = 0
-  const days = new Set<string>()
   for (const r of records) {
     days.add(r.event_on)
     if (DAILY_LOG_SET.has(r.category)) logCount += 1

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
@@ -41,7 +42,22 @@ export default function AchievementsPage() {
       <PageHeader title={t('title')} fallbackHref="/dashboard" />
 
       {!pet ? (
-        <EmptyState title={t('needPet')} />
+        // 예전엔 아이가 없거나 미선택일 때 CTA 없는 막다른 빈 화면이었다. 두 경우를 구분해
+        // 실제로 나아갈 길을 준다 — 등록된 아이가 없으면 '등록하기', 있으면 '아이 선택' 안내.
+        (pets?.length ?? 0) === 0 ? (
+          <EmptyState
+            icon="🏅"
+            title={t('noPetTitle')}
+            hint={t('noPetHint')}
+            action={
+              <Link href="/pets/new" className="btn-primary inline-flex px-4 py-2 text-sm">
+                {t('registerPet')}
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState icon="🏅" title={t('needPet')} hint={t('pickPetHint')} />
+        )
       ) : isLoading || !data ? (
         <CardSkeletonList count={2} />
       ) : (

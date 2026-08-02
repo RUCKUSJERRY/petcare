@@ -10,10 +10,7 @@ import { ImagePicker } from '@/components/ui/ImagePicker'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 import { BackButton } from '@/components/ui/BackButton'
 import { PushToggle } from '@/components/ui/PushToggle'
-import { TipPushToggle } from '@/components/ui/TipPushToggle'
-import { StreakPushToggle } from '@/components/ui/StreakPushToggle'
-import { WeeklyReportPushToggle } from '@/components/ui/WeeklyReportPushToggle'
-import { AnniversaryPushToggle } from '@/components/ui/AnniversaryPushToggle'
+import { PrefPushToggle } from '@/components/ui/PrefPushToggle'
 import { OPEN_ONBOARDING_EVENT } from '@/components/ui/OnboardingModal'
 import { deleteImageByUrl } from '@/lib/upload'
 import Link from 'next/link'
@@ -191,10 +188,10 @@ export default function ProfilePage() {
         {/* 알림 설정 */}
         <div className="border-t border-gray-100 pt-4 space-y-4">
           <PushToggle />
-          <TipPushToggle />
-          <StreakPushToggle />
-          <WeeklyReportPushToggle />
-          <AnniversaryPushToggle />
+          <PrefPushToggle endpoint="tip-pref" titleKey="tipPushTitle" descKey="tipPushDesc" />
+          <PrefPushToggle endpoint="streak-pref" titleKey="streakPushTitle" descKey="streakPushDesc" />
+          <PrefPushToggle endpoint="weekly-pref" titleKey="weeklyPushTitle" descKey="weeklyPushDesc" />
+          <PrefPushToggle endpoint="anniversary-pref" titleKey="anniversaryPushTitle" descKey="anniversaryPushDesc" />
         </div>
 
         {/* 사용 안내 다시 보기 */}

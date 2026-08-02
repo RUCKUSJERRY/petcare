@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
 import { computeLogStreak } from '@/lib/utils'
 import { DAILY_LOG_CATEGORIES } from '@/lib/records'
-import { cronAuthError } from '@/lib/cron'
+import { cronAuthError, kstDate } from '@/lib/cron'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -25,9 +25,6 @@ export async function GET(req: Request) {
   if (authErr) return authErr
 
   // 기록 날짜(event_on)는 작성자 로컬(KST) 달력 기준 → 서버(UTC) cron 에서도 KST '오늘'을 쓴다.
-  const kstDate = (offsetDays = 0) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
-      .format(new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000))
   const today = kstDate(0)
   const since = kstDate(-STREAK_WINDOW_DAYS)
   const force = new URL(req.url).searchParams.get('force') === '1'

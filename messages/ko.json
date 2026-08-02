@@ -27,6 +27,10 @@
     "catTogether": "함께한 날",
     "locked": "미획득",
     "needPet": "아이를 선택하면 성취를 볼 수 있어요",
+    "pickPetHint": "상단 프로필에서 아이를 선택해 주세요",
+    "noPetTitle": "아직 등록한 아이가 없어요",
+    "noPetHint": "우리 아이를 등록하면 기록·산책·함께한 날에 따라 성취가 쌓여요",
+    "registerPet": "우리 아이 등록하기",
     "link": "성취 보기"
   },
   "nav": {
@@ -823,6 +827,7 @@
     "errInviteFailed": "초대 링크 생성에 실패했어요.",
     "errRemoveFailed": "내보내기에 실패했어요. 다시 시도해주세요.",
     "errLeaveFailed": "나가기에 실패했어요. 다시 시도해주세요.",
+    "removeConfirm": "{name}님을 이 아이의 공동 관리에서 내보낼까요? 다시 초대하기 전까지 이 아이의 기록에 접근할 수 없어요.",
     "leaveConfirm": "{name} 공동 관리에서 나갈까요?",
     "inviteHint": "아래 링크를 보내면 상대가 구성원으로 참여할 수 있어요. (14일간 유효)",
     "shareTitle": "{name} 공동 관리 초대",

@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMyPets } from '@/hooks/useMyPets'
+import { useTour } from '@/contexts/TourContext'
 
 const STORAGE_KEY = 'pc-onboarding-v2'
 export const OPEN_ONBOARDING_EVENT = 'pc:open-onboarding'
@@ -60,8 +61,16 @@ export function OnboardingModal() {
   const [rect, setRect] = useState<DOMRect | null>(null)
   const targetRef = useRef<Element | null>(null)
   const { data: pets } = useMyPets()
+  const { setTourActive } = useTour()
   // 최초 자동 실행을 한 번만 판정하기 위한 가드
   const autoChecked = useRef(false)
+
+  // 투어가 열려 있는 동안 FAB(＋기록)을 계속 띄우도록 전역 상태로 알린다.
+  // (홈·아이 상세에서 숨는 FAB 때문에 '＋기록' 단계가 조용히 건너뛰어지던 문제 해결)
+  useEffect(() => {
+    setTourActive(open)
+    return () => setTourActive(false)
+  }, [open, setTourActive])
 
   const close = useCallback(() => {
     try { localStorage.setItem(STORAGE_KEY, '1') } catch { /* noop */ }

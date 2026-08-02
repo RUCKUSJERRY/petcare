@@ -26,6 +26,10 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
   const [error, setError] = useState<string | null>(null)
   // 소유권 이전 확인 대상(구성원)
   const [transferTarget, setTransferTarget] = useState<{ userId: string; name: string } | null>(null)
+  // 구성원 내보내기 확인 대상 — 되돌릴 수 없는 접근 삭제라 확인을 거친다(소유권 이전과 동일 패턴)
+  const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
+  // 공동 관리 나가기 확인 (native confirm 대신 앱 공통 ConfirmModal 사용)
+  const [leaveConfirm, setLeaveConfirm] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null))
@@ -63,6 +67,7 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
     setBusy(true); setError(null)
     const { error: delErr } = await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', memberUserId)
     setBusy(false)
+    setRemoveTarget(null)
     if (delErr) { setError(t('errRemoveFailed')); return }
     qc.invalidateQueries({ queryKey: ['pet-members', petId] })
   }
@@ -84,10 +89,10 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
 
   const leave = async () => {
     if (!uid) return
-    if (!confirm(t('leaveConfirm', { name: petName }))) return
     setBusy(true); setError(null)
     const { error: delErr } = await supabase.from('pet_members').delete().eq('pet_id', petId).eq('user_id', uid)
     setBusy(false)
+    setLeaveConfirm(false)
     if (delErr) { setError(t('errLeaveFailed')); return }
     qc.invalidateQueries({ queryKey: ['my-pets'] })
     router.push('/dashboard')
@@ -146,7 +151,7 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
                   onClick={() => setTransferTarget({ userId: m.user_id, name: m.profile?.display_name ?? t('member') })}
                   disabled={busy}
                   className="text-xs text-gray-400 hover:text-primary-600">{t('transfer')}</button>
-                <button onClick={() => removeMember(m.user_id)} disabled={busy}
+                <button onClick={() => setRemoveTarget({ userId: m.user_id, name: m.profile?.display_name ?? t('member') })} disabled={busy}
                   className="text-xs text-gray-300 hover:text-red-500">{t('remove')}</button>
               </div>
             )}
@@ -170,11 +175,37 @@ export function PetMembers({ petId, petName }: { petId: string; petName: string 
         />
       )}
 
+      {/* 구성원 내보내기 확인 — 되돌릴 수 없는 접근 삭제라 확인을 거친다 */}
+      {removeTarget && (
+        <ConfirmModal
+          title={t('remove')}
+          description={t('removeConfirm', { name: removeTarget.name })}
+          confirmLabel={t('remove')}
+          destructive
+          busy={busy}
+          onConfirm={() => removeMember(removeTarget.userId)}
+          onCancel={() => setRemoveTarget(null)}
+        />
+      )}
+
       {!isOwner && myRole && (
-        <button onClick={leave} disabled={busy}
+        <button onClick={() => setLeaveConfirm(true)} disabled={busy}
           className="w-full py-2 text-sm text-gray-400 hover:text-red-500">
           {t('leave')}
         </button>
+      )}
+
+      {/* 공동 관리 나가기 확인 (native confirm 대신 앱 공통 모달) */}
+      {leaveConfirm && (
+        <ConfirmModal
+          title={t('leave')}
+          description={t('leaveConfirm', { name: petName })}
+          confirmLabel={t('leave')}
+          destructive
+          busy={busy}
+          onConfirm={leave}
+          onCancel={() => setLeaveConfirm(false)}
+        />
       )}
     </div>
   )

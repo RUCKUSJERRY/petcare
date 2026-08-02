@@ -108,6 +108,9 @@ export default async function DashboardPage() {
       .in('pet_id', petIds)
       .eq('category', '식사')
       .gte('event_on', addDays(todayStr, -7))
+      // 미래로 예약(선입력)된 기록이 최근 7일 식사 신호를 부풀리지 않도록 상한을 건다.
+      // (event_on 은 사용자가 고르는 날짜라 미래일 수 있음 — 앱 전반의 7일 집계와 동일 기준)
+      .lte('event_on', todayStr)
     mealLogs7d = count ?? 0
   }
   // 사료 추천 종은 보유 반려동물 중 다수 종
