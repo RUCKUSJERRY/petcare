@@ -31,6 +31,7 @@ alter table public.profiles add column if not exists streak_push_last_on date;
 alter table public.profiles add column if not exists weekly_report_push_enabled boolean not null default false;
 alter table public.profiles add column if not exists weekly_report_push_last_on date;
 
--- 생일·입양 기념일 축하 푸시 옵트인(기본 false)과 당일 중복 발송 방지 플래그 (재실행 안전)
-alter table public.profiles add column if not exists anniversary_push_enabled boolean not null default false;
+-- 생일·입양 기념일 축하 푸시 옵트인(기본 true — 기본 on)과 당일 중복 발송 방지 플래그 (재실행 안전)
+alter table public.profiles add column if not exists anniversary_push_enabled boolean not null default true;
 alter table public.profiles add column if not exists anniversary_push_last_on date;
+alter table public.profiles alter column anniversary_push_enabled set default true;

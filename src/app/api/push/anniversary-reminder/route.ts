@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
 import { cronAuthError } from '@/lib/cron'
+import { getAnniversaryPushActiveServer } from '@/lib/settings'
 import { anniversariesToday, formatAnniversaryPush, type AnniversaryPushItem } from '@/lib/anniversary'
 import { NextResponse } from 'next/server'
 
@@ -29,6 +30,13 @@ export async function GET(req: Request) {
     admin = createAdminClient()
   } catch {
     return NextResponse.json({ error: 'service role not configured' }, { status: 500 })
+  }
+
+  // 0) 전역 스위치 — 관리자가 기능을 끄면 아무에게도 보내지 않는다 (app_settings)
+  if (!(await getAnniversaryPushActiveServer(admin))) {
+    const result = { processed: 0, sent: 0, force, disabled: true }
+    console.log('[anniversary-reminder]', JSON.stringify(result))
+    return NextResponse.json(result)
   }
 
   // 1) 옵트인 사용자 → 당일 미발송만 대상으로 추림

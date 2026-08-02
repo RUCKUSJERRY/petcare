@@ -1102,6 +1102,8 @@
     "priceLabel": "프리미엄 월 가격 (원)",
     "priceHint": "변경 시 결제·프리미엄 화면에 바로 반영됩니다.",
     "adsLabel": "전면 광고 표시",
+    "annivPushLabel": "생일·기념일 축하 푸시",
+    "annivPushHint": "끄면 모든 사용자에게 생일·입양 기념일 알림을 보내지 않습니다 (사용자별 설정과 별개인 전역 스위치).",
     "cooldownLabel": "광고 최소 간격 (분)",
     "cooldownHint": "한 번 노출 후 이 시간 동안은 광고를 다시 띄우지 않아요. 0이면 매번 노출.",
     "upsellDismissLabel": "구독 카드 재노출 간격 (분)",

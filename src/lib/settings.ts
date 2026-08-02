@@ -31,3 +31,12 @@ export async function getFreeOcrMonthlyServer(client: SupabaseClient): Promise<n
   const n = raw != null ? parseInt(raw.replace(/[^0-9]/g, ''), 10) : NaN
   return Number.isFinite(n) && n >= 0 ? n : DEFAULT_FREE_OCR_MONTHLY
 }
+
+/**
+ * 생일·입양 기념일 축하 푸시 기능의 전역 on/off (관리자 스위치).
+ * 값이 명시적으로 'false' 일 때만 끔 — 미설정/오류면 기본 켬(true)으로 폴백. (ads_enabled 와 동일)
+ */
+export async function getAnniversaryPushActiveServer(client: SupabaseClient): Promise<boolean> {
+  const raw = await getAppSetting(client, 'anniversary_push_active')
+  return raw !== 'false'
+}

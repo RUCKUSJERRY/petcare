@@ -45,6 +45,7 @@ export default function AdminPage() {
   const [cooldown, setCooldown] = useState('3')
   const [upsellDismiss, setUpsellDismiss] = useState('1440')
   const [bannerDismiss, setBannerDismiss] = useState('1440')
+  const [annivPush, setAnnivPush] = useState(true)
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -75,6 +76,7 @@ export default function AdminPage() {
       setCooldown(settings.get('ad_cooldown_min') ?? '3')
       setUpsellDismiss(settings.get('upsell_dismiss_min') ?? '1440')
       setBannerDismiss(settings.get('banner_dismiss_min') ?? '1440')
+      setAnnivPush(settings.get('anniversary_push_active') !== 'false')
       setLoaded(true)
     }
   }, [settings, loaded])
@@ -105,6 +107,7 @@ export default function AdminPage() {
       { key: 'ad_cooldown_min', value: nonNeg(cooldown, '3') },
       { key: 'upsell_dismiss_min', value: nonNeg(upsellDismiss, '1440') },
       { key: 'banner_dismiss_min', value: nonNeg(bannerDismiss, '1440') },
+      { key: 'anniversary_push_active', value: annivPush ? 'true' : 'false' },
     ], { onConflict: 'key' })
     setSaving(false)
     setSaved(true)
@@ -155,6 +158,13 @@ export default function AdminPage() {
         <label className="flex items-center justify-between py-1">
           <span className="text-sm text-gray-700">{t('adsLabel')}</span>
           <input type="checkbox" checked={ads} onChange={e => setAds(e.target.checked)} className="w-5 h-5 accent-primary-500" />
+        </label>
+        <label className="flex items-center justify-between py-1">
+          <div className="pr-3">
+            <span className="text-sm text-gray-700">{t('annivPushLabel')}</span>
+            <p className="text-[11px] text-gray-400 mt-0.5">{t('annivPushHint')}</p>
+          </div>
+          <input type="checkbox" checked={annivPush} onChange={e => setAnnivPush(e.target.checked)} className="w-5 h-5 accent-primary-500 shrink-0" />
         </label>
         <div>
           <label className="text-xs font-semibold text-gray-500 block mb-1">{t('cooldownLabel')}</label>
