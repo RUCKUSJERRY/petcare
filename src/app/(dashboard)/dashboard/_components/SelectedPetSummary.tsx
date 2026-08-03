@@ -13,6 +13,7 @@ import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntr
 import { PetAvatar } from '@/components/ui/PetAvatar'
 import { AchievementShareButton } from '@/components/ui/AchievementShareButton'
 import { pickShareableAchievement } from '@/lib/achievement'
+import { petMood } from '@/lib/petMood'
 import type { CareAlert, Pet } from '@/types'
 
 /**
@@ -59,6 +60,8 @@ export function SelectedPetSummary({
   const milestone = togetherMilestone(together)
   // 생활기록 연속일 — 2일 이상일 때만 🔥 배지로 강조(1일은 동기부여 약함). 매일 기록 습관을 유도.
   const streak = streakByPet[pet.id] ?? 0
+  // 연속일에 따른 아이 '기분' — 아바타에 작은 반응(이모지+테두리)으로 정서적 재방문 계기를 준다.
+  const mood = petMood(streak)
   // 지금 자랑할 만한 성취(이정표 당일·연속 3일+)가 있으면 이미지 카드로 공유할 수 있게 한다.
   const shareable = pickShareableAchievement({ streak, milestone })
   const nextVacc = vaccAlerts
@@ -69,8 +72,18 @@ export function SelectedPetSummary({
     <>
     <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-5 text-white shadow-sm">
       <div className="flex items-center gap-4">
-        <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
-          className="w-16 h-16 bg-white/20" emojiClassName="text-3xl" />
+        {/* 아바타 + 기분 반응 — 연속 기록일에 따라 테두리가 밝아지고 아이 표정(이모지)이 바뀐다 */}
+        <div className="relative shrink-0" title={mood.label}>
+          <PetAvatar photoUrl={pet.photo_url} species={pet.species} name={pet.name}
+            className={`w-16 h-16 bg-white/20 ${mood.ring}`} emojiClassName="text-3xl" />
+          <span
+            aria-label={mood.label}
+            role="img"
+            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-sm leading-none"
+          >
+            {mood.emoji}
+          </span>
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold truncate">{pet.name}</span>

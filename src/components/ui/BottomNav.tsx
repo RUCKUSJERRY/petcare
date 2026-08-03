@@ -1,20 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
-// '정보' 탭은 대표 목적지를 음식 가이드(/foods)로 둔다. 예전엔 /info 허브(음식·건강·활동·
-// 생활관리 메뉴)로 보냈으나, 각 하위 페이지가 이미 동일한 SectionTabs 스트립을 상단에 그려
-// 허브가 중복이었다 — 탭하면 바로 실제 콘텐츠(음식)로 진입하게 한다. (tour는 온보딩 selector 유지용)
+// 하단 5탭. '더보기'는 하단탭에 상시 자리가 없던 화면들(음식·건강·활동·생활관리 정보, 비용,
+// 성취 등)을 모으는 허브(/more)로 보낸다. 예전엔 📚'정보' 탭이 실제로는 음식(/foods)으로 떨어져
+// 아이콘·라벨과 목적지가 어긋났고, 비용·성취·건강은 홈 타일로만 접근돼 발견성이 낮았다.
 const navItems = [
   { href: '/dashboard', key: 'home', icon: '🏠', tour: 'nav-dashboard' },
-  { href: '/foods', key: 'info', icon: '📚', tour: 'nav-info' },
   { href: '/map', key: 'map', icon: '🗺️', tour: 'nav-map' },
   { href: '/schedule', key: 'schedule', icon: '🗓️', tour: 'nav-schedule' },
   { href: '/community', key: 'community', icon: '💬', tour: 'nav-community' },
+  { href: '/more', key: 'more', icon: '⋯', tour: 'nav-more' },
 ] as const
 
 // 경로 세그먼트 단위 매칭: '/walk'가 '/walks'를 잘못 포함하지 않도록 한다.
@@ -22,56 +21,30 @@ const navItems = [
 const matchPath = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(prefix + '/')
 
-// 정보 탭에 묶이는 하위 페이지 (BottomNav에서 '정보'를 활성화). 레거시 /info 허브도 포함.
-const INFO_SUBPATHS = ['/info', '/foods', '/health', '/walk', '/care']
-// 정보 탭이 '마지막으로 본 하위 화면'을 기억하도록 하는 실제 콘텐츠 경로.
-// 늘 /foods 로만 떨어지면 (예) 건강 정보를 보다 다른 탭에 갔다 돌아올 때 매번 2탭이 든다 —
-// 지도 탭이 마지막 위치를 기억하는 것과 동일한 취지로, 마지막 정보 화면으로 바로 보낸다.
-const INFO_CONTENT_PATHS = ['/foods', '/health', '/walk', '/care']
-const LAST_INFO_KEY = 'petcare:lastInfoPath'
-// 지도 탭에 묶이는 하위 페이지 (실종 신고/제보·산책하기는 지도 탭에서 진입)
+// '더보기' 탭에 묶이는 하위 페이지들 — 허브(/more)에서 진입하는 정보·비용·성취 화면.
+// (레거시 /info 허브 경로도 포함해 예전 링크·북마크가 여전히 '더보기'로 표시되게 한다.)
+const MORE_SUBPATHS = ['/more', '/foods', '/health', '/walk', '/care', '/info', '/costs', '/achievements']
+// '지도' 탭에 묶이는 하위 페이지 (실종 신고/제보·산책하기는 지도 탭에서 진입)
 const MAP_SUBPATHS = ['/lost', '/walks']
-// 일정 탭에 묶이는 하위 페이지 (케어 비용은 기록/일정에서 파생 — 활성 탭이 없던 문제 해결)
-const SCHEDULE_SUBPATHS = ['/costs']
 
 export function BottomNav() {
   const pathname = usePathname()
   const t = useTranslations('nav')
-
-  // 정보 탭의 목적지 — 마지막으로 본 정보 화면(localStorage). 하이드레이션 불일치를 피하려
-  // 기본값(/foods)으로 시작하고, 마운트 후/경로 변경 시에 저장·복원한다.
-  const [infoHref, setInfoHref] = useState('/foods')
-  useEffect(() => {
-    const current = INFO_CONTENT_PATHS.find(p => matchPath(pathname, p))
-    try {
-      if (current) {
-        window.localStorage.setItem(LAST_INFO_KEY, current)
-        setInfoHref(current)
-      } else {
-        const stored = window.localStorage.getItem(LAST_INFO_KEY)
-        if (stored && INFO_CONTENT_PATHS.includes(stored)) setInfoHref(stored)
-      }
-    } catch { /* localStorage 접근 불가 시 기본값 유지 */ }
-  }, [pathname])
 
   return (
     <nav aria-label={t('label')} className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
       <div className="max-w-lg mx-auto flex">
         {navItems.map(item => {
           const isActive =
-            item.key === 'info'
-              ? INFO_SUBPATHS.some(p => matchPath(pathname, p))
+            item.key === 'more'
+              ? MORE_SUBPATHS.some(p => matchPath(pathname, p))
               : item.href === '/map'
                 ? matchPath(pathname, '/map') || MAP_SUBPATHS.some(p => matchPath(pathname, p))
-                : item.href === '/schedule'
-                  ? matchPath(pathname, '/schedule') || SCHEDULE_SUBPATHS.some(p => matchPath(pathname, p))
-                  : matchPath(pathname, item.href)
-          // 정보 탭만 목적지를 '마지막으로 본 정보 화면'으로 바꾼다(나머지는 고정 경로).
-          const href = item.key === 'info' ? infoHref : item.href
+                : matchPath(pathname, item.href)
           return (
             <Link
               key={item.key}
-              href={href}
+              href={item.href}
               data-tour={item.tour}
               aria-current={isActive ? 'page' : undefined}
               className={cn(

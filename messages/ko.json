@@ -39,7 +39,29 @@
     "info": "정보",
     "map": "지도",
     "schedule": "일정",
-    "community": "커뮤니티"
+    "community": "커뮤니티",
+    "more": "더보기"
+  },
+  "more": {
+    "title": "더보기",
+    "sectionInfo": "우리 아이 정보",
+    "sectionActivity": "기록·활동",
+    "foods": "음식 가이드",
+    "foodsDesc": "사료·간식·안전한 음식",
+    "health": "건강 정보",
+    "healthDesc": "생애주기 건강 체크",
+    "activity": "활동 가이드",
+    "activityDesc": "산책·놀이 가이드",
+    "care": "생활 관리",
+    "careDesc": "양치·털·발톱·목욕",
+    "costs": "비용 관리",
+    "costsDesc": "지출 기록·통계",
+    "achievements": "성취",
+    "achievementsDesc": "레벨·뱃지 모아보기",
+    "walks": "산책 기록",
+    "walksDesc": "산책 이력·목표",
+    "lost": "실종센터",
+    "lostDesc": "실종 신고·제보"
   },
   "sectionTabs": {
     "aria": "섹션 이동",
@@ -105,14 +127,27 @@
     "achievementsTitle": "성취",
     "healthTitle": "건강 체크",
     "communityRecent": "커뮤니티 최근 글",
-    "write": "글쓰기 →"
+    "write": "글쓰기 →",
+    "greet_morning": "좋은 아침이에요",
+    "greet_afternoon": "좋은 오후예요",
+    "greet_evening": "좋은 저녁이에요",
+    "greet_night": "편안한 밤 보내세요",
+    "greetDefault": "반가워요",
+    "greetWithName": "{name}님, {greeting}",
+    "healthPointTitle": "오늘의 건강 포인트",
+    "healthPointMore": "건강 체크리스트"
   },
   "todayCare": {
     "title": "오늘의 돌봄",
     "progress": "{done}/{total} 챙김",
     "allDone": "오늘 돌봄 완료! 🎉",
     "addShort": "기록",
-    "addAria": "{label} 지금 기록하기"
+    "addAria": "{label} 지금 기록하기",
+    "walkSheetTitle": "산책을 어떻게 할까요?",
+    "walkSheetStart": "지금 산책 시작",
+    "walkSheetStartHint": "GPS로 거리·경로를 기록해요",
+    "walkSheetDone": "산책했어요",
+    "walkSheetDoneHint": "이미 다녀왔다면 기록만 남겨요"
   },
   "dailyTip": {
     "title": "💡 오늘의 케어 팁"
@@ -761,6 +796,8 @@
     "onboardingScheduleDesc": "접종·산책·병원 일정을 등록하면 잊지 않도록 알려드려요.",
     "onboardingInfoTitle": "동네 정보 🗺️",
     "onboardingInfoDesc": "주변 동물병원·산책로·반려동물 동반 가능 장소를 찾아보세요.",
+    "onboardingMoreTitle": "더보기 ⋯",
+    "onboardingMoreDesc": "음식·건강·활동 정보부터 비용·성취까지, 자주 쓰지 않지만 필요한 메뉴를 여기 모아뒀어요.",
     "onboardingCommunityTitle": "커뮤니티 💬",
     "onboardingCommunityDesc": "다른 보호자들과 정보를 나누고 고민을 함께 풀어가요.",
     "pushTitle": "푸시 알림",

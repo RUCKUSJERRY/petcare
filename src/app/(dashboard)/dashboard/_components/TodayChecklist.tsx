@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { todayKST } from '@/lib/utils'
-import { logDailyRecord } from '@/lib/careActions'
+import { logDailyRecord, logManualWalk } from '@/lib/careActions'
 import { computeTodayCare, type TodayCareCheckItem } from '@/lib/todayCare'
 
 /**
@@ -27,6 +27,9 @@ export function TodayChecklist() {
   const { data: pets } = useMyPets()
   const pet = pets?.find(p => p.id === selectedPetId) ?? null
   const [busy, setBusy] = useState<string | null>(null)
+  // 산책 타일은 즉시 기록 대신 '지금 시작(GPS)' vs '산책했어요(기록만)' 선택 시트를 연다 —
+  // 다른 타일처럼 눌렀는데 실수로 GPS 추적 화면으로 튕겨 들어가던 문제를 없앤다.
+  const [walkSheet, setWalkSheet] = useState(false)
 
   // QuickLogBar 와 동일한 키·조회 형태를 공유한다 — 같은 키에 서로 다른 select 를 쓰면
   // 먼저 마운트된 쪽의 데이터 형태가 캐시를 차지해 반대쪽이 깨진다. 형태를 맞춰,
@@ -82,6 +85,20 @@ export function TodayChecklist() {
     if (!error) invalidate()
   }
 
+  // '산책했어요' — GPS 없이 오늘 산책을 수동 기록하고 체크를 채운다.
+  const markWalked = async () => {
+    if (busy) return
+    setBusy('walk')
+    const { error } = await logManualWalk(supabase, selectedPetId)
+    setBusy(null)
+    setWalkSheet(false)
+    if (!error) {
+      qc.invalidateQueries({ queryKey: ['today-walk', selectedPetId] })
+      qc.invalidateQueries({ queryKey: ['weekly-report', selectedPetId] })
+      qc.invalidateQueries({ queryKey: ['walk-stats', selectedPetId] })
+    }
+  }
+
   return (
     <div className="card space-y-3">
       <div className="flex items-center justify-between">
@@ -112,12 +129,19 @@ export function TodayChecklist() {
           const cls = `flex flex-col items-center rounded-xl border py-2.5 transition-colors ${
             item.done ? 'bg-primary-50 border-primary-200' : 'bg-white border-gray-200 hover:border-primary-300'
           }`
-          // 산책 미완료 → 산책 시작 화면으로. 그 외 기록 항목 미완료 → 원탭 기록.
+          // 산책 미완료 → 선택 시트(지금 시작 GPS / 산책했어요 기록만). 그 외 미완료 → 원탭 기록.
           if (item.key === 'walk' && !item.done) {
             return (
-              <Link key={item.key} href="/walks/track?autostart=1" className={cls} aria-label={t('addAria', { label: item.label })}>
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setWalkSheet(true)}
+                disabled={busy === 'walk'}
+                aria-label={t('addAria', { label: item.label })}
+                className={`${cls} disabled:opacity-100`}
+              >
                 {label}
-              </Link>
+              </button>
             )
           }
           return (
@@ -134,6 +158,48 @@ export function TodayChecklist() {
           )
         })}
       </div>
+
+      {/* 산책 선택 시트 — 지금 GPS 시작 / 이미 산책했으면 기록만 */}
+      {walkSheet && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40"
+          onClick={() => setWalkSheet(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('walkSheetTitle')}
+            className="bg-white w-full max-w-lg rounded-t-2xl p-4 pb-6 space-y-3 shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mx-auto w-10 h-1 rounded-full bg-gray-200" />
+            <p className="font-bold text-gray-900">{t('walkSheetTitle')}</p>
+            <Link
+              href="/walks/track?autostart=1"
+              onClick={() => setWalkSheet(false)}
+              className="flex items-center gap-3 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 hover:bg-primary-100 transition-colors"
+            >
+              <span className="text-2xl shrink-0" aria-hidden>🦮</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-primary-700">{t('walkSheetStart')}</div>
+                <div className="text-xs text-primary-600/80">{t('walkSheetStartHint')}</div>
+              </div>
+            </Link>
+            <button
+              type="button"
+              onClick={markWalked}
+              disabled={busy === 'walk'}
+              className="w-full flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              <span className="text-2xl shrink-0" aria-hidden>✅</span>
+              <div className="flex-1 min-w-0 text-left">
+                <div className="text-sm font-bold text-gray-900">{t('walkSheetDone')}</div>
+                <div className="text-xs text-gray-400">{t('walkSheetDoneHint')}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

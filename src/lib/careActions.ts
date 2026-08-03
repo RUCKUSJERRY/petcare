@@ -41,6 +41,31 @@ export async function completeCareToday(
 }
 
 /**
+ * '산책했어요' 수동 기록 — GPS 추적 없이 오늘 산책을 한 건 남긴다.
+ * '오늘의 돌봄 체크'에서 (이미 산책을 마친 뒤) 체크만 하고 싶을 때 쓴다. 거리·시간은 미측정이라
+ * 0 으로 두고 비공개로 저장한다(거리 통계 왜곡 없음, 공개 피드에 노출되지 않음). walks 테이블에
+ * 남으므로 '오늘 산책 여부'·주간 산책 횟수 판정과 일관된다.
+ */
+export async function logManualWalk(
+  supabase: SupabaseClient,
+  petId: string,
+): Promise<{ error: string | null }> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'not_authenticated' }
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('walks').insert({
+    user_id: user.id,
+    pet_id: petId,
+    started_at: now,
+    ended_at: now,
+    duration_s: 0,
+    distance_m: 0,
+    is_public: false,
+  })
+  return { error: error ? error.message : null }
+}
+
+/**
  * 원탭 생활기록(밥·물·배변·투약 등)을 "지금 시각"으로 한 건 추가한다.
  * QuickLogBar 와 오늘의 돌봄 체크가 공유하는 단일 입력 경로(중복 방지).
  * @returns id(성공 시 생성된 기록 id) · at(기록 시각 Date) · error(실패 메시지)

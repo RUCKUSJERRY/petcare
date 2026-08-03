@@ -7,7 +7,9 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
+import { HomeGreeting } from './_components/HomeGreeting'
 import { TodayChecklist } from './_components/TodayChecklist'
+import { LifeStageHealthCard } from './_components/LifeStageHealthCard'
 import { DailyTipCard } from './_components/DailyTipCard'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
@@ -21,17 +23,21 @@ export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
   const t = await getTranslations('dashboard')
   const tCommon = await getTranslations('common')
-  await supabase.auth.getUser()
 
   const todayStr = todayKST()
   const soon = addDays(todayStr, 30)
 
-  // 반려동물 목록과 최근 커뮤니티 글은 서로 독립적이라 병렬로 조회한다.
+  // 반려동물 목록·최근 커뮤니티 글·보호자 프로필은 서로 독립적이라 병렬로 조회한다.
   // (멤버십 기반 RLS가 "내가 구성원인 반려동물"만 반환 — 공동 관리 아이 포함)
-  const [petsRes, recentPostsRes] = await Promise.all([
+  // getUser 는 세션 갱신도 겸하므로 여기서 한 번만 호출해 재사용한다.
+  const { data: { user } } = await supabase.auth.getUser()
+  const [petsRes, recentPostsRes, profileRes] = await Promise.all([
     supabase.from('pets').select('*, breed:breeds(*)').order('created_at'),
     supabase.from('post_list').select('*').order('created_at', { ascending: false }).limit(3),
+    // 홈 인사말에 쓸 보호자 이름 (없으면 이름 없는 인사로 폴백)
+    user ? supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null }),
   ])
+  const ownerName = (profileRes.data as { display_name?: string } | null)?.display_name ?? null
   const pets = petsRes.data
   // 조회 실패(RLS/네트워크)로 data 가 null 이면, 아이가 있는 사용자에게도 '첫 아이 등록'
   // 온보딩이 떠 버린다 — 성공(빈 배열)과 실패(null+error)를 구분해 에러 상태를 전달한다.
@@ -129,6 +135,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
+      {/* 개인화 인사말 — 시간대 + 보호자 이름으로 매일 따뜻하게 맞이(재방문 습관 강화) */}
+      <HomeGreeting name={ownerName} />
+
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} streakByPet={streakByPet} loadError={petsLoadError} />
 
@@ -140,6 +149,10 @@ export default async function DashboardPage() {
       {/* 이번 주 리포트 — 최근 7일 활동 요약 + 성장 레벨. 재방문·체류·게임화(리텐션) 유도.
           선택된 아이 기준으로 클라이언트에서 조회(활동/누적이 0이면 스스로 숨김). */}
       {pets && pets.length > 0 && <WeeklyReportCard />}
+
+      {/* 오늘의 건강 포인트 — 선택한 아이의 종·생애단계 건강 체크리스트에서 하루 한 항목.
+          기존 큐레이션 정보를 홈으로 끌어올려 발견성을 높이고(정보 고도화), /health 로 연결. */}
+      {pets && pets.length > 0 && <LifeStageHealthCard />}
 
       {/* 오늘의 케어 팁 — 매일 바뀌는 짧은 관리 팁으로 재방문·체류 유도 (아이 등록 후 노출) */}
       {pets && pets.length > 0 && (
