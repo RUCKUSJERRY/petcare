@@ -159,6 +159,15 @@ export function TodayChecklist() {
         })}
       </div>
 
+      {/* 오늘 돌봄 전부 완료 시 축하 반응 — 하루 습관 루프를 '목표 달성'의 정서적 보상으로 닫아
+          매일 완료하고 싶게 만든다(캐릭터 반응과 톤을 맞춤). */}
+      {status.allDone && (
+        <div className="flex items-center gap-2 rounded-xl bg-primary-50 border border-primary-200 px-3 py-2">
+          <span aria-hidden className="text-lg leading-none shrink-0">🥰</span>
+          <p className="text-xs font-semibold text-primary-700 leading-snug">{t('celebrate')}</p>
+        </div>
+      )}
+
       {/* 산책 선택 시트 — 지금 GPS 시작 / 이미 산책했으면 기록만 */}
       {walkSheet && (
         <div

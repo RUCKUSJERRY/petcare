@@ -36,9 +36,14 @@ export function NotificationBell() {
   const { data: unread = 0 } = useQuery({
     queryKey: ['notifications-unread'],
     queryFn: async () => {
+      // recipient_id 를 명시해 '내 안읽음'만 센다 — markAllRead 와 동일하게 RLS 만 믿지 않고
+      // (정책 회귀 시 남의 알림까지 배지에 잡히는 사고 방지) 코드에서도 본인 것만 집계함을 보장한다.
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return 0
       const { count } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
         .eq('read', false)
       return count ?? 0
     },
@@ -48,9 +53,13 @@ export function NotificationBell() {
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
+      // 드롭다운 목록도 recipient_id 로 내 알림만 조회(위와 동일한 방어적 필터).
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
       const { data } = await supabase
         .from('notification_list')
         .select('*')
+        .eq('recipient_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50)
       return (data ?? []) as NotificationItem[]

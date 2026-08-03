@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, togetherMilestone, daysUntil, todayKST } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
@@ -13,7 +14,8 @@ import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntr
 import { PetAvatar } from '@/components/ui/PetAvatar'
 import { AchievementShareButton } from '@/components/ui/AchievementShareButton'
 import { pickShareableAchievement } from '@/lib/achievement'
-import { petMood } from '@/lib/petMood'
+import { petMood, petSpeech } from '@/lib/petMood'
+import { computeTodayCare } from '@/lib/todayCare'
 import type { CareAlert, Pet } from '@/types'
 
 /**
@@ -33,10 +35,41 @@ export function SelectedPetSummary({
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
   const qc = useQueryClient()
+  const supabase = createClient()
   const [detailId, setDetailId] = useState<string | null>(null)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 홈 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
   // (QuickRecordFab 과 동일 패턴 — 앱 전반의 기록 진입을 일관되게)
   const [modal, setModal] = useState<null | 'weight' | 'manual' | 'scan'>(null)
+
+  // 오늘 돌봄 완료 정도 — 아바타 기분·말풍선에 '지금 이 순간'의 신호를 더하기 위해 조회한다.
+  // TodayChecklist·QuickLogBar 와 동일한 캐시 키·조회 형태를 공유해, 한쪽에서 원탭 기록하면
+  // 이 요약 카드의 표정·대사도 즉시 함께 갱신된다(추가 네트워크 없이 캐시 공유).
+  const { data: todayLogs = [] } = useQuery({
+    queryKey: ['today-log', selectedPetId],
+    enabled: !!selectedPetId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('records')
+        .select('id, category, event_at')
+        .eq('pet_id', selectedPetId!)
+        .eq('event_on', todayKST())
+        .order('event_at', { ascending: false })
+      return (data ?? []) as { id: string; category: string; event_at: string | null }[]
+    },
+  })
+  const { data: walkedToday = false } = useQuery({
+    queryKey: ['today-walk', selectedPetId],
+    enabled: !!selectedPetId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('walks')
+        .select('id', { count: 'exact', head: true })
+        .eq('pet_id', selectedPetId!)
+        .gte('started_at', `${todayKST()}T00:00:00+09:00`)
+      return (count ?? 0) > 0
+    },
+  })
+
   if (!selectedPetId) return null
 
   const pet = pets.find(p => p.id === selectedPetId)
@@ -60,8 +93,12 @@ export function SelectedPetSummary({
   const milestone = togetherMilestone(together)
   // 생활기록 연속일 — 2일 이상일 때만 🔥 배지로 강조(1일은 동기부여 약함). 매일 기록 습관을 유도.
   const streak = streakByPet[pet.id] ?? 0
-  // 연속일에 따른 아이 '기분' — 아바타에 작은 반응(이모지+테두리)으로 정서적 재방문 계기를 준다.
-  const mood = petMood(streak)
+  // 오늘 핵심 돌봄(밥·물·배변·산책) 완료 정도 — 방금 챙긴 노력이 표정·대사에 즉시 반영되도록.
+  const todayCare = computeTodayCare(todayLogs.map(r => r.category), walkedToday)
+  // 연속일 + 오늘 완료도에 따른 아이 '기분' — 아바타 표정·테두리로 정서적 재방문 계기를 준다.
+  const mood = petMood(streak, todayCare.doneCount, todayCare.total)
+  // 아이가 말을 거는 한 줄 말풍선 — 오늘 돌봄·연속 상태에 맞춰 바뀐다(캐릭터 상호작용).
+  const speech = petSpeech(streak, todayCare.doneCount, todayCare.total)
   // 지금 자랑할 만한 성취(이정표 당일·연속 3일+)가 있으면 이미지 카드로 공유할 수 있게 한다.
   const shareable = pickShareableAchievement({ streak, milestone })
   const nextVacc = vaccAlerts
@@ -138,6 +175,13 @@ export function SelectedPetSummary({
         >
           {t('detail')}
         </Link>
+      </div>
+
+      {/* 캐릭터 말풍선 — 아이가 말을 거는 한 줄. 오늘 돌봄·연속 상태에 따라 대사가 바뀌어
+          숫자·뱃지 위주 신호를 정서적 상호작용으로 확장한다(참여·재방문 유도). */}
+      <div className="mt-3 flex items-start gap-2 bg-white/15 rounded-xl px-3 py-2">
+        <span aria-hidden className="text-base leading-none shrink-0">{mood.emoji}</span>
+        <p className="text-[13px] leading-snug text-white/95">{speech}</p>
       </div>
 
       {/* 다음 건강 일정 알림 — 누르면 일정 화면(해당 날짜)으로 진입 */}

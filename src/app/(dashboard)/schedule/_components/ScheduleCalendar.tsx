@@ -67,14 +67,16 @@ export function ScheduleCalendar({
   // 일정 데이터(next_due_on·event_on)가 모두 KST 달력 기준이므로 '오늘'도 KST로 맞춘다.
   // (기기 로컬 날짜로 계산하면 해외/오설정 기기에서 '오늘' 하이라이트·지남(빨강) 표시가 하루 어긋난다.)
   const todayYMD = todayKST()
+  // 월 그리드·연/월 피커의 기준 '오늘'도 KST로 맞춘다 — 기기 로컬 날짜(new Date())로 초기화하면
+  // 해외/오설정 기기에서 '이번 달'과 아래 셀의 '오늘' 하이라이트(KST 기준)가 하루 어긋난다.
   const [cursor, setCursor] = useState(() => {
-    const n = new Date()
-    return new Date(n.getFullYear(), n.getMonth(), 1)
+    const [y, m] = todayYMD.split('-').map(Number)
+    return new Date(y, m - 1, 1)
   })
   const [selected, setSelected] = useState<string | null>(todayYMD)
   const [pickerOpen, setPickerOpen] = useState(false)
-  // 연/월 선택 패널에서 현재 보고 있는 연도(월 선택 전 단계)
-  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
+  // 연/월 선택 패널에서 현재 보고 있는 연도(월 선택 전 단계) — KST 기준
+  const [pickerYear, setPickerYear] = useState(() => Number(todayYMD.slice(0, 4)))
 
   // focusDate(딥링크/검색 결과)로 진입하면 해당 월·날짜로 이동
   useEffect(() => {
@@ -166,8 +168,9 @@ export function ScheduleCalendar({
     setPickerOpen(false)
   }
   const goToday = () => {
-    const n = new Date()
-    setCursor(new Date(n.getFullYear(), n.getMonth(), 1))
+    // '오늘' 버튼도 KST 기준 달로 이동해 하이라이트되는 오늘 셀과 같은 달을 연다.
+    const [y, m] = todayYMD.split('-').map(Number)
+    setCursor(new Date(y, m - 1, 1))
     setSelected(todayYMD)
     setPickerOpen(false)
   }
