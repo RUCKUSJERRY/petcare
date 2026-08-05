@@ -8,6 +8,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
+import { useMyPets } from '@/hooks/useMyPets'
+import { PetScopeToggle } from '@/components/ui/PetScopeToggle'
 import { cn, careCategoryIcon, daysUntil, elapsedBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { RecordForm } from '../pets/_components/RecordForm'
@@ -55,7 +57,15 @@ export default function SchedulePage() {
   const tc = useTranslations('common')
   const tq = useTranslations('quickLog')
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
+  const { data: myPets } = useMyPets()
   const { isPremium } = usePlan()
+  // 보기 범위: 기본은 헤더에서 고른 아이. 여러 아이를 키우면 '전체'로 전환해 모든 아이의 일정을
+  // 합쳐 본다(캘린더·목록·이력·내보내기에 반영). 스캔·오늘 기록 같은 '한 아이 대상' 액션은
+  // 그대로 선택된 아이(selectedPetId)를 따른다.
+  const [showAll, setShowAll] = useState(false)
+  const multiPet = (myPets?.length ?? 0) >= 2
+  const scopePetId = showAll ? null : selectedPetId
+  const activePet = selectedPetId ? (myPets ?? []).find(p => p.id === selectedPetId) : null
   // 기본 뷰는 '캘린더' — 앱을 열면 이번 달 일정 전반을 한눈에 본다.
   // (지난/임박 정리는 '목록' 탭, 지난 일정이 있으면 상단 경보 배너로도 유도한다.)
   // 'today' 는 탭에서는 뺐지만(빠른기록 FAB·홈 요약카드가 대체) ?view=today 딥링크로는 유지한다.
@@ -153,10 +163,10 @@ export default function SchedulePage() {
   const items = data?.upcoming ?? []
   const history = data?.history ?? []
 
-  const visible = selectedPetId ? items.filter(i => i.pet_id === selectedPetId) : items
-  const visibleHistory = selectedPetId ? history.filter(i => i.pet_id === selectedPetId) : history
-  const selectedName = selectedPetId
-    ? (items.find(i => i.pet_id === selectedPetId)?.pet_name ?? history.find(i => i.pet_id === selectedPetId)?.pet_name)
+  const visible = scopePetId ? items.filter(i => i.pet_id === scopePetId) : items
+  const visibleHistory = scopePetId ? history.filter(i => i.pet_id === scopePetId) : history
+  const selectedName = scopePetId
+    ? (items.find(i => i.pet_id === scopePetId)?.pet_name ?? history.find(i => i.pet_id === scopePetId)?.pet_name)
     : null
 
   const q = search.trim().toLowerCase()
@@ -188,7 +198,7 @@ export default function SchedulePage() {
     setExporting(true)
     setExportBlocked(false)
     try {
-      const petIds = selectedPetId ? [selectedPetId] : Array.from(new Set(history.map(h => h.pet_id)))
+      const petIds = scopePetId ? [scopePetId] : Array.from(new Set(history.map(h => h.pet_id)))
       let rows: ExportRecord[] = []
       if (petIds.length > 0) {
         const { data } = await supabase
@@ -268,9 +278,17 @@ export default function SchedulePage() {
     <div className="px-4 py-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <PageHeader title={t('title')} fallbackHref="/dashboard" />
-        {selectedName && (
+        {multiPet && activePet ? (
+          <PetScopeToggle
+            showAll={showAll}
+            onChange={setShowAll}
+            petName={activePet.name}
+            petSpecies={activePet.species}
+            petPhotoUrl={activePet.photo_url}
+          />
+        ) : selectedName ? (
           <span className="text-sm text-primary-600 font-medium shrink-0">{t('petBasis', { name: selectedName })}</span>
-        )}
+        ) : null}
       </div>
 
       {/* 기록 검색 (과거 이력 포함) */}

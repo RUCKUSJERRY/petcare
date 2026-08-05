@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PetScopeToggle } from '@/components/ui/PetScopeToggle'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { cn, formatWon, careCategoryIcon, todayKST } from '@/lib/utils'
@@ -33,10 +34,12 @@ export default function CostsPage() {
   const [addMode, setAddMode] = useState<null | 'quick' | 'detail'>(null)
   // 빠른입력에서 '자세히 입력'으로 넘어올 때 이미 고른 금액·항목·날짜를 이어받아 전체 폼에 프리필한다.
   const [detailDraft, setDetailDraft] = useState<{ amount: string; category: RecordCategory; date: string } | null>(null)
-  // 아이 범위(전체/특정)는 상단 헤더의 아이 칩 하나로 통일한다. 화면마다 중복 선택 UI를 두지
-  // 않고 헤더 선택을 그대로 따른다(선택 없음=전체). 여기선 '현재 기준'만 라벨로 표기한다.
-  const effectivePetId = selectedPetId
+  // 보기 범위: 기본은 헤더에서 고른 아이(selectedPetId). 여러 아이를 키우면 '전체'로 전환해
+  // 모든 아이 합산을 볼 수 있다(헤더 선택은 건드리지 않고 이 화면 안에서만 범위를 바꾼다).
+  const [showAll, setShowAll] = useState(false)
   const activePet = selectedPetId ? (myPets ?? []).find(p => p.id === selectedPetId) : null
+  const multiPet = (myPets?.length ?? 0) >= 2
+  const effectivePetId = showAll ? null : selectedPetId
   // 월/항목 막대를 누르면 해당 내역을 아래에 펼친다 (탭하면 상세/수정 모달)
   const [drill, setDrill] = useState<Drill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -100,11 +103,19 @@ export default function CostsPage() {
       <div className="flex items-center justify-between gap-2">
         <PageHeader title={t('title')} fallbackHref="/dashboard" />
         <div className="flex items-center gap-2 shrink-0 min-w-0">
-          {activePet && (
+          {multiPet && activePet ? (
+            <PetScopeToggle
+              showAll={showAll}
+              onChange={setShowAll}
+              petName={activePet.name}
+              petSpecies={activePet.species}
+              petPhotoUrl={activePet.photo_url}
+            />
+          ) : activePet ? (
             <span className="text-sm text-primary-600 font-medium truncate">
               {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
             </span>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={() => setAddMode('quick')}

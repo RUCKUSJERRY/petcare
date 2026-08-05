@@ -89,7 +89,10 @@
     "leaveConfirm": "나가기",
     "keepEditing": "계속 작성",
     "retry": "다시 시도",
-    "loginRequired": "세션이 만료됐어요. 다시 로그인해 주세요."
+    "loginRequired": "세션이 만료됐어요. 다시 로그인해 주세요.",
+    "scopeAll": "전체",
+    "scopeAllAria": "모든 아이 함께 보기",
+    "scopeThisAria": "{name}만 보기"
   },
   "quickRecord": {
     "open": "기록하기",
