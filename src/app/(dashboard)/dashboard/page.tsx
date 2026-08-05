@@ -12,6 +12,7 @@ import { TodayChecklist } from './_components/TodayChecklist'
 import { TodayInfoCard } from './_components/TodayInfoCard'
 import { FoodSafetySearch } from './_components/FoodSafetySearch'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
+import { MonthlyRecapCard } from './_components/MonthlyRecapCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 import { PushNudge } from '@/components/ui/PushNudge'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
@@ -151,6 +152,10 @@ export default async function DashboardPage() {
           하루 습관 루프를 '목표 달성'으로 만들어 재방문·기록 지속(리텐션)을 유도한다.
           선택된 아이가 있을 때만 스스로 노출된다(클라이언트). */}
       {pets && pets.length > 0 && <TodayChecklist />}
+
+      {/* 지난달 회고 — 새 달 초반(1~7일)에만 지난 한 달을 돌아보게 하는 카드(월초 재방문 계기 +
+          브랜드 이미지 공유로 자연 유입). 노출 창이 아니거나 활동이 없으면 스스로 숨김. */}
+      {pets && pets.length > 0 && <MonthlyRecapCard />}
 
       {/* 이번 주 리포트 — 최근 7일 활동 요약 + 성장 레벨. 재방문·체류·게임화(리텐션) 유도.
           선택된 아이 기준으로 클라이언트에서 조회(활동/누적이 0이면 스스로 숨김). */}

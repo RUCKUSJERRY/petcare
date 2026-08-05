@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { achievementCaption } from '@/lib/achievement'
+import { shareOrDownloadImage } from '@/lib/shareImage'
 
 /**
  * 성취(연속 기록·이정표)를 브랜드 이미지 카드로 만들어 공유하는 버튼.
@@ -68,25 +69,7 @@ export function AchievementShareButton({
       const blob: Blob | null = await new Promise(r => canvas.toBlob(r, 'image/png'))
       if (!blob) throw new Error('blob fail')
 
-      const file = new File([blob], 'petcare-achievement.png', { type: 'image/png' })
-      const caption = achievementCaption(petName, headline)
-
-      // 파일 공유 지원 시 네이티브 공유 시트, 아니면 다운로드 폴백
-      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean }
-      if (nav.canShare?.({ files: [file] }) && typeof nav.share === 'function') {
-        try {
-          await nav.share({ files: [file], text: caption })
-        } catch {
-          // 사용자가 공유 시트를 닫음(AbortError) — 조용히 무시
-        }
-      } else {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'petcare-achievement.png'
-        a.click()
-        URL.revokeObjectURL(url)
-      }
+      await shareOrDownloadImage(blob, 'petcare-achievement.png', achievementCaption(petName, headline))
     } catch {
       // 캔버스/공유 실패 — 조용히 무시(비핵심 기능)
     } finally {
