@@ -8,9 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { usePlan } from '@/hooks/usePlan'
 import { useAppSettings } from '@/hooks/useAppSettings'
 import { formatKRW } from '@/lib/pricing'
-
-/** 토스 customerKey (서버 lib/toss.customerKeyForUser 와 동일 규칙). 서버 전용 모듈을 클라에 끌어오지 않도록 인라인. */
-const customerKeyForUser = (userId: string) => 'cus_' + userId.replace(/-/g, '')
+// 서버 헬퍼(lib/toss)와 동일 규칙을 공유 순수 모듈에서 가져온다(규칙 드리프트 방지).
+import { customerKeyForUser } from '@/lib/tossCustomerKey'
 
 interface SubSummary {
   status: 'active' | 'canceled' | 'past_due'

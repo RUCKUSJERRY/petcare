@@ -21,8 +21,9 @@ export function QuickCostModal({
   petId: string | null
   onClose: () => void
   onDone: () => void
-  /** 장소·메모·사진 등 상세가 필요할 때 전체 기록 폼으로 전환 */
-  onDetail: () => void
+  /** 장소·메모·사진 등 상세가 필요할 때 전체 기록 폼으로 전환. 이미 입력한 금액·항목·날짜를 넘겨
+   *  전체 폼에서 다시 입력하지 않게 한다. */
+  onDetail: (draft: { amount: string; category: RecordCategory; date: string }) => void
 }) {
   const t = useTranslations('costs')
   const tc = useTranslations('common')
@@ -158,7 +159,7 @@ export function QuickCostModal({
           {saving ? tc('saving') : tc('save')}
         </button>
 
-        <button onClick={onDetail} className="w-full text-center text-xs text-gray-500 hover:text-primary-600">
+        <button onClick={() => onDetail({ amount, category, date })} className="w-full text-center text-xs text-gray-500 hover:text-primary-600">
           {t('quickCostDetail')}
         </button>
       </div>

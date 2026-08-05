@@ -3,16 +3,19 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Pet, PostCategory, Post } from '@/types'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const t = useTranslations('community')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,6 +27,8 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     content: '',
     breed_id: '',
   })
+  // 불러온 원본 스냅샷 — 편집 중 실제로 바뀐 게 있을 때만 이탈 가드를 띄우기 위해 비교 기준으로 쓴다.
+  const initialRef = useRef<{ category: string; title: string; content: string; breed_id: string; images: string } | null>(null)
 
   // 기존 게시글 불러오기
   const { data: post } = useQuery({
@@ -46,16 +51,30 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (post && !loaded) {
+      const images = post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : [])
       setForm({
         category: post.category,
         title: post.title,
         content: post.content,
         breed_id: post.breed_id ?? '',
       })
-      setImageUrls(post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : []))
+      setImageUrls(images)
+      initialRef.current = {
+        category: post.category, title: post.title, content: post.content,
+        breed_id: post.breed_id ?? '', images: images.join(','),
+      }
       setLoaded(true)
     }
   }, [post, loaded])
+
+  // 편집 중 뒤로가기/새로고침 시 수정분 유실 방지 — 원본과 달라진 게 있을 때만 확인을 띄운다.
+  const init = initialRef.current
+  const dirty = !saving && loaded && init != null && (
+    form.category !== init.category || form.title !== init.title ||
+    form.content !== init.content || form.breed_id !== init.breed_id ||
+    imageUrls.join(',') !== init.images
+  )
+  const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
 
   const { data: pets } = useQuery({
     queryKey: ['my-pets'],
@@ -215,6 +234,18 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
           {saving ? t('updating') : t('updateSubmit')}
         </button>
       </form>
+
+      {promptLeave && (
+        <ConfirmModal
+          title={tc('leaveTitle')}
+          description={tc('leaveDesc')}
+          confirmLabel={tc('leaveConfirm')}
+          cancelLabel={tc('keepEditing')}
+          destructive
+          onConfirm={confirmLeave}
+          onCancel={cancelLeave}
+        />
+      )}
     </div>
   )
 }

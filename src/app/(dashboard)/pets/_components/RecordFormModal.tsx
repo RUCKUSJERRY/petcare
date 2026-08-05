@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { RecordForm, type RecordFormHandle } from './RecordForm'
+import type { RecordCategory } from '@/types'
 
 /**
  * 직접 기록 입력 모달 — 임베드 폼(embedded)을 헤더의 저장 버튼이 구동한다.
@@ -12,6 +13,7 @@ import { RecordForm, type RecordFormHandle } from './RecordForm'
  */
 export function RecordFormModal({
   petId, title, onClose, onDone, allowPetSelect = false,
+  defaultCategory, defaultDate, defaultCost,
 }: {
   petId: string | null
   title: string
@@ -19,6 +21,10 @@ export function RecordFormModal({
   onDone: () => void
   /** 대상 아이가 고정되지 않은 화면(예: 비용 '전체 보기')에서 폼 안에서 아이를 고르게 한다 */
   allowPetSelect?: boolean
+  /** 신규 기록 프리필 — 비용 빠른입력에서 '자세히 입력'으로 넘어올 때 이미 고른 값을 이어받는다 */
+  defaultCategory?: RecordCategory
+  defaultDate?: string
+  defaultCost?: string
 }) {
   const tc = useTranslations('common')
   const formRef = useRef<RecordFormHandle>(null)
@@ -51,6 +57,9 @@ export function RecordFormModal({
             ref={formRef}
             petId={petId}
             allowPetSelect={allowPetSelect}
+            defaultCategory={defaultCategory}
+            defaultDate={defaultDate}
+            defaultCost={defaultCost}
             embedded
             onSavingChange={setSaving}
             onDone={onDone}

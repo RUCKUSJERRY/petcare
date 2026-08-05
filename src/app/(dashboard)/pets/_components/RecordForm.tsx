@@ -37,6 +37,8 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   defaultCategory?: RecordCategory
   /** 신규 기록의 기본 날짜(YYYY-MM-DD). 캘린더에서 특정 날짜를 눌러 추가할 때 사용 */
   defaultDate?: string
+  /** 신규 기록의 기본 금액(원, 문자열). 비용 빠른입력에서 '자세히 입력'으로 넘어올 때 이어받는다 */
+  defaultCost?: string
   /** 신규 기록 프리필(반복 케어의 다음 회차를 '완료로 기록'할 때 라인 정보를 미리 채운다) */
   template?: { category?: RecordCategory; title?: string; recur_rule?: string | null }
   /** 모달 등 외부 헤더가 따로 있을 때: 내부 헤더·카드 틀·하단 저장버튼을 숨긴다 */
@@ -53,6 +55,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   record,
   defaultCategory = '진료',
   defaultDate,
+  defaultCost,
   template,
   embedded = false,
   onSavingChange,
@@ -76,7 +79,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const [place, setPlace] = useState<PlaceValue>({
     name: record?.place_name || '', lat: record?.place_lat ?? null, lng: record?.place_lng ?? null,
   })
-  const [cost, setCost] = useState(record?.cost != null ? String(record.cost) : '')
+  const [cost, setCost] = useState(record?.cost != null ? String(record.cost) : (defaultCost ?? ''))
   const [memo, setMemo] = useState(record?.memo || '')
   const initialPhotos = record?.photo_urls?.length ? record.photo_urls : (record?.photo_url ? [record.photo_url] : [])
   const [photoUrls, setPhotoUrls] = useState<string[]>(initialPhotos)

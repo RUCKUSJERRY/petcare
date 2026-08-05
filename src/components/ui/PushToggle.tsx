@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { VAPID_PUBLIC_KEY, isPushSupported, getPushEnabled, subscribeToPush } from '@/lib/pushClient'
+import { Switch } from './Switch'
 
 export function PushToggle() {
   const t = useTranslations('ui')
@@ -82,15 +83,12 @@ export function PushToggle() {
           <p className="text-xs text-gray-400">{t('pushDesc')}</p>
         </div>
         {supported ? (
-          <button
-            onClick={enabled ? disable : enable}
+          <Switch
+            enabled={enabled}
+            onToggle={enabled ? disable : enable}
             disabled={busy}
-            className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${enabled ? 'bg-primary-500' : 'bg-gray-300'} disabled:opacity-60`}
-            aria-pressed={enabled}
-            aria-label={t('pushToggleLabel')}
-          >
-            <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${enabled ? 'left-6' : 'left-1'}`} />
-          </button>
+            ariaLabel={t('pushToggleLabel')}
+          />
         ) : (
           <span className="text-xs text-gray-400 shrink-0">{t('pushUnsupported')}</span>
         )}

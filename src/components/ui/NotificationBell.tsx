@@ -107,7 +107,9 @@ export function NotificationBell() {
     if (!n.read) {
       qc.setQueryData<NotificationItem[]>(['notifications'], prev =>
         prev?.map(it => (it.id === n.id ? { ...it, read: true } : it)))
-      qc.setQueryData<number>(['notifications-unread'], c => Math.max(0, (c ?? 1) - 1))
+      // 배지 카운트가 아직 로드되지 않았으면(undefined) 임의로 0으로 만들지 않는다 —
+      // 로드 전 '1→0' 가정은 실제 미읽음 수와 무관하게 배지를 꺼버린다. 값이 있을 때만 1 줄인다.
+      qc.setQueryData<number>(['notifications-unread'], c => (c == null ? c : Math.max(0, c - 1)))
       supabase.from('notifications').update({ read: true }).eq('id', n.id)
         .then(() => qc.invalidateQueries({ queryKey: ['notifications-unread'] }))
     }

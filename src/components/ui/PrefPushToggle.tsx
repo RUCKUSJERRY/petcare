@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
-
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+import { VAPID_PUBLIC_KEY } from '@/lib/pushClient'
+import { Switch } from './Switch'
 
 /**
  * 옵트인(기본 off) 푸시 채널 토글 (팁·연속기록·주간리포트·기념일 등 공통).
@@ -69,15 +69,7 @@ export function PrefPushToggle({
         <p className="text-sm font-medium text-gray-700">{t(titleKey)}</p>
         <p className="text-xs text-gray-400">{t(descKey)}</p>
       </div>
-      <button
-        onClick={toggle}
-        disabled={busy || !loaded}
-        className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${enabled ? 'bg-primary-500' : 'bg-gray-300'} disabled:opacity-60`}
-        aria-pressed={enabled}
-        aria-label={t(titleKey)}
-      >
-        <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${enabled ? 'left-6' : 'left-1'}`} />
-      </button>
+      <Switch enabled={enabled} onToggle={toggle} disabled={busy || !loaded} ariaLabel={t(titleKey)} />
     </div>
   )
 }

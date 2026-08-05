@@ -8,12 +8,15 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 import { useKakaoMap, kakaoNotice } from '@/hooks/useKakaoMap'
 import { todayKST } from '@/lib/utils'
 import type { Species } from '@/types'
 
 export default function NewLostPage() {
   const t = useTranslations('lostNew')
+  const tc = useTranslations('common')
   const supabase = createClient()
   const router = useRouter()
   const qc = useQueryClient()
@@ -34,6 +37,14 @@ export default function NewLostPage() {
     description: '', contact: '', contact_public: true,
   })
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }))
+
+  // 작성 중 뒤로가기/새로고침 시 입력 유실 방지 — 사진·설명·연락처는 다시 채우기 번거롭고
+  // 실종 신고는 급한 상황이라 특히 중요하다. (위치 핀은 현재위치로 자동 지정될 수 있어 dirty 판정에서 제외)
+  const dirty = !saving && (
+    photoUrls.length > 0 || !!form.name.trim() || !!form.description.trim() ||
+    !!form.contact.trim() || !!query.trim() || form.gender !== '' || form.species !== 'dog'
+  )
+  const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
 
   // 지도: 탭해서 위치 핀 지정 + 역지오코딩으로 지역명
   const { containerRef: mapRef, status: mapStatus } = useKakaoMap((maps, el) => {
@@ -217,6 +228,18 @@ export default function NewLostPage() {
           {saving ? t('submitting') : t('submit')}
         </button>
       </form>
+
+      {promptLeave && (
+        <ConfirmModal
+          title={tc('leaveTitle')}
+          description={tc('leaveDesc')}
+          confirmLabel={tc('leaveConfirm')}
+          cancelLabel={tc('keepEditing')}
+          destructive
+          onConfirm={confirmLeave}
+          onCancel={cancelLeave}
+        />
+      )}
     </div>
   )
 }

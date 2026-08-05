@@ -13,10 +13,8 @@ export function tossConfigured(): boolean {
   return !!process.env.TOSS_SECRET_KEY
 }
 
-/** 토스 customerKey (사용자별 고정·비공개 식별자). UUID 하이픈 제거해 규격에 맞춘다. */
-export function customerKeyForUser(userId: string): string {
-  return 'cus_' + userId.replace(/-/g, '')
-}
+// customerKey 생성 규칙은 클라이언트(premium 화면)와 공유하는 순수 모듈에 두어 드리프트를 막는다.
+export { customerKeyForUser } from './tossCustomerKey'
 
 function authHeader(): string {
   const sk = process.env.TOSS_SECRET_KEY || ''

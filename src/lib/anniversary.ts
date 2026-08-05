@@ -6,7 +6,7 @@ export type AnniversaryKind = 'birthday' | 'adoption'
 export interface AnniversaryEvent {
   kind: AnniversaryKind
   /**
-   * 생일: 알 수 있으면 만 나이(년), 모르면 null.
+   * 생일: 만 1살 이상이면 나이(년), 모르거나 태어난 해(0살)면 null.
    * 입양: 함께한 해(주년) — 1 이상. (오늘이 입양 당일인 '0주년'은 기념일로 보지 않는다.)
    */
   years: number | null
@@ -44,8 +44,10 @@ export function anniversariesToday(
   // 생일
   if (pet.birth_month && pet.birth_day && occursToday(pet.birth_month, pet.birth_day, todayStr)) {
     const years = pet.birth_year ? todayYear - pet.birth_year : null
-    // 태어난 해에 이미 등록된 미래연도 등 비정상값 방지 — 음수면 나이 미표기
-    events.push({ kind: 'birthday', years: years != null && years >= 0 ? years : null })
+    // 나이(년)는 만 1살 이상일 때만 표기한다. 태어난 해(0살)엔 "0번째 생일"이 되어 어색하고,
+    // 미래연도 등 비정상값(음수)도 있어, 1 미만이면 나이 없이 '생일 축하'로만 보낸다.
+    // (입양 기념일이 0주년을 아예 제외하는 것과 같은 취지 — 숫자 라벨은 1부터.)
+    events.push({ kind: 'birthday', years: years != null && years >= 1 ? years : null })
   }
 
   // 입양(가족이 된 날) 기념일 — YYYY-MM-DD 형식일 때만

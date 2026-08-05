@@ -11,6 +11,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { cn, formatWon, careCategoryIcon, todayKST } from '@/lib/utils'
 import { aggregateCostStats, costYears, type CostRecord } from '@/lib/costStats'
+import type { RecordCategory } from '@/types'
 import { RecordDetailModal } from '../pets/_components/RecordDetailModal'
 import { RecordFormModal } from '../pets/_components/RecordFormModal'
 import { QuickCostModal } from './_components/QuickCostModal'
@@ -30,6 +31,8 @@ export default function CostsPage() {
   // 비용 추가 — 기본은 '금액+항목+날짜'만의 빠른 입력(quick), 장소·메모·사진·반복이 필요하면
   // '자세히 입력'으로 전체 폼(detail)으로 전환한다. 예전엔 곧바로 전체 폼만 열려 마찰이 컸다.
   const [addMode, setAddMode] = useState<null | 'quick' | 'detail'>(null)
+  // 빠른입력에서 '자세히 입력'으로 넘어올 때 이미 고른 금액·항목·날짜를 이어받아 전체 폼에 프리필한다.
+  const [detailDraft, setDetailDraft] = useState<{ amount: string; category: RecordCategory; date: string } | null>(null)
   // 아이 범위(전체/특정)는 상단 헤더의 아이 칩 하나로 통일한다. 화면마다 중복 선택 UI를 두지
   // 않고 헤더 선택을 그대로 따른다(선택 없음=전체). 여기선 '현재 기준'만 라벨로 표기한다.
   const effectivePetId = selectedPetId
@@ -252,19 +255,23 @@ export default function CostsPage() {
           petId={effectivePetId}
           onClose={() => setAddMode(null)}
           onDone={() => { setAddMode(null); showSavedToast() }}
-          onDetail={() => setAddMode('detail')}
+          onDetail={(draft) => { setDetailDraft(draft); setAddMode('detail') }}
         />
       )}
 
       {/* 전체 기록 폼 — 아이를 안 고른 '전체 보기'에서는 폼 안에서 대상 아이를 고른다.
-          저장 후 비용 통계(cost-records)를 즉시 갱신하고 모달을 닫는다. */}
+          저장 후 비용 통계(cost-records)를 즉시 갱신하고 모달을 닫는다.
+          빠른입력에서 넘어온 경우 detailDraft(금액·항목·날짜)를 프리필해 재입력을 없앤다. */}
       {addMode === 'detail' && (
         <RecordFormModal
           petId={effectivePetId}
           allowPetSelect={!effectivePetId}
           title={t('addRecord')}
-          onClose={() => setAddMode(null)}
-          onDone={() => { setAddMode(null); qc.invalidateQueries({ queryKey: ['cost-records'] }); showSavedToast() }}
+          defaultCategory={detailDraft?.category}
+          defaultDate={detailDraft?.date}
+          defaultCost={detailDraft?.amount || undefined}
+          onClose={() => { setAddMode(null); setDetailDraft(null) }}
+          onDone={() => { setAddMode(null); setDetailDraft(null); qc.invalidateQueries({ queryKey: ['cost-records'] }); showSavedToast() }}
         />
       )}
 

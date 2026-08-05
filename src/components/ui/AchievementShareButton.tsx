@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { achievementCaption } from '@/lib/achievement'
 
 /**
@@ -20,6 +21,7 @@ export function AchievementShareButton({
   petName: string
   className?: string
 }) {
+  const t = useTranslations('ui')
   const [busy, setBusy] = useState(false)
 
   const share = async () => {
@@ -97,14 +99,14 @@ export function AchievementShareButton({
       type="button"
       onClick={share}
       disabled={busy}
-      aria-label="성취 공유하기"
+      aria-label={t('achievementShareAria')}
       className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 transition-colors disabled:opacity-60 ${className}`}
     >
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M8.7 10.7l6.6-3.4M8.7 13.3l6.6 3.4M18 8a2 2 0 100-4 2 2 0 000 4zM6 14a2 2 0 100-4 2 2 0 000 4zM18 20a2 2 0 100-4 2 2 0 000 4z" />
       </svg>
-      공유
+      {t('share')}
     </button>
   )
 }

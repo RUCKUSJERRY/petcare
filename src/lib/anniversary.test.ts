@@ -14,6 +14,11 @@ describe('anniversariesToday — 생일', () => {
     expect(ev).toEqual([{ kind: 'birthday', years: null }])
   })
 
+  it('태어난 해(0살) 생일은 "0번째"가 되지 않도록 나이를 null 로 둔다', () => {
+    const ev = anniversariesToday({ ...base, birth_year: 2026, birth_month: 8, birth_day: 1 }, '2026-08-01')
+    expect(ev).toEqual([{ kind: 'birthday', years: null }])
+  })
+
   it('생일 일(day)을 모르면 챙기지 않는다(정확한 날 미상)', () => {
     const ev = anniversariesToday({ ...base, birth_year: 2020, birth_month: 8 }, '2026-08-01')
     expect(ev).toEqual([])
