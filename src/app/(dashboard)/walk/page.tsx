@@ -5,9 +5,11 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, lifeStageColor, stageLabel, pickBestPerActivityType } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
+import { useState } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTabs } from '@/components/ui/SectionTabs'
+import { GuideSearchInput } from '@/components/ui/GuideSearchInput'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchWalkGuides } from '../_actions/guides'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
@@ -38,6 +40,8 @@ const intensityColor = (i: string) => ({
 export default function WalkPage() {
   const t = useTranslations('walkGuide')
   const { selectedPetId } = useSelectedPet()
+  const [query, setQuery] = useState('')
+  const nq = query.trim().toLowerCase()
 
   const { data: petsAll, isLoading: petsLoading } = useMyPets()
 
@@ -68,10 +72,23 @@ export default function WalkPage() {
     const byType = pickBestPerActivityType(candidates, pet.breed_id ?? '', size)
 
     // 종에 맞는 순서로 정렬
-    const orderedTypes = (ACTIVITY_ORDER[pet.species] ?? []).filter(t => byType.has(t))
+    let orderedTypes = (ACTIVITY_ORDER[pet.species] ?? []).filter(t => byType.has(t))
+
+    // 키워드 검색: 활동명·설명·타입·팁 텍스트로 좁힌다(원하는 활동을 바로 찾도록).
+    if (nq) {
+      orderedTypes = orderedTypes.filter(type => {
+        const meta = ACTIVITY_META[type]
+        const guide = byType.get(type)
+        return `${meta?.label ?? type} ${meta?.desc ?? ''} ${type} ${guide?.tips ?? ''}`
+          .toLowerCase().includes(nq)
+      })
+    }
 
     return { pet, age, byType, orderedTypes }
   })
+
+  // 검색 중 어떤 아이에도 걸리는 활동이 없으면 전체 빈 결과로 안내한다.
+  const anyMatch = petGuides.some(pg => pg.orderedTypes.length > 0)
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -86,6 +103,20 @@ export default function WalkPage() {
 
       <SectionTabs section="info" />
 
+      {/* '활동 가이드'(권장량·팁)와 실제 'GPS 산책 기록'을 사용자가 헷갈리지 않도록 명시적으로
+          연결한다 — 이 화면은 가이드, 내 산책 이력·통계는 산책 기록 화면. */}
+      <Link
+        href="/walks"
+        className="flex items-center justify-between gap-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-xl px-3.5 py-2.5 hover:bg-primary-100 transition-colors"
+      >
+        <span className="flex items-center gap-1.5"><span aria-hidden>🦮</span>{t('recordsLink')}</span>
+        <span aria-hidden>›</span>
+      </Link>
+
+      {petGuides.length > 0 && (
+        <GuideSearchInput value={query} onChange={setQuery} placeholder={t('searchPlaceholder')} />
+      )}
+
       {isLoading ? (
         <CardSkeletonList count={3} />
       ) : petGuides.length === 0 ? (
@@ -98,8 +129,21 @@ export default function WalkPage() {
             </Link>
           }
         />
+      ) : nq && !anyMatch ? (
+        <EmptyState
+          icon="🔎"
+          title={t('searchEmpty')}
+          action={
+            <button onClick={() => setQuery('')} className="btn-primary text-sm py-1.5 px-4">
+              {t('searchReset')}
+            </button>
+          }
+        />
       ) : (
-        petGuides.map(({ pet, age, byType, orderedTypes }) => (
+        petGuides
+          // 검색 중이면 걸리는 활동이 있는 아이만 보여준다(빈 블록 방지).
+          .filter(pg => !nq || pg.orderedTypes.length > 0)
+          .map(({ pet, age, byType, orderedTypes }) => (
           <div key={pet.id} className="space-y-3">
             {/* 펫 헤더 */}
             <div className="flex items-center gap-2">

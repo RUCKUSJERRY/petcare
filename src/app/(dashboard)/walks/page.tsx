@@ -141,6 +141,15 @@ function WalksContent() {
 
       <SectionTabs section="map" />
 
+      {/* 이 화면은 내 GPS 산책 기록·통계. 권장 산책량·활동 팁은 '활동 가이드'로 안내(명칭 혼선 방지). */}
+      <Link
+        href="/walk"
+        className="flex items-center justify-between gap-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-xl px-3.5 py-2.5 hover:bg-primary-100 transition-colors"
+      >
+        <span className="flex items-center gap-1.5"><span aria-hidden>🎾</span>{t('guideLink')}</span>
+        <span aria-hidden>›</span>
+      </Link>
+
       <Link href="/walks/track" className="btn-primary w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2">
         🐾 {t('startWalk')}
       </Link>

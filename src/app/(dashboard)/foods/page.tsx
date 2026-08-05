@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
@@ -94,10 +95,14 @@ export default function FoodsPage() {
   const t = useTranslations('foods')
   const { selectedPetId } = useSelectedPet()
 
+  // 홈 '음식 안전 빠른검색' 등에서 딥링크로 들어오면(?view=safety&q=포도) 해당 탭·검색어로 바로 연다.
+  // (초기값만 URL 에서 읽는다 — 이후 상호작용은 로컬 상태로 진행)
+  const searchParams = useSearchParams()
+
   // 화면 안에서 '음식 안전(검색·안전도)' 과 '급여 가이드(계산기·사료 정보)' 를 세그먼트로 나눠,
   // 급여 가이드가 긴 음식 목록 아래로 밀려 스크롤해야만 보이던 문제를 없앤다. 한 탭이면 바로 열린다.
-  const [view, setView] = useState<'safety' | 'guide'>('safety')
-  const [search, setSearch] = useState('')
+  const [view, setView] = useState<'safety' | 'guide'>(searchParams.get('view') === 'guide' ? 'guide' : 'safety')
+  const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [filter, setFilter] = useState<Filter>('전체')
   const [category, setCategory] = useState<CategoryFilter>('전체')
   const [species, setSpecies] = useState<Species>('dog')

@@ -135,7 +135,13 @@
     "greetDefault": "반가워요",
     "greetWithName": "{name}님, {greeting}",
     "healthPointTitle": "오늘의 건강 포인트",
-    "healthPointMore": "건강 체크리스트"
+    "healthPointMore": "건강 체크리스트",
+    "todayInfoTitle": "오늘의 정보",
+    "todayInfoHealthTab": "건강",
+    "todayInfoTipTab": "케어 팁",
+    "foodSearchTitle": "🔎 음식 안전 확인",
+    "foodSearchPlaceholder": "음식 이름 검색 (예: 포도, 양파)",
+    "foodSearchCta": "확인"
   },
   "todayCare": {
     "title": "오늘의 돌봄",
@@ -480,7 +486,8 @@
     "goalCancel": "취소",
     "goalClear": "목표 끄기",
     "goalSaveFailed": "목표 저장에 실패했어요. 다시 시도해주세요.",
-    "goalHint": "거리·횟수 중 하나만 정해도 돼요. 0이면 사용 안 함."
+    "goalHint": "거리·횟수 중 하나만 정해도 돼요. 0이면 사용 안 함.",
+    "guideLink": "활동 가이드 보기"
   },
   "healthGuide": {
     "title": "건강 가이드",
@@ -490,7 +497,10 @@
     "noGuides": "현재 나이에 해당하는 가이드가 없어요",
     "petBasis": "{name} 기준",
     "checklistTitle": "이 시기 건강 체크리스트",
-    "guidesTitle": "맞춤 건강 정보"
+    "guidesTitle": "맞춤 건강 정보",
+    "searchPlaceholder": "건강 정보 검색 (예: 예방접종, 치아)",
+    "searchEmpty": "검색 결과가 없어요",
+    "searchReset": "검색 지우기"
   },
   "careGuide": {
     "title": "생활 관리 가이드",
@@ -500,7 +510,10 @@
     "methodLabel": "방법",
     "emptyHint": "아이를 등록하면 견종·나이에 맞춰 보여드려요.",
     "registerPet": "반려동물 등록하기",
-    "petBasis": "{name} 기준"
+    "petBasis": "{name} 기준",
+    "searchPlaceholder": "관리 항목 검색 (예: 양치, 발톱)",
+    "searchEmpty": "검색 결과가 없어요",
+    "searchReset": "검색 지우기"
   },
   "walkGuide": {
     "title": "활동 가이드",
@@ -510,7 +523,11 @@
     "dailyMinutes": "일일 권장 분",
     "intensity": "강도",
     "startTrack": "산책 기록 시작하기",
-    "petBasis": "{name} 기준"
+    "petBasis": "{name} 기준",
+    "searchPlaceholder": "활동 검색 (예: 산책, 놀이)",
+    "searchEmpty": "검색 결과가 없어요",
+    "searchReset": "검색 지우기",
+    "recordsLink": "내 산책 기록 보기"
   },
   "lostNew": {
     "title": "실종 제보",
@@ -855,7 +872,11 @@
     "imgMaxReached": "사진은 최대 {max}장까지 올릴 수 있어요",
     "imgCount": "{n}/{max}장",
     "onboardingQuickRecordTitle": "어디서든 ＋기록 ✏️",
-    "onboardingQuickRecordDesc": "이 ＋ 버튼을 누르면 어느 화면에서든 식사·배변·투약 같은 생활기록을 한 번에 남길 수 있어요."
+    "onboardingQuickRecordDesc": "이 ＋ 버튼을 누르면 어느 화면에서든 식사·배변·투약 같은 생활기록을 한 번에 남길 수 있어요.",
+    "pushNudgeTitle": "알림을 켜고 놓치지 마세요",
+    "pushNudgeDesc": "기념일·연속 기록·주간 리포트·건강 관리 알림을 받아볼 수 있어요.",
+    "pushNudgeCta": "알림 켜기",
+    "pushNudgeDismiss": "나중에"
   },
   "petMembers": {
     "title": "공동 관리",

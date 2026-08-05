@@ -9,10 +9,23 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTabs } from '@/components/ui/SectionTabs'
+import { GuideSearchInput } from '@/components/ui/GuideSearchInput'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import type { PetAge, Species } from '@/types'
+
+/** 생활관리 가이드가 키워드에 걸리는지 — 주제·주기·노트·방법·팁 텍스트를 통째로 검색한다. */
+function careGuideMatches(g: CareGuideTopic, q: string): boolean {
+  if (!q) return true
+  const hay = [
+    g.topic, g.frequency,
+    ...g.notes.map(n => n.text),
+    ...(g.steps ?? []),
+    ...(g.tips ?? []),
+  ].join(' ').toLowerCase()
+  return hay.includes(q)
+}
 
 /** calcPetAge의 lifeStage → 가이드 단계로 매핑 */
 function toStage(lifeStage: PetAge['lifeStage']): CareGuideStage {
@@ -106,6 +119,7 @@ export default function CarePage() {
   const t = useTranslations('careGuide')
   const { selectedPetId } = useSelectedPet()
   const { data: petsAll, isLoading } = useMyPets()
+  const [query, setQuery] = useState('')
 
   const pets = selectedPetId
     ? (petsAll ?? []).filter(p => p.id === selectedPetId)
@@ -120,7 +134,8 @@ export default function CarePage() {
   const stage: CareGuideStage = age ? toStage(age.lifeStage) : '성견·성묘'
   const size = pet?.breed?.size_category ?? null
 
-  const guides = careGuidesForSpecies(species)
+  const nq = query.trim().toLowerCase()
+  const guides = careGuidesForSpecies(species).filter(g => careGuideMatches(g, nq))
 
   return (
     <div className="px-4 py-6 space-y-4">
@@ -139,6 +154,8 @@ export default function CarePage() {
         {t('disclaimer')}
       </div>
 
+      <GuideSearchInput value={query} onChange={setQuery} placeholder={t('searchPlaceholder')} />
+
       {pet && age && (
         <div className="flex items-center gap-2">
           <span className="font-bold text-gray-900">{pet.name}</span>
@@ -151,6 +168,16 @@ export default function CarePage() {
 
       {isLoading ? (
         <CardSkeletonList count={4} />
+      ) : guides.length === 0 && nq ? (
+        <EmptyState
+          icon="🔎"
+          title={t('searchEmpty')}
+          action={
+            <button onClick={() => setQuery('')} className="btn-primary text-sm py-1.5 px-4">
+              {t('searchReset')}
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {guides.map(g => (

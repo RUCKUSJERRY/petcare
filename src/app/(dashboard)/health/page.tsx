@@ -9,15 +9,25 @@ import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTabs } from '@/components/ui/SectionTabs'
+import { GuideSearchInput } from '@/components/ui/GuideSearchInput'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchHealthGuides } from '../_actions/guides'
+import { useState } from 'react'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { HealthGuide, Pet } from '@/types'
 
+/** 건강 가이드가 키워드에 걸리는지 — 분류·제목·설명 텍스트를 검색한다. */
+function healthGuideMatches(g: HealthGuide, q: string): boolean {
+  if (!q) return true
+  return `${g.category} ${g.title} ${g.description}`.toLowerCase().includes(q)
+}
+
 export default function HealthPage() {
   const t = useTranslations('healthGuide')
   const { selectedPetId } = useSelectedPet()
+  const [query, setQuery] = useState('')
+  const nq = query.trim().toLowerCase()
 
   const { data: petsAll, isLoading: petsLoading } = useMyPets()
 
@@ -52,8 +62,18 @@ export default function HealthPage() {
       guides = ageMatched.filter(g => !g.breed_id && !g.size_category)
     }
 
-    return { pet, age, guides }
+    // 키워드 검색: 체크리스트 항목과 맞춤 가이드를 함께 좁힌다(정보를 다시 찾는 이유 → 체류).
+    const checklist = healthChecklistFor(pet.species, stageLabel(age))
+    const items = nq
+      ? checklist.items.filter(it => `${it.title} ${it.detail}`.toLowerCase().includes(nq))
+      : checklist.items
+    const filteredGuides = nq ? guides.filter(g => healthGuideMatches(g, nq)) : guides
+
+    return { pet, age, checklist: { ...checklist, items }, guides: filteredGuides }
   })
+
+  // 검색 중 어떤 아이에도 걸리는 내용이 없으면 전체 빈 결과로 안내한다.
+  const anyMatch = petGuides.some(pg => pg.checklist.items.length > 0 || pg.guides.length > 0)
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -72,6 +92,10 @@ export default function HealthPage() {
         {t('disclaimer')}
       </div>
 
+      {petGuides.length > 0 && (
+        <GuideSearchInput value={query} onChange={setQuery} placeholder={t('searchPlaceholder')} />
+      )}
+
       {isLoading ? (
         <CardSkeletonList count={4} />
       ) : petGuides.length === 0 ? (
@@ -84,8 +108,21 @@ export default function HealthPage() {
             </Link>
           }
         />
+      ) : nq && !anyMatch ? (
+        <EmptyState
+          icon="🔎"
+          title={t('searchEmpty')}
+          action={
+            <button onClick={() => setQuery('')} className="btn-primary text-sm py-1.5 px-4">
+              {t('searchReset')}
+            </button>
+          }
+        />
       ) : (
-        petGuides.map(({ pet, age, guides }) => (
+        petGuides
+          // 검색 중이면 걸리는 내용이 있는 아이만 보여준다(빈 블록 방지).
+          .filter(pg => !nq || pg.checklist.items.length > 0 || pg.guides.length > 0)
+          .map(({ pet, age, checklist, guides }) => (
           <div key={pet.id} className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-900">{pet.name}</span>
@@ -95,39 +132,41 @@ export default function HealthPage() {
               </span>
             </div>
 
-            {/* 생애주기별 건강 체크리스트 — 이 시기에 챙기면 좋은 예방·관찰 포인트(정적 큐레이션) */}
-            {(() => {
-              const checklist = healthChecklistFor(pet.species, stageLabel(age))
-              return (
-                <div className="card space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden>✅</span>
-                    <span className="font-bold text-sm text-gray-900">{t('checklistTitle')}</span>
-                  </div>
-                  {checklist.summary && <p className="text-xs text-gray-500">{checklist.summary}</p>}
-                  <ul className="space-y-2">
-                    {checklist.items.map((it, i) => (
-                      <li key={i} className="flex gap-2.5">
-                        <span className="text-lg leading-none shrink-0" aria-hidden>{it.icon}</span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-800">{it.title}</p>
-                          <p className="text-xs text-gray-500 leading-relaxed">{it.detail}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+            {/* 생애주기별 건강 체크리스트 — 이 시기에 챙기면 좋은 예방·관찰 포인트(정적 큐레이션).
+                검색 중에는 걸린 항목만 남으며, 없으면 카드를 숨긴다(위에서 필터한 checklist 사용). */}
+            {checklist.items.length > 0 && (
+              <div className="card space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span aria-hidden>✅</span>
+                  <span className="font-bold text-sm text-gray-900">{t('checklistTitle')}</span>
                 </div>
-              )
-            })()}
+                {!nq && checklist.summary && <p className="text-xs text-gray-500">{checklist.summary}</p>}
+                <ul className="space-y-2">
+                  {checklist.items.map((it, i) => (
+                    <li key={i} className="flex gap-2.5">
+                      <span className="text-lg leading-none shrink-0" aria-hidden>{it.icon}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800">{it.title}</p>
+                        <p className="text-xs text-gray-500 leading-relaxed">{it.detail}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {guides.length > 0 && (
               <p className="text-xs font-semibold text-gray-400 pt-1">{t('guidesTitle')}</p>
             )}
 
+            {/* 검색 중(nq)일 땐 '나이 가이드 없음' 안내를 띄우지 않는다 — 필터 결과 0을 '가이드 없음'으로
+                오인시키지 않도록. 평상시에만 나이대 가이드 부재를 안내한다. */}
             {guides.length === 0 ? (
-              <div className="card text-sm text-gray-400 py-4 text-center">
-                {t('noGuides')}
-              </div>
+              !nq && (
+                <div className="card text-sm text-gray-400 py-4 text-center">
+                  {t('noGuides')}
+                </div>
+              )
             ) : (
               guides.map((guide: HealthGuide) => (
                 <div key={guide.id} className="card space-y-1 border-l-4 border-primary-400" style={{ borderRadius: '0 12px 12px 0' }}>

@@ -2,17 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
-
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = atob(base64)
-  const out = new Uint8Array(raw.length)
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i)
-  return out
-}
+import { VAPID_PUBLIC_KEY, isPushSupported, getPushEnabled, subscribeToPush } from '@/lib/pushClient'
 
 export function PushToggle() {
   const t = useTranslations('ui')
@@ -23,18 +13,10 @@ export function PushToggle() {
   const [diag, setDiag] = useState<string | null>(null)
 
   useEffect(() => {
-    const ok =
-      typeof window !== 'undefined' &&
-      'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      'Notification' in window &&
-      !!VAPID_PUBLIC_KEY
+    const ok = isPushSupported()
     setSupported(ok)
     if (!ok) return
-    navigator.serviceWorker.ready
-      .then(reg => reg.pushManager.getSubscription())
-      .then(sub => setEnabled(!!sub))
-      .catch(() => {})
+    getPushEnabled().then(setEnabled).catch(() => {})
   }, [])
 
   // VAPID 키가 없으면(설정 전) 토글 자체를 노출하지 않음
@@ -43,22 +25,11 @@ export function PushToggle() {
   const enable = async () => {
     setBusy(true); setError(null)
     try {
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') { setError(t('pushPermissionDenied')); return }
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY!) as unknown as BufferSource,
-      })
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub),
-      })
-      if (!res.ok) throw new Error('save failed')
+      await subscribeToPush()
       setEnabled(true)
-    } catch {
-      setError(t('pushEnableFailed'))
+    } catch (e) {
+      // 권한 거부와 그 외 실패를 구분해 안내한다(공용 subscribeToPush 가 코드로 던짐).
+      setError(e instanceof Error && e.message === 'denied' ? t('pushPermissionDenied') : t('pushEnableFailed'))
     } finally {
       setBusy(false)
     }

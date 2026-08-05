@@ -9,10 +9,11 @@ import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
 import { HomeGreeting } from './_components/HomeGreeting'
 import { TodayChecklist } from './_components/TodayChecklist'
-import { LifeStageHealthCard } from './_components/LifeStageHealthCard'
-import { DailyTipCard } from './_components/DailyTipCard'
+import { TodayInfoCard } from './_components/TodayInfoCard'
+import { FoodSafetySearch } from './_components/FoodSafetySearch'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
+import { PushNudge } from '@/components/ui/PushNudge'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
 
 // 연속 기록 계산 시 거슬러 올라갈 최대 창(일). streak-reminder cron 과 동일 기준 —
@@ -138,6 +139,11 @@ export default async function DashboardPage() {
       {/* 개인화 인사말 — 시간대 + 보호자 이름으로 매일 따뜻하게 맞이(재방문 습관 강화) */}
       <HomeGreeting name={ownerName} />
 
+      {/* 알림 켜기 넛지 — 아직 푸시를 구독하지 않은 사용자에게만 가볍게 권한다(재방문 핵심 장치).
+          이미 켜짐/미지원/닫음 상태면 스스로 숨는다(클라이언트 판단). 첫 아이 등록(온보딩) CTA와
+          겹치지 않도록 아이가 있을 때만 노출한다. */}
+      {pets && pets.length > 0 && <PushNudge />}
+
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} streakByPet={streakByPet} loadError={petsLoadError} />
 
@@ -150,14 +156,13 @@ export default async function DashboardPage() {
           선택된 아이 기준으로 클라이언트에서 조회(활동/누적이 0이면 스스로 숨김). */}
       {pets && pets.length > 0 && <WeeklyReportCard />}
 
-      {/* 오늘의 건강 포인트 — 선택한 아이의 종·생애단계 건강 체크리스트에서 하루 한 항목.
-          기존 큐레이션 정보를 홈으로 끌어올려 발견성을 높이고(정보 고도화), /health 로 연결. */}
-      {pets && pets.length > 0 && <LifeStageHealthCard />}
+      {/* 오늘의 정보 — '오늘의 건강 포인트'와 '오늘의 케어 팁'을 하나의 카드에서 세그먼트로 전환.
+          성격이 겹치던 두 정보 카드를 합쳐 홈 스크롤·중복을 줄이되 노출은 유지(정보 고도화). */}
+      {pets && pets.length > 0 && <TodayInfoCard />}
 
-      {/* 오늘의 케어 팁 — 매일 바뀌는 짧은 관리 팁으로 재방문·체류 유도 (아이 등록 후 노출) */}
-      {pets && pets.length > 0 && (
-        <DailyTipCard species={mealSpecies} dateStr={todayStr} />
-      )}
+      {/* 음식 안전 빠른검색 — "이거 먹어도 돼?"를 홈에서 바로 검색해 /foods 안전 결과로 딥링크.
+          가장 잦은 정보 질의를 최상위로 끌어올려 재방문·체류를 유도한다. */}
+      {pets && pets.length > 0 && <FoodSafetySearch />}
 
       {/* 프리미엄 업셀 (무료 사용자만, 닫기 가능) */}
       <PremiumUpsellCard />
@@ -172,9 +177,9 @@ export default async function DashboardPage() {
         {pets && pets.length > 0 ? (
           <>
             {/* 성취(레벨·뱃지)는 예전엔 주간 리포트 카드의 배지 하나로만 들어갈 수 있어
-                거의 발견되지 않았다 — 홈 타일로 상시 진입점을 준다(리텐션 시스템 노출). */}
+                거의 발견되지 않았다 — 홈 타일로 상시 진입점을 준다(리텐션 시스템 노출).
+                건강(/health)은 '오늘의 정보' 카드에서 상시 연결되므로 타일 중복을 제거했다. */}
             <QuickTile href="/achievements" icon="🏅" label={t('achievementsTitle')} />
-            <QuickTile href="/health" icon="🩺" label={t('healthTitle')} />
             <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
             {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로.
                 autostart=1 로 넘겨, GPS가 준비됐고 복구할 세션이 없으면 idle 한 단계를 건너뛰고 자동 시작한다. */}
