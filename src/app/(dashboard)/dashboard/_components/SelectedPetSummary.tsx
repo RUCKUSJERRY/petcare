@@ -177,6 +177,15 @@ export function SelectedPetSummary({
         </Link>
       </div>
 
+      {/* 오늘 핵심 돌봄(밥·물·배변·산책) 완주 축하 리본 — 하루를 마친 순간의 즉각 보상.
+          미션 리스트(TodayChecklist)와 달리, 캐릭터 카드에서 '완주' 자체를 밝게 자축한다. */}
+      {todayCare.total > 0 && todayCare.doneCount >= todayCare.total && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-300/95 text-amber-900 px-3 py-2 shadow-sm">
+          <span aria-hidden className="text-base leading-none animate-bounce">🎉</span>
+          <p className="text-[13px] font-bold leading-snug">{t('missionComplete', { name: pet.name })}</p>
+        </div>
+      )}
+
       {/* 캐릭터 말풍선 — 아이가 말을 거는 한 줄. 오늘 돌봄·연속 상태에 따라 대사가 바뀌어
           숫자·뱃지 위주 신호를 정서적 상호작용으로 확장한다(참여·재방문 유도). */}
       <div className="mt-3 flex items-start gap-2 bg-white/15 rounded-xl px-3 py-2">

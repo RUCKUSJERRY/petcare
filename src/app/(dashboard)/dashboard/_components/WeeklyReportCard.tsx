@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -8,7 +9,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { addDays, formatDistance, formatWon, isoToKstDate, todayKST } from '@/lib/utils'
 import { computeWeeklyRecap, hasRecapActivity, type RecapRecord, type RecapWalk } from '@/lib/weeklyRecap'
-import { computeCareLevel, computeCarePoints } from '@/lib/careLevel'
+import { computeCareLevel, computeCarePoints, type CareLevel } from '@/lib/careLevel'
 
 /**
  * 홈 '이번 주 리포트' 카드 — 최근 7일 산책·기록·지출 요약 + 반려동물 성장 레벨.
@@ -21,6 +22,9 @@ export function WeeklyReportCard() {
   const { selectedPetId } = useSelectedPet()
   const { data: pets } = useMyPets()
   const pet = pets?.find(p => p.id === selectedPetId) ?? null
+  // 레벨업 순간 축하 — 이 아이의 레벨이 지난 방문보다 올랐으면 한 번 배너로 자축한다.
+  // (레벨 표시만 있고 '올라간 순간'의 보상이 없던 것을 보완 — 게임화 몰입.)
+  const [leveledUpTo, setLeveledUpTo] = useState<CareLevel | null>(null)
 
   const { data } = useQuery({
     queryKey: ['weekly-report', selectedPetId],
@@ -54,6 +58,20 @@ export function WeeklyReportCard() {
     },
   })
 
+  // 레벨업 감지: 이 아이의 마지막으로 본 레벨을 localStorage 에 저장해두고, 다시 방문했을 때
+  // 레벨이 올랐으면 축하 배너를 띄운다. 첫 방문(저장값 없음)엔 자축 없이 현재 레벨만 기록한다.
+  useEffect(() => {
+    if (!data || !selectedPetId) return
+    const lvl = computeCareLevel(data.points)
+    const key = `petcare_seen_level_${selectedPetId}`
+    try {
+      const raw = window.localStorage.getItem(key)
+      const seen = raw != null ? parseInt(raw, 10) : null
+      if (seen != null && Number.isFinite(seen) && lvl.level > seen) setLeveledUpTo(lvl)
+      if (seen == null || lvl.level !== seen) window.localStorage.setItem(key, String(lvl.level))
+    } catch { /* localStorage 접근 불가(사생활 모드 등) — 축하 생략 */ }
+  }, [data, selectedPetId])
+
   if (!pet || !data) return null
   const { recap, points } = data
   // 활동이 전혀 없고 누적 포인트도 0이면(신규 등록 직후) 빈 카드를 숨긴다.
@@ -63,6 +81,18 @@ export function WeeklyReportCard() {
 
   return (
     <div className="card space-y-4">
+      {/* 레벨업 자축 배너 — 레벨이 오른 순간 한 번 축하한다(닫으면 다시 뜨지 않음). */}
+      {leveledUpTo && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-100 to-primary-50 px-3 py-2">
+          <span className="text-lg leading-none animate-bounce" aria-hidden>🎉</span>
+          <p className="flex-1 text-sm font-bold text-amber-900">
+            {t('levelUp', { level: leveledUpTo.level, title: leveledUpTo.title })}
+          </p>
+          <button onClick={() => setLeveledUpTo(null)} aria-label={t('levelUpDismiss')}
+            className="shrink-0 text-amber-500 hover:text-amber-700">✕</button>
+        </div>
+      )}
+
       {/* 헤더: 제목 + 성장 레벨 */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
