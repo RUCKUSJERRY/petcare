@@ -37,11 +37,13 @@ export function TodayInfoCard() {
 
   const today = todayKST()
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
-  const checklist = healthChecklistFor(pet.species, stageLabel(age))
+  const stage = stageLabel(age)
+  const checklist = healthChecklistFor(pet.species, stage)
   const healthItem = checklist.items.length
     ? checklist.items[dayNumber(today) % checklist.items.length]
     : null
-  const tip = getDailyTip(pet.species, today)
+  // 오늘의 팁도 종뿐 아니라 생애단계(나이대)에 맞춰 고른다(정보 고도화 — 나이 맞춤).
+  const tip = getDailyTip(pet.species, today, stage)
 
   // 둘 다 없으면(방어적) 렌더링하지 않는다.
   if (!healthItem && !tip) return null
