@@ -95,7 +95,11 @@ export function TodayChecklist() {
     if (!error) {
       qc.invalidateQueries({ queryKey: ['today-walk', selectedPetId] })
       qc.invalidateQueries({ queryKey: ['weekly-report', selectedPetId] })
-      qc.invalidateQueries({ queryKey: ['walk-stats', selectedPetId] })
+      // 수동 산책도 산책 목록(mine/shared)에 남으므로 목록 캐시를 무효화한다.
+      // (예전엔 어디서도 쓰지 않는 ['walk-stats'] 팬텀 키를 무효화해 목록이 최대 60초간
+      //  새 수동 산책을 반영하지 못했다 — 실제 목록 키는 ['walks',...] 프리픽스다.)
+      qc.invalidateQueries({ queryKey: ['walks'] })
+      qc.invalidateQueries({ queryKey: ['walk-goal'] })
     }
   }
 

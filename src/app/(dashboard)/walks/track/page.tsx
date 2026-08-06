@@ -8,6 +8,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { formatDistance, formatDuration, formatPace, haversineMeters } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { WalkPoint } from '@/types'
 import { WalkPhotoComposer } from '../_components/WalkPhotoComposer'
@@ -33,6 +34,7 @@ export default function WalkTrackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const qc = useQueryClient()
   const t = useTranslations('walks')
   const tc = useTranslations('common')
   const { data: pets } = useMyPets()
@@ -382,6 +384,15 @@ export default function WalkTrackPage() {
       return
     }
     clearWalkSession() // 저장 완료 → 복구본 정리
+    // 방금 저장한 산책이 앱 전반의 캐시(기본 staleTime 60s)에 즉시 반영되도록 무효화한다.
+    // (편집·삭제 경로는 이미 ['walks']를 무효화하는데, 최초 저장 경로만 누락돼 있어 목록·홈
+    //  요약·주간 리포트에서 새 산책이 최대 60초간 보이지 않았다.)
+    qc.invalidateQueries({ queryKey: ['walks'] }) // 목록(mine/shared) 프리픽스 매칭
+    qc.invalidateQueries({ queryKey: ['walk-goal'] }) // 이번 주 산책 목표 진행도
+    if (petId) {
+      qc.invalidateQueries({ queryKey: ['today-walk', petId] }) // 홈 '오늘의 돌봄' 산책 체크·기분
+      qc.invalidateQueries({ queryKey: ['weekly-report', petId] }) // 주간 리포트 활동 합계
+    }
     router.replace(`/walks/${(data as { id: string }).id}`)
   }
 
