@@ -78,7 +78,12 @@
     "walks": "산책 기록",
     "walksDesc": "산책 이력·목표",
     "lost": "실종센터",
-    "lostDesc": "실종 신고·제보"
+    "lostDesc": "실종 신고·제보",
+    "sectionAccount": "계정·설정",
+    "coCare": "공동 관리",
+    "coCareDesc": "가족과 함께 돌보기·초대",
+    "settings": "알림·설정",
+    "settingsDesc": "푸시 알림·프로필"
   },
   "sectionTabs": {
     "aria": "섹션 이동",
@@ -1224,6 +1229,8 @@
     "undo": "되돌리기",
     "undoFailed": "되돌리기에 실패했어요. 잠시 후 다시 시도해주세요.",
     "saveFailed": "기록에 실패했어요. 잠시 후 다시 시도해주세요.",
+    "saveFailedShort": "{label} 기록에 실패했어요",
+    "retry": "다시 시도",
     "viewTimeline": "오늘 기록 전체 보기",
     "needPet": "기록할 아이를 먼저 선택해주세요",
     "todayCount": "오늘 {count}",

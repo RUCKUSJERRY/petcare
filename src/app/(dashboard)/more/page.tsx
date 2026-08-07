@@ -23,6 +23,13 @@ const ACTIVITY_ITEMS: Item[] = [
   { href: '/lost', icon: '🐾', key: 'lost' },
 ]
 
+// 계정·설정 — 예전엔 공동 관리(초대)가 아이 상세 화면 맨 아래에만, 알림·프로필 설정이 헤더의
+// 라벨 없는 사람 아이콘 뒤에만 있어 발견성이 낮았다. 허브에 상시 진입점을 둔다.
+const ACCOUNT_ITEMS: Item[] = [
+  { href: '/pets', icon: '👨‍👩‍👧', key: 'coCare' },
+  { href: '/profile', icon: '⚙️', key: 'settings' },
+]
+
 export default async function MorePage() {
   const t = await getTranslations('more')
 
@@ -32,6 +39,7 @@ export default async function MorePage() {
 
       <Section title={t('sectionInfo')} items={INFO_ITEMS} t={t} />
       <Section title={t('sectionActivity')} items={ACTIVITY_ITEMS} t={t} />
+      <Section title={t('sectionAccount')} items={ACCOUNT_ITEMS} t={t} />
     </div>
   )
 }

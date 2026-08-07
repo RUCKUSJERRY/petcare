@@ -45,8 +45,11 @@ export function QuickLogBar({
   const [notice, setNotice] = useState(false)
   const [undoErr, setUndoErr] = useState(false)
   // 원탭 저장 실패 시 조용히 넘기면 사용자는 탭이 안 먹은 줄 알고 다시 눌러 중복 기록되거나
-  // 앱이 멈춘 것으로 오해한다. 다른 쓰기 흐름(undoErr 등)과 동일하게 짧은 안내를 띄운다.
-  const [saveErr, setSaveErr] = useState(false)
+  // 앱이 멈춘 것으로 오해한다. 예전엔 작은 정적 텍스트가 다음 성공까지 잔류해 놓치기 쉬웠다 —
+  // 어떤 항목이 실패했는지 담아, 성공 토스트처럼 잠깐 떴다 사라지되 '다시 시도'를 제공한다.
+  const [saveErr, setSaveErr] = useState<{ cat: RecordCategory; title: string } | null>(null)
+  // 저장 실패 안내 자동 소멸 타이머(성공 토스트와 동일한 일시성). 언마운트/재실패 시 정리한다.
+  const saveErrTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [busy, setBusy] = useState<RecordCategory | null>(null)
   // 배변처럼 세부 종류를 골라야 하는 카테고리를 탭하면, 즉시 저장 대신 보기를 펼친다.
   const [subFor, setSubFor] = useState<RecordCategory | null>(null)
@@ -55,7 +58,10 @@ export function QuickLogBar({
 
   useEffect(() => {
     const map = timers.current
-    return () => { map.forEach(clearTimeout); map.clear() }
+    return () => {
+      map.forEach(clearTimeout); map.clear()
+      if (saveErrTimer.current) clearTimeout(saveErrTimer.current)
+    }
   }, [])
 
   const { data: todayLogs = [] } = useQuery({
@@ -124,16 +130,26 @@ export function QuickLogBar({
     timers.current.set(id, tm)
   }
 
+  const clearSaveErr = () => {
+    if (saveErrTimer.current) { clearTimeout(saveErrTimer.current); saveErrTimer.current = null }
+    setSaveErr(null)
+  }
+
   const log = async (cat: RecordCategory, title?: string) => {
     if (!petId) { setNotice(true); return }
     setNotice(false)
-    setSaveErr(false)
+    clearSaveErr()
     setSubFor(null)
     setBusy(cat)
     const label = title ?? cat
     const { id, at, error } = await logDailyRecord(supabase, petId, cat, label)
     setBusy(null)
-    if (error || !id) { setSaveErr(true); return }
+    if (error || !id) {
+      // 성공 토스트와 동일한 일시성: 잠깐 떴다 자동으로 사라진다(잔류 방지). 재시도 액션 제공.
+      setSaveErr({ cat, title: label })
+      saveErrTimer.current = setTimeout(() => setSaveErr(null), 6000)
+      return
+    }
     setUndoErr(false)
     showToast(id, label, hhmm(at.toISOString()), cat)
     invalidate()
@@ -236,8 +252,23 @@ export function QuickLogBar({
         <p className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('needPet')}</p>
       )}
 
+      {/* 저장 실패 토스트 — 성공 토스트와 같은 자리·모양으로 잠깐 떴다 사라지되, '다시 시도'로
+          방금 실패한 항목을 바로 재저장할 수 있게 한다(잔류·조용한 실패 방지). */}
       {saveErr && (
-        <p role="status" className={`mt-1.5 text-xs ${onP ? 'text-white/90' : 'text-amber-600'}`}>{t('saveFailed')}</p>
+        <div
+          role="alert"
+          className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${onP ? 'bg-white/20 text-white' : 'bg-amber-600 text-white'}`}
+        >
+          <span aria-hidden>⚠️</span>
+          <span className="flex-1 truncate">{t('saveFailedShort', { label: saveErr.title })}</span>
+          <button
+            type="button"
+            onClick={() => { const s = saveErr; clearSaveErr(); log(s.cat, s.title) }}
+            className="shrink-0 font-bold text-white underline underline-offset-2"
+          >
+            {t('retry')}
+          </button>
+        </div>
       )}
 
       {/* 최근 원탭 기록 토스트(각각 되돌리기 가능) — 최신이 아래로 쌓인다 */}

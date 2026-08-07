@@ -53,7 +53,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   petId: fixedPetId,
   allowPetSelect = false,
   record,
-  defaultCategory = '진료',
+  defaultCategory,
   defaultDate,
   defaultCost,
   template,
@@ -71,7 +71,10 @@ export const RecordForm = forwardRef<RecordFormHandle, {
   const editing = !!record
 
   const [petId, setPetId] = useState<string>(record?.pet_id || fixedPetId || '')
-  const [category, setCategory] = useState<RecordCategory>(record?.category || template?.category || defaultCategory)
+  // 신규 기록의 기본 카테고리. 예전엔 '진료'(병원 방문)로 고정돼, 앱의 일상 돌봄 중심 흐름과
+  // 어긋나고 병원 전용 입력(비용·병원)이 먼저 펼쳐졌다. 명시 지정이 없으면 일상관리 대표인
+  // '식사'로 시작한다(일정 추가 등 진료 성격 진입점은 defaultCategory="진료"를 명시로 전달).
+  const [category, setCategory] = useState<RecordCategory>(record?.category || template?.category || defaultCategory || '식사')
   const [title, setTitle] = useState(record?.title || template?.title || '')
   const [eventOn, setEventOn] = useState(record?.event_on || defaultDate || today())
   // 생활기록의 시각(HH:MM). 편집 시 기존 event_at에서, 신규는 현재 시각.

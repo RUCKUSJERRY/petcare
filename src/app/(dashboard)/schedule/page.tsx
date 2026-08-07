@@ -399,6 +399,8 @@ export default function SchedulePage() {
           petId={selectedPetId} allowPetSelect
           defaultDate={addDate ?? undefined}
           template={addTemplate ?? undefined}
+          // 일정 화면의 '일정 추가'는 접종·진료 등 예정 케어 성격이라 기본을 '진료'로 유지한다.
+          defaultCategory="진료"
           onDone={() => { setShowAdd(false); setAddDate(null); setAddTemplate(null); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }}
           onCancel={() => { setShowAdd(false); setAddDate(null); setAddTemplate(null) }}
         />
