@@ -547,7 +547,14 @@
     "searchPlaceholder": "활동 검색 (예: 산책, 놀이)",
     "searchEmpty": "검색 결과가 없어요",
     "searchReset": "검색 지우기",
-    "recordsLink": "내 산책 기록 보기"
+    "recordsLink": "내 산책 기록 보기",
+    "activity": {
+      "산책": { "label": "산책", "desc": "야외 활동 · 일일 권장량" },
+      "실내놀이": { "label": "실내놀이", "desc": "집 안에서 함께하는 놀이" },
+      "인지훈련": { "label": "인지훈련", "desc": "노즈워크 · 트릭 · 퍼즐" },
+      "사냥놀이": { "label": "사냥놀이", "desc": "낚싯대 · 레이저 · 터널" },
+      "실내탐험": { "label": "실내탐험", "desc": "캣타워 · 박스 · 수직공간" }
+    }
   },
   "lostNew": {
     "title": "실종 제보",
@@ -559,6 +566,8 @@
     "speciesDog": "🐶 강아지",
     "speciesCat": "🐱 고양이",
     "genderLabel": "성별(선택)",
+    "genderMale": "수컷",
+    "genderFemale": "암컷",
     "locationLabel": "실종 위치",
     "searchPlaceholder": "주소·장소 검색 (예: 강남역, 역삼동)",
     "searchButton": "검색",
@@ -575,6 +584,16 @@
     "submit": "실종 제보 등록"
   },
   "map": {
+    "hospitalTag": {
+      "24시": "24시",
+      "응급": "응급",
+      "안과": "안과",
+      "치과": "치과",
+      "피부": "피부",
+      "정형외과": "정형외과",
+      "내과": "내과",
+      "한방": "한방"
+    },
     "category": {
       "lost": "실종",
       "hospital": "동물병원",
@@ -673,7 +692,10 @@
     "unavailableDesc1": "데이터베이스 서버가 응답하지 않고 있어요.",
     "unavailableDesc2": "잠시 후 다시 시도해 주세요.",
     "unavailableNote": "(백엔드 일시정지 또는 점검 중일 수 있습니다)",
-    "retry": "다시 시도"
+    "retry": "다시 시도",
+    "dashErrorTitle": "잠시 문제가 생겼어요",
+    "dashErrorDesc": "화면을 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
+    "dashErrorHome": "홈으로"
   },
   "manifest": {
     "name": "펫케어 - 반려동물 맞춤 건강 정보",
@@ -700,7 +722,8 @@
     "goalReached": "목표 달성 🎉",
     "goalRemain": "{dir} {kg}kg",
     "goalLose": "감량",
-    "goalGain": "증량"
+    "goalGain": "증량",
+    "chartGoal": "목표 {kg}kg"
   },
   "feed": {
     "title": "급여량 계산기",

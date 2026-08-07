@@ -274,6 +274,7 @@ export function WeightSection({ petId, defaultOpen = false }: { petId: string; d
 
 /** 의존성 없는 SVG 체중 추이 차트 (y축 라벨·영역·기준선·목표선·최근값 강조) */
 function WeightChart({ logs, goal = null }: { logs: WeightLog[]; goal?: number | null }) {
+  const t = useTranslations('weight')
   const W = 300, H = 120
   const padL = 34, padR = 10, padT = 12, padB = 20 // 좌측 y라벨/하단 날짜 여백
   const innerW = W - padL - padR
@@ -325,7 +326,7 @@ function WeightChart({ logs, goal = null }: { logs: WeightLog[]; goal?: number |
       {goal != null && (
         <g>
           <line x1={padL} y1={y(goal)} x2={W - padR} y2={y(goal)} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" />
-          <text x={W - padR} y={Math.max(y(goal) - 3, padT + 8)} textAnchor="end" fontSize="9" fontWeight="600" fill="#d97706">목표 {goal}kg</text>
+          <text x={W - padR} y={Math.max(y(goal) - 3, padT + 8)} textAnchor="end" fontSize="9" fontWeight="600" fill="#d97706">{t('chartGoal', { kg: goal })}</text>
         </g>
       )}
 

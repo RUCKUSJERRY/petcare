@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 /**
  * 대시보드 세그먼트 공용 에러 바운더리.
@@ -21,6 +22,7 @@ export default function DashboardError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const t = useTranslations('system')
   useEffect(() => {
     // 운영 로깅(예: Vercel 로그)으로 원인 추적. digest 는 서버 에러와 매칭되는 식별자.
     console.error('[dashboard] 화면 렌더 오류', error)
@@ -30,16 +32,16 @@ export default function DashboardError({
     <div className="px-4 py-16">
       <div className="card text-center py-12 text-gray-500 space-y-3 max-w-sm mx-auto">
         <div className="text-4xl" aria-hidden>🐾</div>
-        <p className="font-semibold text-gray-800">잠시 문제가 생겼어요</p>
+        <p className="font-semibold text-gray-800">{t('dashErrorTitle')}</p>
         <p className="text-xs px-4 leading-relaxed">
-          화면을 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.
+          {t('dashErrorDesc')}
         </p>
         <div className="flex items-center justify-center gap-2 pt-2">
           <button type="button" onClick={reset} className="btn-primary text-sm">
-            다시 시도
+            {t('retry')}
           </button>
           <Link href="/dashboard" className="btn-secondary text-sm">
-            홈으로
+            {t('dashErrorHome')}
           </Link>
         </div>
       </div>

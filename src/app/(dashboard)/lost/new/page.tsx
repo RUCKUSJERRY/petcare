@@ -166,10 +166,10 @@ export default function NewLostPage() {
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{t('genderLabel')}</label>
             <div className="grid grid-cols-2 gap-2">
-              {['수컷', '암컷'].map(g => (
+              {([['수컷', t('genderMale')], ['암컷', t('genderFemale')]] as const).map(([g, label]) => (
                 <button key={g} type="button" onClick={() => set('gender', form.gender === g ? '' : g)}
                   className={`py-2 rounded-lg border text-sm font-medium ${form.gender === g ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-gray-600 border-gray-200'}`}>
-                  {g}
+                  {label}
                 </button>
               ))}
             </div>

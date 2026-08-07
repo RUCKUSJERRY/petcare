@@ -10,6 +10,7 @@ import { useAppSettings } from '@/hooks/useAppSettings'
 import { formatKRW } from '@/lib/pricing'
 // 서버 헬퍼(lib/toss)와 동일 규칙을 공유 순수 모듈에서 가져온다(규칙 드리프트 방지).
 import { customerKeyForUser } from '@/lib/tossCustomerKey'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 interface SubSummary {
   status: 'active' | 'canceled' | 'past_due'
@@ -33,6 +34,9 @@ export default function PremiumPage() {
 
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null)
+  // 해지 확인은 네이티브 confirm() 대신 앱 공용 ConfirmModal(파괴적 변형)로 — 결제 관련
+  // 가장 민감한 순간에 스타일·동작을 앱 전반과 통일한다(모바일 PWA에서 원점 노출 방지).
+  const [showCancel, setShowCancel] = useState(false)
 
   const { data: subData } = useQuery<{ subscription: SubSummary | null }>({
     queryKey: ['my-subscription'],
@@ -109,7 +113,7 @@ export default function PremiumPage() {
   }
 
   const cancel = async () => {
-    if (!confirm(t('cancelConfirm'))) return
+    setShowCancel(false)
     setBusy(true)
     try {
       const res = await fetch('/api/billing/cancel', { method: 'POST' })
@@ -183,7 +187,7 @@ export default function PremiumPage() {
             </p>
           )}
           {sub.status === 'active' && (
-            <button onClick={cancel} disabled={busy} className="mt-2 text-xs text-red-500 underline underline-offset-2">
+            <button onClick={() => setShowCancel(true)} disabled={busy} className="mt-2 text-xs text-red-500 underline underline-offset-2">
               {t('cancelBtn')}
             </button>
           )}
@@ -253,6 +257,18 @@ export default function PremiumPage() {
       )}
 
       <p className="mt-6 text-[11px] text-gray-400 leading-relaxed">{t('disclaimer')}</p>
+
+      {showCancel && (
+        <ConfirmModal
+          title={t('cancelBtn')}
+          description={t('cancelConfirm')}
+          confirmLabel={t('cancelBtn')}
+          destructive
+          busy={busy}
+          onConfirm={cancel}
+          onCancel={() => setShowCancel(false)}
+        />
+      )}
     </div>
   )
 }

@@ -11,7 +11,8 @@ import type { MapFavorite } from '@/types'
 
 type CategoryKey = 'lost' | 'hospital' | 'cafe' | 'restaurant' | 'favorite'
 
-// 동물병원 특화 진료/시설 빠른 필터 (카카오 키워드 검색에 덧붙임)
+// 동물병원 특화 진료/시설 빠른 필터. 값은 카카오 키워드 검색에 그대로 쓰이는 검색어이므로
+// 한글 값을 유지하고, 표시 라벨만 map.hospitalTag 메시지로 내보낸다(i18n 단일 출처).
 const HOSPITAL_TAGS = ['24시', '응급', '안과', '치과', '피부', '정형외과', '내과', '한방']
 
 const escapeHtml = (s: string) =>
@@ -485,7 +486,7 @@ export default function MapPage() {
                       : 'bg-white/95 text-gray-600 border-gray-100'
                   )}
                 >
-                  {tag}
+                  {t.has(`hospitalTag.${tag}`) ? t(`hospitalTag.${tag}`) : tag}
                 </button>
               )
             })}

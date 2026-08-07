@@ -16,13 +16,9 @@ import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Pet } from '@/types'
 
-// activity_type 표시 메타
-const ACTIVITY_META: Record<string, { icon: string; label: string; desc: string }> = {
-  '산책':     { icon: '🦮', label: '산책',     desc: '야외 활동 · 일일 권장량' },
-  '실내놀이': { icon: '🎾', label: '실내놀이', desc: '집 안에서 함께하는 놀이' },
-  '인지훈련': { icon: '🧠', label: '인지훈련', desc: '노즈워크 · 트릭 · 퍼즐' },
-  '사냥놀이': { icon: '🪄', label: '사냥놀이', desc: '낚싯대 · 레이저 · 터널' },
-  '실내탐험': { icon: '🏠', label: '실내탐험', desc: '캣타워 · 박스 · 수직공간' },
+// activity_type 표시 아이콘 (라벨·설명은 walkGuide.activity 메시지에서 — i18n 단일 출처)
+const ACTIVITY_ICON: Record<string, string> = {
+  '산책': '🦮', '실내놀이': '🎾', '인지훈련': '🧠', '사냥놀이': '🪄', '실내탐험': '🏠',
 }
 
 // 강아지/고양이별 표시 순서
@@ -39,6 +35,9 @@ const intensityColor = (i: string) => ({
 
 export default function WalkPage() {
   const t = useTranslations('walkGuide')
+  // 활동 라벨·설명은 메시지에서 (미정의 타입은 타입명/빈 설명으로 안전 폴백)
+  const activityLabel = (type: string) => t.has(`activity.${type}.label`) ? t(`activity.${type}.label`) : type
+  const activityDesc = (type: string) => t.has(`activity.${type}.desc`) ? t(`activity.${type}.desc`) : ''
   const { selectedPetId } = useSelectedPet()
   const [query, setQuery] = useState('')
   const nq = query.trim().toLowerCase()
@@ -77,9 +76,8 @@ export default function WalkPage() {
     // 키워드 검색: 활동명·설명·타입·팁 텍스트로 좁힌다(원하는 활동을 바로 찾도록).
     if (nq) {
       orderedTypes = orderedTypes.filter(type => {
-        const meta = ACTIVITY_META[type]
         const guide = byType.get(type)
-        return `${meta?.label ?? type} ${meta?.desc ?? ''} ${type} ${guide?.tips ?? ''}`
+        return `${activityLabel(type)} ${activityDesc(type)} ${type} ${guide?.tips ?? ''}`
           .toLowerCase().includes(nq)
       })
     }
@@ -161,15 +159,14 @@ export default function WalkPage() {
             ) : (
               orderedTypes.map(type => {
                 const guide = byType.get(type)!
-                const meta = ACTIVITY_META[type] ?? { icon: '🐾', label: type, desc: '' }
                 return (
                   <div key={type} className="card space-y-3">
                     {/* 활동 타입 헤더 */}
                     <div className="flex items-center gap-2">
-                      <span className="text-xl leading-none">{meta.icon}</span>
+                      <span className="text-xl leading-none">{ACTIVITY_ICON[type] ?? '🐾'}</span>
                       <div>
-                        <div className="font-semibold text-sm text-gray-900">{meta.label}</div>
-                        <div className="text-xs text-gray-400">{meta.desc}</div>
+                        <div className="font-semibold text-sm text-gray-900">{activityLabel(type)}</div>
+                        <div className="text-xs text-gray-400">{activityDesc(type)}</div>
                       </div>
                     </div>
 

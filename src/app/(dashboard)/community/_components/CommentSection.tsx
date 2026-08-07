@@ -35,6 +35,7 @@ export function CommentSection({
   const [sendingReply, setSendingReply] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const myAuthorRef = useRef<Author | null>(null)
@@ -89,13 +90,16 @@ export function CommentSection({
   }
 
   const saveEdit = async (id: string) => {
+    if (savingEdit) return
     const content = editText.trim()
     if (!content) return
+    setSavingEdit(true)
     const now = new Date().toISOString()
     const { error: updErr } = await supabase
       .from('comments')
       .update({ content, updated_at: now })
       .eq('id', id)
+    setSavingEdit(false)
     if (updErr) { setError(t('editFailed')); return }
     setComments(prev => prev.map(c => c.id === id ? { ...c, content, updated_at: now } : c))
     setEditingId(null)
@@ -147,8 +151,8 @@ export function CommentSection({
                 onChange={e => setEditText(e.target.value)}
                 autoFocus
               />
-              <button onClick={() => saveEdit(c.id)} className="btn-primary px-3 text-sm shrink-0">{tc('save')}</button>
-              <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 shrink-0">{tc('cancel')}</button>
+              <button onClick={() => saveEdit(c.id)} disabled={savingEdit} className="btn-primary px-3 text-sm shrink-0 disabled:opacity-60">{savingEdit ? tc('saving') : tc('save')}</button>
+              <button onClick={() => { if (!savingEdit) setEditingId(null) }} className="text-xs text-gray-400 shrink-0">{tc('cancel')}</button>
             </div>
           ) : (
             <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{c.content}</p>
@@ -156,11 +160,11 @@ export function CommentSection({
 
           {/* 액션 */}
           {!editing && (
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-1 mt-1 -ml-1.5">
               {!isReply && (
                 <button
                   onClick={() => { setReplyTo(replyTo === c.id ? null : c.id); setReplyText('') }}
-                  className="text-xs text-gray-400 hover:text-primary-600"
+                  className="text-xs text-gray-400 hover:text-primary-600 px-1.5 py-1.5"
                 >
                   {t('reply')}
                 </button>
@@ -169,7 +173,7 @@ export function CommentSection({
                 <>
                   <button
                     onClick={() => { setEditingId(c.id); setEditText(c.content) }}
-                    className="text-xs text-gray-400 hover:text-primary-600"
+                    className="text-xs text-gray-400 hover:text-primary-600 px-1.5 py-1.5"
                   >
                     {t('edit')}
                   </button>
@@ -179,13 +183,13 @@ export function CommentSection({
                       {/* 파괴적 동작은 채운 빨강 알약으로 명확히 구분(취소와 헷갈리지 않게) */}
                       <button
                         onClick={() => remove(c.id)}
-                        className="text-xs font-semibold text-white bg-red-500 rounded-full px-2.5 py-1"
+                        className="text-xs font-semibold text-white bg-red-500 rounded-full px-2.5 py-1.5"
                       >
                         {tc('delete')}
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs text-gray-500 px-1"
+                        className="text-xs text-gray-500 px-1.5 py-1.5"
                       >
                         {tc('cancel')}
                       </button>
@@ -193,7 +197,7 @@ export function CommentSection({
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(c.id)}
-                      className="text-xs text-gray-400 hover:text-red-500"
+                      className="text-xs text-gray-400 hover:text-red-500 px-1.5 py-1.5"
                     >
                       {tc('delete')}
                     </button>

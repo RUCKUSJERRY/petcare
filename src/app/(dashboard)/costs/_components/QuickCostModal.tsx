@@ -90,7 +90,7 @@ export function QuickCostModal({
       >
         <div className="flex items-center justify-between">
           <p className="font-bold text-gray-900">{t('quickCostTitle')}</p>
-          <button onClick={onClose} aria-label={tc('close')} className="w-7 h-7 rounded-full bg-gray-100 text-gray-500">✕</button>
+          <button onClick={() => { if (!saving) onClose() }} aria-label={tc('close')} className="w-7 h-7 rounded-full bg-gray-100 text-gray-500">✕</button>
         </div>
 
         {/* 대상 아이 — 아이가 고정되지 않았고 2마리 이상일 때만 */}
