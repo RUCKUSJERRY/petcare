@@ -32,6 +32,7 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   // 홈 빠른 기록 버튼에서 ?add=weight 로 진입하면 체중 폼을 펼친 채로 시작
   const addTarget = searchParams.get('add')
   const weightRef = useRef<HTMLDivElement>(null)
+  const membersRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { selectedPetId, setSelectedPetId } = useSelectedPet()
@@ -118,6 +119,17 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       return () => clearTimeout(t)
     }
   }, [pet, addTarget])
+
+  // #members 해시로 진입(더보기 '공동 관리' 딥링크)하면 구성원 섹션으로 스크롤한다.
+  // (구성원 섹션이 화면 하단이라, 바로 목적지가 보이도록 발견성을 높인다.)
+  useEffect(() => {
+    if (!pet || typeof window === 'undefined' || window.location.hash !== '#members') return
+    const el = membersRef.current
+    if (el) {
+      const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200)
+      return () => clearTimeout(t)
+    }
+  }, [pet])
 
   // 기록(원탭·직접·스캔) 후 이 아이의 오늘/피드/예정 캐시를 갱신
   const afterRecord = () => {
@@ -455,7 +467,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
           <div ref={weightRef}>
             <WeightSection petId={params.id} defaultOpen={addTarget === 'weight'} />
           </div>
-          <PetMembers petId={params.id} petName={pet.name} />
+          <div ref={membersRef} id="members">
+            <PetMembers petId={params.id} petName={pet.name} />
+          </div>
         </>
       )}
 

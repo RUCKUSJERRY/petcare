@@ -15,6 +15,7 @@ const SECTIONS = {
   info: [
     { href: '/foods', key: 'foods', icon: '🍽️' },
     { href: '/health', key: 'health', icon: '🩺' },
+    { href: '/symptoms', key: 'symptoms', icon: '🩹' },
     { href: '/walk', key: 'activity', icon: '🎾' },
     { href: '/care', key: 'care', icon: '🧼' },
   ],

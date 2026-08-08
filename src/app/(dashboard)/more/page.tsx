@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 /**
  * '더보기' 허브 — 하단탭에 상시 자리가 없던 화면들을 한곳에 모은다.
@@ -12,6 +13,7 @@ type Item = { href: string; icon: string; key: string }
 const INFO_ITEMS: Item[] = [
   { href: '/foods', icon: '🍽️', key: 'foods' },
   { href: '/health', icon: '🩺', key: 'health' },
+  { href: '/symptoms', icon: '🩹', key: 'symptoms' },
   { href: '/walk', icon: '🎾', key: 'activity' },
   { href: '/care', icon: '🧼', key: 'care' },
 ]
@@ -23,15 +25,23 @@ const ACTIVITY_ITEMS: Item[] = [
   { href: '/lost', icon: '🐾', key: 'lost' },
 ]
 
-// 계정·설정 — 예전엔 공동 관리(초대)가 아이 상세 화면 맨 아래에만, 알림·프로필 설정이 헤더의
-// 라벨 없는 사람 아이콘 뒤에만 있어 발견성이 낮았다. 허브에 상시 진입점을 둔다.
-const ACCOUNT_ITEMS: Item[] = [
-  { href: '/pets', icon: '👨‍👩‍👧', key: 'coCare' },
-  { href: '/profile', icon: '⚙️', key: 'settings' },
-]
-
 export default async function MorePage() {
   const t = await getTranslations('more')
+
+  // 공동 관리(초대·구성원) 화면은 아이 상세(/pets/[id]) 하단에 있다. 예전엔 이 타일이 목록
+  // (/pets)으로만 가 "어느 아이?"를 한 번 더 고르고 스크롤해야 구성원 화면에 닿았다. 아이가
+  // 1마리면 그 아이의 구성원 섹션으로 바로 딥링크해 한 단계를 없앤다(여러 마리면 목록에서 선택).
+  const supabase = await createServerSupabaseClient()
+  const { data: petRows } = await supabase.from('pets').select('id').order('created_at')
+  const pets = petRows ?? []
+  const coCareHref = pets.length === 1 ? `/pets/${pets[0].id}#members` : '/pets'
+
+  // 계정·설정 — 공동 관리(초대)가 아이 상세 화면 맨 아래에만, 알림·프로필 설정이 헤더의
+  // 라벨 없는 사람 아이콘 뒤에만 있어 발견성이 낮았다. 허브에 상시 진입점을 둔다.
+  const accountItems: Item[] = [
+    { href: coCareHref, icon: '👨‍👩‍👧', key: 'coCare' },
+    { href: '/profile', icon: '⚙️', key: 'settings' },
+  ]
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -39,7 +49,7 @@ export default async function MorePage() {
 
       <Section title={t('sectionInfo')} items={INFO_ITEMS} t={t} />
       <Section title={t('sectionActivity')} items={ACTIVITY_ITEMS} t={t} />
-      <Section title={t('sectionAccount')} items={ACCOUNT_ITEMS} t={t} />
+      <Section title={t('sectionAccount')} items={accountItems} t={t} />
     </div>
   )
 }

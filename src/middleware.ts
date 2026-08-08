@@ -92,7 +92,7 @@ export async function middleware(request: NextRequest) {
   // (/costs·/map·/premium·/admin 도 모두 로그인 사용자 전용 화면 — 누락 시 미로그인 접근 때
   //  로그인으로 리다이렉트되지 않고 빈/깨진 화면이 떠서 함께 포함한다. 데이터 자체는 RLS·
   //  API 인가로 보호되지만, 미들웨어 게이트는 올바른 리다이렉트·심층 방어를 위해 필요.)
-  const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/care', '/walk', '/info', '/community', '/profile', '/schedule', '/notifications', '/lost', '/invite', '/costs', '/map', '/premium', '/admin', '/achievements', '/more']
+  const protectedPaths = ['/dashboard', '/pets', '/foods', '/health', '/symptoms', '/care', '/walk', '/info', '/community', '/profile', '/schedule', '/notifications', '/lost', '/invite', '/costs', '/map', '/premium', '/admin', '/achievements', '/more']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {

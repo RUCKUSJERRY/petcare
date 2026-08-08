@@ -67,6 +67,8 @@
     "foodsDesc": "사료·간식·안전한 음식",
     "health": "건강 정보",
     "healthDesc": "생애주기 건강 체크",
+    "symptoms": "증상별 대처",
+    "symptomsDesc": "구토·설사 등 급할 때",
     "activity": "활동 가이드",
     "activityDesc": "산책·놀이 가이드",
     "care": "생활 관리",
@@ -89,6 +91,7 @@
     "aria": "섹션 이동",
     "foods": "음식",
     "health": "건강",
+    "symptoms": "증상",
     "activity": "활동",
     "care": "생활관리",
     "map": "지도",
@@ -1268,5 +1271,19 @@
     "labelYesterday": "어제",
     "labelDate": "{month}월 {day}일",
     "loadingMore": "불러오는 중…"
+  },
+  "symptoms": {
+    "title": "증상별 대처",
+    "petBasis": "{name} 기준",
+    "emergencyTitle": "응급 상황이면 바로 병원으로",
+    "emergencyDesc": "호흡곤란, 의식 저하, 경련, 심한 출혈, 중독 의심, 수고양이 배뇨 곤란은 촌각을 다투는 응급이에요. 아래 내용을 읽기보다 즉시 동물병원·응급실에 연락하세요.",
+    "disclaimer": "이 정보는 일반적인 참고용이며 수의학적 진단·처방을 대신하지 않아요. 증상이 지속·악화되거나 판단이 어려우면 반드시 수의사와 상담하세요.",
+    "searchPlaceholder": "증상 검색 (예: 구토, 설사)",
+    "searchEmpty": "해당하는 증상 정보가 없어요",
+    "searchReset": "검색 지우기",
+    "watchTitle": "집에서 관찰·케어",
+    "redFlagsTitle": "이럴 땐 바로 병원 (위험 신호)",
+    "vetWhenTitle": "병원 방문 기준",
+    "healthLink": "생애주기 건강 정보 보러 가기 →"
   }
 }
