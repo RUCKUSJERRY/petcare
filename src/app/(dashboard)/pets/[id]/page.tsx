@@ -15,6 +15,9 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 import { WeightSection } from '../_components/WeightSection'
 import { PetMembers } from '../_components/PetMembers'
+import { PetCharacterCard } from '../_components/PetCharacterCard'
+import { WeightInsightCard } from '@/app/(dashboard)/dashboard/_components/WeightInsightCard'
+import { LifePatternCard } from '@/app/(dashboard)/dashboard/_components/LifePatternCard'
 import { QuickLogBar } from '../_components/QuickLogBar'
 import { RecordFeed } from '../_components/RecordFeed'
 import { RecordDetailModal } from '../_components/RecordDetailModal'
@@ -137,6 +140,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     queryClient.invalidateQueries({ queryKey: ['today-log', params.id] })
     queryClient.invalidateQueries({ queryKey: ['record-feed', params.id] })
     queryClient.invalidateQueries({ queryKey: ['care-schedule'] })
+    // 캐릭터·성장 카드(기분·연속·레벨)와 생활 패턴 카드도 이 페이지에서 기록하면 즉시 반영되도록
+    // 함께 무효화한다(카드 전용 키 + 공용 생활패턴 키).
+    queryClient.invalidateQueries({ queryKey: ['pet-streak', params.id] })
+    queryClient.invalidateQueries({ queryKey: ['pet-care-points', params.id] })
+    queryClient.invalidateQueries({ queryKey: ['life-pattern', params.id] })
   }
 
   const handleSave = async () => {
@@ -442,6 +450,15 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       {/* 내 아이 기록 (조회 모드에서만) */}
       {!editing && (
         <>
+          {/* 캐릭터·성장 카드 — 홈 요약카드에만 있던 기분 이모지·말풍선·연속·성장 레벨을
+              아이 하나에 집중하는 상세 화면에도 그대로 노출(발견성·정서적 신호·일관성). */}
+          <PetCharacterCard petId={params.id} petName={pet.name} />
+
+          {/* 체중 추세 인사이트 + 생활 패턴(추이·공백 이상 신호) — 홈에서만 보이던 건강 정보를
+              아이를 직접 관리하는 이 화면에서도 보여준다(정보 고도화). 데이터가 적으면 스스로 숨는다. */}
+          <WeightInsightCard petId={params.id} />
+          <LifePatternCard petId={params.id} />
+
           {/* 원탭 생활기록 + 시간순 피드 + 직접기록/스캔 — 홈 요약카드와 동일한 기록 진입을
               이 아이의 상세 페이지에서도 그대로 제공(상세가 요약카드의 상위집합이 되도록). */}
           <div className="card space-y-2">

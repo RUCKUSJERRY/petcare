@@ -201,6 +201,11 @@ export function RecordsScanModal({
       qc.invalidateQueries({ queryKey: ['today-timeline', null] })
       qc.invalidateQueries({ queryKey: ['record-feed', petId] })
       qc.invalidateQueries({ queryKey: ['record-feed', null] })
+      // 홈 생활 패턴·주간 리포트(활동·성장 레벨)·월간 회고도 기록을 집계원으로 쓰므로 함께 무효화
+      // (QuickLogBar·RecordForm 과 동일 세트로 맞춰 스캔 저장 직후에도 옛값이 남지 않게 한다).
+      qc.invalidateQueries({ queryKey: ['life-pattern', petId] })
+      qc.invalidateQueries({ queryKey: ['weekly-report', petId] })
+      qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
       // 스캔 기록은 진료비 등 비용을 포함할 수 있으므로 비용 통계도 갱신한다.
       qc.invalidateQueries({ queryKey: ['cost-records'] })
     }

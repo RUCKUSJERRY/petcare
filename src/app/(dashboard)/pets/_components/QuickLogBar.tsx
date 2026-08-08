@@ -100,6 +100,11 @@ export function QuickLogBar({
       qc.invalidateQueries({ queryKey: ['records', petId] })
       // 홈 생활 패턴 카드(최근 14일 추이·공백)도 새 기록 즉시 반영되도록 갱신
       qc.invalidateQueries({ queryKey: ['life-pattern', petId] })
+      // 홈 주간 리포트(7일 활동·성장 레벨)·월간 회고도 이 기록을 집계원으로 쓴다 — 함께 무효화해야
+      // 원탭 기록 직후 옛값(레벨·활동 합계)이 staleTime 만큼 남지 않는다. (키 접두 매칭으로
+      // ['monthly-recap', petId, 시작일] 도 함께 무효화됨.)
+      qc.invalidateQueries({ queryKey: ['weekly-report', petId] })
+      qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
     }
   }
 

@@ -245,6 +245,10 @@ export const RecordForm = forwardRef<RecordFormHandle, {
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
     // 홈 생활 패턴 카드(식사·물·배변 추이)도 새 기록 즉시 반영
     qc.invalidateQueries({ queryKey: ['life-pattern', effectivePetId] })
+    // 홈 주간 리포트(7일 활동·성장 레벨)·월간 회고도 기록을 집계원으로 쓴다 — 함께 무효화해
+    // 직접 기록/수정 직후에도 레벨·활동 합계가 옛값으로 남지 않게 한다.
+    qc.invalidateQueries({ queryKey: ['weekly-report', effectivePetId] })
+    qc.invalidateQueries({ queryKey: ['monthly-recap', effectivePetId] })
     // 비용이 포함된 기록이면 비용 통계(costs 화면)도 갱신 대상 — 조건 없이 무효화해 정합성 유지.
     qc.invalidateQueries({ queryKey: ['cost-records'] })
     onDone()
@@ -422,7 +426,7 @@ export const RecordForm = forwardRef<RecordFormHandle, {
                         {WEEK_ORDINAL_LABELS[String(wk)]}
                       </button>
                     ))}
-                    <span className="text-xs text-gray-500">{WEEKDAY_LABELS[parseYMD(eventOn).getDay()]}요일</span>
+                    <span className="text-xs text-gray-500">{t('weekdaySuffix', { day: WEEKDAY_LABELS[parseYMD(eventOn).getDay()] })}</span>
                   </div>
                 )}
               </div>

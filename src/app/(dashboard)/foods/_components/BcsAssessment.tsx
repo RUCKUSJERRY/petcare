@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { BCS_QUESTIONS, scoreBcs, bcsOutcome, type BcsSignal } from '@/lib/bcs'
 
 const TONE: Record<'amber' | 'green' | 'red', { card: string; badge: string }> = {
@@ -15,6 +16,7 @@ const TONE: Record<'amber' | 'green' | 'red', { card: string; badge: string }> =
  * 결과는 저장하지 않는다(참고용). 순수 로직은 lib/bcs.ts 에서 계산·테스트된다.
  */
 export function BcsAssessment() {
+  const t = useTranslations('bcs')
   // 각 문항의 선택 신호(미응답은 undefined). step 은 현재 보여줄 문항 인덱스.
   const [answers, setAnswers] = useState<(BcsSignal | undefined)[]>(
     () => BCS_QUESTIONS.map(() => undefined),
@@ -46,8 +48,8 @@ export function BcsAssessment() {
       <div className="flex items-center gap-2.5">
         <span className="text-2xl shrink-0" aria-hidden>⚖️</span>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-gray-900">체형 자가진단 (BCS)</div>
-          <div className="text-xs text-gray-400 mt-0.5">3가지만 확인하면 우리 아이 체형을 가늠할 수 있어요</div>
+          <div className="font-semibold text-gray-900">{t('title')}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</div>
         </div>
       </div>
 
@@ -58,7 +60,7 @@ export function BcsAssessment() {
           onClick={() => setStarted(true)}
           className="btn-primary w-full text-sm py-2.5"
         >
-          자가진단 시작하기
+          {t('start')}
         </button>
       )}
 
@@ -108,7 +110,7 @@ export function BcsAssessment() {
               onClick={() => setStep(step - 1)}
               className="text-xs text-gray-400 hover:text-gray-600"
             >
-              ‹ 이전 문항
+              {t('prev')}
             </button>
           )}
         </div>
@@ -134,14 +136,14 @@ export function BcsAssessment() {
               ))}
             </ul>
             <p className="text-[11px] text-gray-400 pt-0.5">
-              ※ 의료 진단이 아닌 보호자용 참고 지표예요. 급격한 체중 변화는 수의사와 상담하세요.
+              {t('disclaimer')}
             </p>
             <button
               type="button"
               onClick={reset}
               className="text-xs text-primary-600 font-semibold pt-0.5"
             >
-              ↺ 다시 진단하기
+              {t('retry')}
             </button>
           </div>
         )

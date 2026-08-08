@@ -50,6 +50,12 @@ export function RecordDetailModal({
       qc.invalidateQueries({ queryKey: ['today-log', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['today-timeline', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['record-feed', record.pet_id] })
+      // 이 모달로 식사·물·배변 기록을 수정/삭제하면 홈 생활 패턴·주간 리포트(활동·성장 레벨)·
+      // 월간 회고도 옛값이 남는다 — 기록 편집 경로에서도 다른 경로(QuickLogBar·RecordForm)와
+      // 동일하게 함께 무효화해 정합성을 맞춘다.
+      qc.invalidateQueries({ queryKey: ['life-pattern', record.pet_id] })
+      qc.invalidateQueries({ queryKey: ['weekly-report', record.pet_id] })
+      qc.invalidateQueries({ queryKey: ['monthly-recap', record.pet_id] })
     }
     // 전체(아이 미선택) 타임라인·피드도 갱신
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
