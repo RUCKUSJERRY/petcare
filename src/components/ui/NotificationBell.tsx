@@ -111,7 +111,12 @@ export function NotificationBell() {
       // 로드 전 '1→0' 가정은 실제 미읽음 수와 무관하게 배지를 꺼버린다. 값이 있을 때만 1 줄인다.
       qc.setQueryData<number>(['notifications-unread'], c => (c == null ? c : Math.max(0, c - 1)))
       supabase.from('notifications').update({ read: true }).eq('id', n.id)
-        .then(() => qc.invalidateQueries({ queryKey: ['notifications-unread'] }))
+        .then(() => {
+          // 배지 수뿐 아니라 목록 캐시도 서버와 재조정한다 — 낙관적 패치만 남으면 전체
+          // 알림 화면(/notifications)·드롭다운의 읽음 표시가 서버 상태와 어긋날 수 있다.
+          qc.invalidateQueries({ queryKey: ['notifications-unread'] })
+          qc.invalidateQueries({ queryKey: ['notifications'] })
+        })
     }
   }
 

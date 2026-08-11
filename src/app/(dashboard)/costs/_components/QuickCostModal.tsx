@@ -72,10 +72,20 @@ export function QuickCostModal({
     if (insErr) { setError(t('quickCostSaveFailed')); return }
     // 다음 빠른 입력의 기본 항목으로 재사용 (반복 지출 입력 마찰 완화)
     try { window.localStorage.setItem('petcare_last_cost_category', category) } catch { /* 저장 실패는 무시 */ }
+    // 비용도 결국 records 한 건이라, 다른 기록 경로(QuickLogBar·RecordForm)와 동일한 캐시들을
+    // 함께 무효화해야 홈 '오늘 타임라인'·오늘 피드(선택 아이 + '전체'=null 스코프)와 주간·월간
+    // 집계가 새 지출을 즉시 반영한다. 예전엔 cost-records·record-feed 만 무효화해, 오늘 남긴
+    // 지출이 홈 타임라인·'전체 보기'에서 최대 60초간 안 보였다.
     qc.invalidateQueries({ queryKey: ['cost-records'] })
+    qc.invalidateQueries({ queryKey: ['today-timeline', targetPet] })
+    qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record-feed', targetPet] })
+    qc.invalidateQueries({ queryKey: ['record-feed', null] })
     qc.invalidateQueries({ queryKey: ['records', targetPet] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    // 주간 리포트·월간 회고는 지출 합계를 집계원으로 쓴다(키 접두 매칭으로 시작일 포함 무효화).
+    qc.invalidateQueries({ queryKey: ['weekly-report', targetPet] })
+    qc.invalidateQueries({ queryKey: ['monthly-recap', targetPet] })
     onDone()
   }
 

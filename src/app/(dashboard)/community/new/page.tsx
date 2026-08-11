@@ -3,13 +3,13 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import type { Pet, PostCategory } from '@/types'
+import type { PostCategory } from '@/types'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { BackButton } from '@/components/ui/BackButton'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
+import { useMyPets } from '@/hooks/useMyPets'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
@@ -27,21 +27,10 @@ export default function NewPostPage() {
     breed_id: '',
   })
 
-  // 내 반려동물 (견종 태그 자동 추천용)
-  const { data: pets } = useQuery({
-    queryKey: ['my-pets'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
-      const { data } = await supabase
-        .from('pets')
-        .select('id, name, breed_id, breed:breeds(name_ko)')
-        .eq('user_id', user.id)
-      return (data ?? []) as unknown as (Pick<Pet, 'id' | 'name' | 'breed_id'> & {
-        breed?: { name_ko: string }
-      })[]
-    },
-  })
+  // 내 반려동물 (견종 태그 자동 추천용) — 앱 전역과 동일한 공용 캐시('my-pets')를 그대로 쓴다.
+  // 예전엔 이 화면에서 축소된 컬럼·다른 스코프(user_id 필터)로 같은 키를 덮어써, 홈·요약 카드가
+  // 캐시를 먼저 읽으면 species·photo_url 등이 누락된 아이 객체를 받는 교차 오염 위험이 있었다.
+  const { data: pets } = useMyPets()
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 

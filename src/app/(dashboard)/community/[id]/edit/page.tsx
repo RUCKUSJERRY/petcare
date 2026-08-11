@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { Pet, PostCategory, Post } from '@/types'
+import type { PostCategory, Post } from '@/types'
 import { MultiImagePicker } from '@/components/ui/MultiImagePicker'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
+import { useMyPets } from '@/hooks/useMyPets'
 
 const CATEGORIES: PostCategory[] = ['질문', '자랑', '정보공유', '일상']
 
@@ -30,8 +31,10 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
   // 불러온 원본 스냅샷 — 편집 중 실제로 바뀐 게 있을 때만 이탈 가드를 띄우기 위해 비교 기준으로 쓴다.
   const initialRef = useRef<{ category: string; title: string; content: string; breed_id: string; images: string } | null>(null)
 
-  // 기존 게시글 불러오기
-  const { data: post } = useQuery({
+  // 기존 게시글 불러오기. 편집 권한(존재·소유) 판정만 여기서 하고, 실제 화면 이동은 렌더 이후
+  // effect 에서 한다 — 라우팅은 부작용이라 queryFn 안에서 하면 재조회·창 포커스 복귀마다 다시
+  // 실행돼, 일시적 조회 실패 때 정상 소유자도 읽기 화면으로 튕길 수 있다.
+  const { data: postResult } = useQuery({
     queryKey: ['post', params.id],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -41,13 +44,16 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         .eq('id', params.id)
         .single()
       const p = data as Post | null
-      if (!p || p.user_id !== user?.id) {
-        router.replace(`/community/${params.id}`)
-        return null
-      }
-      return p
+      if (!p || p.user_id !== user?.id) return { post: null, denied: true as const }
+      return { post: p, denied: false as const }
     },
   })
+  const post = postResult?.post ?? null
+
+  // 없는 글/남의 글이면 편집 불가 → 읽기 화면으로 되돌린다.
+  useEffect(() => {
+    if (postResult?.denied) router.replace(`/community/${params.id}`)
+  }, [postResult, router, params.id])
 
   useEffect(() => {
     if (post && !loaded) {
@@ -76,20 +82,8 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
   )
   const { promptLeave, confirmLeave, cancelLeave } = useUnsavedGuard(dirty)
 
-  const { data: pets } = useQuery({
-    queryKey: ['my-pets'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
-      const { data } = await supabase
-        .from('pets')
-        .select('id, name, breed_id, breed:breeds(name_ko)')
-        .eq('user_id', user.id)
-      return (data ?? []) as unknown as (Pick<Pet, 'id' | 'name' | 'breed_id'> & {
-        breed?: { name_ko: string }
-      })[]
-    },
-  })
+  // 견종 태그 추천용 — 앱 전역과 동일한 공용 캐시('my-pets')를 그대로 쓴다(교차 오염 방지).
+  const { data: pets } = useMyPets()
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
