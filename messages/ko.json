@@ -370,6 +370,8 @@
     "heading": "기분 · 성장",
     "viewAchievements": "성취 모아보기 ›",
     "streakBadge": "🔥 {days}일 연속",
+    "bestStreak": "🏆 최고 {days}일",
+    "bestStreakRecord": "🏆 최고 기록 경신 중!",
     "missionComplete": "오늘 핵심 돌봄을 모두 마쳤어요! {name}가 활짝 🥰"
   },
   "bcs": {

@@ -126,6 +126,36 @@ export function computeLogStreak(dates: Iterable<string>, today: string): number
 }
 
 /**
+ * 주어진 기간 안에서 '가장 길게 이어진 연속 기록일(최고 기록)'을 계산한다.
+ *
+ * 현재 진행 중인 연속(computeLogStreak)만으로는, 하루라도 놓치면 그동안 쌓은 기록이 0으로
+ * 사라진 것처럼 보여 이탈 계기가 된다. '자기 최고 기록'을 함께 보여 주면 연속이 끊겨도 "다시
+ * 최고 기록에 도전"이라는 재방문 동기가 남는다(리텐션). 지금 연속이 최고와 같으면 = 신기록 경신 중.
+ *
+ * - 오늘(today) 이후의 미래 날짜는 무시한다(방어적).
+ * - Date.now()·타임존에 의존하지 않도록 '오늘'을 인자로 받아 결정적으로 계산한다.
+ * - 최고 기록은 넘겨받은 날짜 집합(=조회 창) 안에서만 산출된다. 호출부가 창 길이를 정한다.
+ *
+ * @param dates '기록한 날'의 날짜 문자열(YYYY-MM-DD) 집합 또는 반복가능 객체(중복·순서 무관)
+ * @param today 기준 '오늘' (KST YYYY-MM-DD)
+ */
+export function computeLongestStreak(dates: Iterable<string>, today: string): number {
+  const set = dates instanceof Set ? dates : new Set(dates)
+  // 미래 날짜 제외 후 오름차순 정렬 — 이어지는 구간을 앞에서부터 훑어 최댓값을 찾는다.
+  const days = Array.from(set).filter(d => d <= today).sort()
+  if (days.length === 0) return 0
+  let best = 1
+  let run = 1
+  for (let i = 1; i < days.length; i++) {
+    // 집합이라 사실상 중복은 없지만, 반복 입력으로 같은 날이 들어와도 안전하게 건너뛴다.
+    if (days[i] === days[i - 1]) continue
+    run = addDays(days[i - 1], 1) === days[i] ? run + 1 : 1
+    if (run > best) best = run
+  }
+  return best
+}
+
+/**
  * 나이 단계별 색상 클래스 (Tailwind)
  */
 export function lifeStageColor(stage: PetAge['lifeStage'] | '미상'): string {

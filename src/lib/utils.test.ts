@@ -21,6 +21,7 @@ import {
   daysTogether,
   togetherMilestone,
   computeLogStreak,
+  computeLongestStreak,
   todayKST,
   shiftDateTime,
   isoToLocalTime,
@@ -258,6 +259,36 @@ describe('computeLogStreak', () => {
   })
   it('월 경계를 넘는 연속도 정확히 센다', () => {
     expect(computeLogStreak(['2026-08-01', '2026-07-31', '2026-07-30'], '2026-08-01')).toBe(3)
+  })
+})
+
+describe('computeLongestStreak', () => {
+  const T = '2026-07-25'
+  it('가장 길게 이어진 구간 길이를 센다(현재 연속과 무관)', () => {
+    // 07-10~07-14 = 5일 연속(과거), 07-24~07-25 = 2일 연속(현재) → 최고는 5
+    const dates = ['2026-07-10', '2026-07-11', '2026-07-12', '2026-07-13', '2026-07-14', '2026-07-24', '2026-07-25']
+    expect(computeLongestStreak(dates, T)).toBe(5)
+    expect(computeLogStreak(dates, T)).toBe(2)
+  })
+  it('전부 이어지면 전체 길이', () => {
+    expect(computeLongestStreak(['2026-07-23', '2026-07-24', '2026-07-25'], T)).toBe(3)
+  })
+  it('하루씩 떨어져 있으면 1', () => {
+    expect(computeLongestStreak(['2026-07-21', '2026-07-23', '2026-07-25'], T)).toBe(1)
+  })
+  it('오늘 이후(미래) 날짜는 무시', () => {
+    expect(computeLongestStreak(['2026-07-25', '2026-07-26', '2026-07-27'], T)).toBe(1)
+  })
+  it('중복·순서 무관, Set 허용', () => {
+    expect(computeLongestStreak(['2026-07-24', '2026-07-25', '2026-07-25', '2026-07-24'], T)).toBe(2)
+    expect(computeLongestStreak(new Set(['2026-07-13', '2026-07-14', '2026-07-15']), T)).toBe(3)
+  })
+  it('빈 입력은 0', () => {
+    expect(computeLongestStreak([], T)).toBe(0)
+    expect(computeLongestStreak(new Set(), T)).toBe(0)
+  })
+  it('월 경계를 넘는 최고 기록도 정확히 센다', () => {
+    expect(computeLongestStreak(['2026-06-29', '2026-06-30', '2026-07-01', '2026-07-02'], T)).toBe(4)
   })
 })
 

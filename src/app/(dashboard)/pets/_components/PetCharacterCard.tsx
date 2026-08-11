@@ -4,15 +4,16 @@ import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { addDays, computeLogStreak, todayKST } from '@/lib/utils'
+import { addDays, computeLogStreak, computeLongestStreak, todayKST } from '@/lib/utils'
 import { DAILY_LOG_CATEGORIES } from '@/lib/records'
 import { computeTodayCare } from '@/lib/todayCare'
 import { petMood, petSpeech } from '@/lib/petMood'
 import { computeCareLevel, computeCarePoints } from '@/lib/careLevel'
 
-/** 연속 기록 계산 창(일) — 홈 대시보드(STREAK_WINDOW_DAYS)와 동일 기준. 이보다 긴 연속은 이
- *  창으로 제한되지만 표시용 배지엔 충분하고 조회 행 수를 합리적으로 제한한다. */
-const STREAK_WINDOW_DAYS = 60
+/** 최고 기록(최장 연속)·현재 연속을 함께 산출할 조회 창(일). '자기 최고 기록'이 의미를 가지려면
+ *  현재 연속(홈 60일)보다 넉넉해야 하되, event_on 만 읽는 가벼운 조회라 반년으로 창을 제한해
+ *  행 수를 합리적으로 묶는다. 이보다 오래된 기록은 최고 기록 산정에서 빠진다. */
+const STREAK_WINDOW_DAYS = 180
 
 /**
  * 아이 상세 페이지용 '캐릭터 · 성장' 카드.
@@ -61,8 +62,9 @@ export function PetCharacterCard({ petId, petName }: { petId: string; petName: s
     },
   })
 
-  // 생활기록 연속일(streak) — 최근 STREAK_WINDOW_DAYS 로 범위를 좁혀 조회(무제한 방지).
-  const { data: streak = 0, isLoading: streakLoading } = useQuery({
+  // 생활기록 연속일 — 현재 연속(current)과 자기 최고 기록(best)을 한 번의 조회로 함께 계산한다.
+  // 최근 STREAK_WINDOW_DAYS 로 범위를 좁혀 조회(무제한 방지)하고, 같은 날짜 집합에서 두 값을 파생.
+  const { data: streakData, isLoading: streakLoading } = useQuery({
     queryKey: ['pet-streak', petId],
     queryFn: async () => {
       const { data } = await supabase
@@ -71,9 +73,12 @@ export function PetCharacterCard({ petId, petName }: { petId: string; petName: s
         .eq('pet_id', petId)
         .in('category', DAILY_LOG_CATEGORIES as unknown as string[])
         .gte('event_on', addDays(today, -STREAK_WINDOW_DAYS))
-      return computeLogStreak((data ?? []).map(r => (r as { event_on: string }).event_on), today)
+      const dates = (data ?? []).map(r => (r as { event_on: string }).event_on)
+      return { current: computeLogStreak(dates, today), best: computeLongestStreak(dates, today) }
     },
   })
+  const streak = streakData?.current ?? 0
+  const bestStreak = streakData?.best ?? 0
 
   // 성장 레벨 — 누적 기록 수 + 산책 수(가중)로 계산(head 카운트라 가볍다).
   const { data: level, isLoading: levelLoading } = useQuery({
@@ -122,12 +127,25 @@ export function PetCharacterCard({ petId, petName }: { petId: string; petName: s
         </div>
       )}
 
-      {/* 연속 기록 배지 + 성장 레벨 */}
+      {/* 연속 기록 배지 + 자기 최고 기록 + 성장 레벨 */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {streak >= 2 && (
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
             {t('streakBadge', { days: streak })}
           </span>
+        )}
+        {/* 자기 최고 기록(최장 연속) — 연속이 끊겨도 '다시 최고 기록에 도전'이라는 재방문 동기를
+            남긴다. 지금 연속이 최고와 같으면(=신기록 경신 중) 강조색으로, 아니면 도전 목표로 표시. */}
+        {bestStreak >= 2 && (
+          streak >= bestStreak ? (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-bold">
+              {t('bestStreakRecord')}
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold">
+              {t('bestStreak', { days: bestStreak })}
+            </span>
+          )
         )}
         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary-700 bg-primary-100 rounded-full px-2 py-0.5">
           <span aria-hidden>⭐</span>{tr('levelLabel', { level: level.level })}
