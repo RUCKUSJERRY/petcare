@@ -83,6 +83,12 @@ export function QuickCostModal({
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
     qc.invalidateQueries({ queryKey: ['records', targetPet] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    // 빠른 비용 입력은 항목으로 생활기록 카테고리(식사·물·배변·투약 등)도 고를 수 있다 —
+    // 오늘 날짜로 그런 지출을 남기면 records 한 건이 '오늘의 돌봄'(today-log)·생활 패턴(life-pattern)
+    // 집계에도 포함되므로, 전체 기록 폼(RecordForm)과 동일하게 이 두 캐시도 함께 무효화한다.
+    // (예전엔 누락돼, 오늘 '식사' 지출을 남겨도 홈 '오늘 돌봄' 카운트·생활 패턴이 최대 60초간 옛값이었다.)
+    qc.invalidateQueries({ queryKey: ['today-log', targetPet] })
+    qc.invalidateQueries({ queryKey: ['life-pattern', targetPet] })
     // 주간 리포트·월간 회고는 지출 합계를 집계원으로 쓴다(키 접두 매칭으로 시작일 포함 무효화).
     qc.invalidateQueries({ queryKey: ['weekly-report', targetPet] })
     qc.invalidateQueries({ queryKey: ['monthly-recap', targetPet] })

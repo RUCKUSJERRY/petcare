@@ -105,7 +105,17 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
     const { error } = await supabase.from('walks').delete().eq('id', walk.id)
     setBusy(false)
     if (error) { setActionErr(t('deleteError')); setShowDelete(false); return }
-    qc.invalidateQueries({ queryKey: ['walks'] })
+    // 삭제는 저장의 거울상 — 저장 경로(track/page.tsx)가 무효화하는 캐시를 그대로 되돌려야
+    // 홈 '오늘의 돌봄' 산책 체크·기분, 주간 리포트, 월간 회고가 삭제를 즉시 반영한다.
+    // (예전엔 ['walks'] 만 무효화해, 오늘의 유일한 산책을 지워도 홈 요약이 최대 60초간
+    //  '산책 완료'로 남고 주간·월간 거리 합계도 옛값을 보였다.)
+    qc.invalidateQueries({ queryKey: ['walks'] }) // 목록(mine/shared) 프리픽스 매칭
+    qc.invalidateQueries({ queryKey: ['walk-goal'] }) // 이번 주 산책 목표 진행도
+    if (walk.pet_id) {
+      qc.invalidateQueries({ queryKey: ['today-walk', walk.pet_id] }) // 홈 '오늘의 돌봄' 산책 체크·기분
+      qc.invalidateQueries({ queryKey: ['weekly-report', walk.pet_id] }) // 주간 리포트 활동 합계
+      qc.invalidateQueries({ queryKey: ['monthly-recap', walk.pet_id] }) // 월초 회고 거리 합계(접두 매칭)
+    }
     router.replace('/walks')
   }
 

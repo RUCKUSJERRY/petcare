@@ -153,6 +153,32 @@ export default async function DashboardPage() {
           선택된 아이가 있을 때만 스스로 노출된다(클라이언트). */}
       {pets && pets.length > 0 && <TodayChecklist />}
 
+      {/* 바로가기 — 하단 탭에 이미 있는 목적지(일정·지도)를 다시 얹지 않고, '숨어 있어 찾기 어려운'
+          화면(성취·비용)과 가장 잦은 의도(산책 지금 시작)를 홈 상단부에 노출한다.
+          (성취·비용·산책은 하단 탭 진입점이 없어 발견성이 낮았다.) 예전엔 이 바로가기가 홈 맨
+          아래, 그것도 프리미엄 업셀·제휴 추천 카드 '아래'에 있어, 매일 쓰는 이동 동선이 홍보 카드
+          뒤로 밀려 있었다 — 오늘의 돌봄 바로 밑으로 올려 한 번의 스크롤 안에 닿게 한다. */}
+      <div className="grid grid-cols-2 gap-3">
+        {pets && pets.length > 0 ? (
+          <>
+            {/* 성취(레벨·뱃지)는 예전엔 주간 리포트 카드의 배지 하나로만 들어갈 수 있어
+                거의 발견되지 않았다 — 홈 타일로 상시 진입점을 준다(리텐션 시스템 노출).
+                건강(/health)은 '오늘의 정보' 카드에서 상시 연결되므로 타일 중복을 제거했다. */}
+            <QuickTile href="/achievements" icon="🏅" label={t('achievementsTitle')} />
+            <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
+            {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로.
+                autostart=1 로 넘겨, GPS가 준비됐고 복구할 세션이 없으면 idle 한 단계를 건너뛰고 자동 시작한다. */}
+            <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
+          </>
+        ) : (
+          // 아직 아이가 없으면 성취·건강·비용은 의미가 없어(아이 기준) 지도·산책만 노출한다.
+          <>
+            <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
+            <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
+          </>
+        )}
+      </div>
+
       {/* 지난달 회고 — 새 달 초반(1~7일)에만 지난 한 달을 돌아보게 하는 카드(월초 재방문 계기 +
           브랜드 이미지 공유로 자연 유입). 노출 창이 아니거나 활동이 없으면 스스로 숨김. */}
       {pets && pets.length > 0 && <MonthlyRecapCard />}
@@ -174,30 +200,6 @@ export default async function DashboardPage() {
 
       {/* 기록 기반 맞춤 제휴 추천 (임박 일정·식사 루틴) */}
       <SmartAffiliateCard recs={smartRecs} />
-
-      {/* 바로가기 — 하단 탭에 이미 있는 목적지(일정·지도)를 다시 얹지 않고, '숨어 있어 찾기 어려운'
-          화면(성취·건강 체크리스트·비용)과 가장 잦은 의도(산책 지금 시작)를 홈에 노출한다.
-          (성취·건강·비용은 하단 탭 진입점이 없어 발견성이 낮았다.) */}
-      <div className="grid grid-cols-2 gap-3">
-        {pets && pets.length > 0 ? (
-          <>
-            {/* 성취(레벨·뱃지)는 예전엔 주간 리포트 카드의 배지 하나로만 들어갈 수 있어
-                거의 발견되지 않았다 — 홈 타일로 상시 진입점을 준다(리텐션 시스템 노출).
-                건강(/health)은 '오늘의 정보' 카드에서 상시 연결되므로 타일 중복을 제거했다. */}
-            <QuickTile href="/achievements" icon="🏅" label={t('achievementsTitle')} />
-            <QuickTile href="/costs" icon="🧾" label={t('costsTitle')} />
-            {/* 홈에서 가장 잦은 산책 의도는 '지금 시작'이라, 목록을 거치지 않고 바로 산책 시작 화면으로.
-                autostart=1 로 넘겨, GPS가 준비됐고 복구할 세션이 없으면 idle 한 단계를 건너뛰고 자동 시작한다. */}
-            <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
-          </>
-        ) : (
-          // 아직 아이가 없으면 성취·건강·비용은 의미가 없어(아이 기준) 지도·산책만 노출한다.
-          <>
-            <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
-            <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
-          </>
-        )}
-      </div>
 
       {/* 최근 커뮤니티 글 */}
       {recentPosts.length > 0 && (
