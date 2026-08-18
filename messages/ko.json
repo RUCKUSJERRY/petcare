@@ -1119,7 +1119,7 @@
     "monthly": "월별 지출",
     "byCategory": "항목별 지출",
     "monthLabel": "{n}월",
-    "monthlyHint": "막대를 누르면 그 달 내역을 볼 수 있어요",
+    "monthlyHint": "막대나 아래 목록에서 달을 누르면 내역이 열려요",
     "drillMonth": "{n}월 내역",
     "drillCategory": "{category} 내역",
     "drillEmpty": "해당 내역이 없어요.",

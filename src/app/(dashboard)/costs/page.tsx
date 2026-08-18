@@ -172,7 +172,10 @@ export default function CostsPage() {
             </p>
           </div>
 
-          {/* 월별 지출 — 막대를 누르면 그 달 내역을 펼친다(모바일에선 hover 툴팁이 안 보이므로 탭으로) */}
+          {/* 월별 지출 — 막대는 '한눈에 보기'용 개요, 그 아래 목록은 '정확히 눌러 펼치기'용.
+              막대 12개가 가로폭을 나눠 폭이 좁고(≈24px) 모바일엔 hover 툴팁도 없어 정조준이
+              어려웠다 — 같은 drill 을 여는 넉넉한 탭 영역의 월 행을 함께 두어, 막대든 행이든
+              어느 쪽을 눌러도 같은 달 내역이 아래에 펼쳐지게 한다. */}
           <div className="card space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-500">{t('monthly')}</p>
@@ -199,6 +202,34 @@ export default function CostsPage() {
                       style={{ height: `${Math.max(pct, m.total > 0 ? 6 : 2)}%` }}
                     />
                     <span className={cn('text-[9px]', active ? 'text-primary-600 font-bold' : 'text-gray-400')}>{m.month}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {/* 넉넉한 탭 영역의 월 목록 — 지출이 있는 달만. 막대와 동일한 drill 을 토글한다
+                (항목별 지출 행과 같은 조작감의 큰 탭 타깃). */}
+            <div className="space-y-1 pt-0.5">
+              {stats.byMonth.filter(m => m.total > 0).map(m => {
+                const active = drill?.kind === 'month' && drill.month === m.month
+                return (
+                  <button
+                    key={m.month}
+                    type="button"
+                    onClick={() => toggleDrill({ kind: 'month', month: m.month })}
+                    aria-pressed={active}
+                    className={cn(
+                      'w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm border transition-colors',
+                      active ? 'bg-primary-50 border-primary-200' : 'bg-white border-gray-100 hover:bg-gray-50'
+                    )}
+                  >
+                    <span className={cn('font-medium', active ? 'text-primary-700' : 'text-gray-700')}>
+                      {t('monthLabel', { n: m.month })}
+                      <span className="text-xs text-gray-400"> · {t('count', { n: m.count })}</span>
+                    </span>
+                    <span className={cn('flex items-center gap-1 font-semibold', active ? 'text-primary-700' : 'text-gray-900')}>
+                      {formatWon(m.total)}
+                      <span aria-hidden className={active ? 'text-primary-400' : 'text-gray-300'}>›</span>
+                    </span>
                   </button>
                 )
               })}
