@@ -392,6 +392,9 @@ export default function WalkTrackPage() {
     if (petId) {
       qc.invalidateQueries({ queryKey: ['today-walk', petId] }) // 홈 '오늘의 돌봄' 산책 체크·기분
       qc.invalidateQueries({ queryKey: ['weekly-report', petId] }) // 주간 리포트 활동 합계
+      // 지난달 회고 카드는 산책 거리를 합산한다. 편집·삭제 경로(walks/[id])는 이미 무효화하는데
+      // 최초 저장 경로만 누락돼, 새 산책이 회고 거리에 최대 60초간 반영되지 않았다.
+      qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
     }
     router.replace(`/walks/${(data as { id: string }).id}`)
   }

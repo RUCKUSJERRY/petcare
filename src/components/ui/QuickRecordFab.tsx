@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntryModals'
+import { QuickCostModal } from '@/app/(dashboard)/costs/_components/QuickCostModal'
+import { RecordFormModal } from '@/app/(dashboard)/pets/_components/RecordFormModal'
+import type { RecordCategory } from '@/types'
 
 // FAB를 항상 숨길 화면 — 자체 하단 컨트롤이 있는 몰입형 화면
 const HIDDEN_PREFIXES = ['/map', '/walks/track']
@@ -26,6 +29,7 @@ const HIDDEN_PREFIXES = ['/map', '/walks/track']
  */
 export function QuickRecordFab() {
   const t = useTranslations('quickRecord')
+  const tCosts = useTranslations('costs')
   const tc = useTranslations('common')
   const pathname = usePathname()
   const { data: pets } = useMyPets()
@@ -34,8 +38,11 @@ export function QuickRecordFab() {
   const { tourActive } = useTour()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
-  // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
-  const [modal, setModal] = useState<null | 'weight' | 'manual' | 'scan'>(null)
+  // 상세 입력(체중·직접·스캔·비용)은 페이지 이동 대신 현재 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
+  // 'cost' 는 비용 빠른입력, 'cost-detail' 은 거기서 '자세히 입력'으로 넘어온 전체 폼(비용 페이지와 동일 흐름).
+  const [modal, setModal] = useState<null | 'weight' | 'manual' | 'scan' | 'cost' | 'cost-detail'>(null)
+  // 비용 빠른입력 → 자세히 입력 전환 시 이미 고른 금액·항목·날짜를 전체 폼에 이어받게 한다.
+  const [costDraft, setCostDraft] = useState<{ amount: string; category: RecordCategory; date: string } | null>(null)
 
   const afterRecord = () => {
     qc.invalidateQueries({ queryKey: ['today-timeline', selectedPetId] })
@@ -170,9 +177,15 @@ export function QuickRecordFab() {
               onLogged={() => qc.invalidateQueries({ queryKey: ['today-timeline', activeId] })}
             />
 
-            {/* 상세 입력 — 대상 아이가 정해졌을 때만. 페이지 이동 대신 모달로 연다. */}
+            {/* 상세 입력 — 대상 아이가 정해졌을 때만. 페이지 이동 대신 모달로 연다.
+                비용은 다른 기록과 동일하게 records 한 건이지만, 예전엔 이 시트에 진입점이 없어
+                지출을 남기려면 더보기→비용→＋기록으로 3~4번을 눌러야 했다. 매일 쓰는 지출 기록을
+                다른 기록처럼 어느 화면에서든 한 번에 남길 수 있도록 타일을 추가한다(사용성 개선). */}
             {activeId && (
-              <div className="grid grid-cols-3 gap-2 pt-0.5">
+              <div className="grid grid-cols-2 gap-2 pt-0.5">
+                <button type="button" onClick={() => { setOpen(false); setModal('cost') }} className={linkCls}>
+                  <span aria-hidden>🧾</span> {t('cost')}
+                </button>
                 <button type="button" onClick={() => { setOpen(false); setModal('weight') }} className={linkCls}>
                   <span aria-hidden>⚖️</span> {t('weight')}
                 </button>
@@ -200,11 +213,33 @@ export function QuickRecordFab() {
       {activeId && (
         <RecordEntryModals
           petId={activeId}
-          modal={modal}
+          modal={modal === 'weight' || modal === 'manual' || modal === 'scan' ? modal : null}
           manualTitle={t('manual')}
           weightTitle={t('weight')}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); afterRecord() }}
+        />
+      )}
+
+      {/* 비용 빠른입력 — 저장 시 필요한 캐시 무효화는 QuickCostModal 이 자체적으로 수행한다.
+          비용 페이지와 동일하게 '자세히 입력'은 프리필된 전체 폼(cost-detail)으로 전환한다. */}
+      {activeId && modal === 'cost' && (
+        <QuickCostModal
+          petId={activeId}
+          onClose={() => setModal(null)}
+          onDone={() => setModal(null)}
+          onDetail={(draft) => { setCostDraft(draft); setModal('cost-detail') }}
+        />
+      )}
+      {activeId && modal === 'cost-detail' && (
+        <RecordFormModal
+          petId={activeId}
+          title={tCosts('addRecord')}
+          defaultCategory={costDraft?.category}
+          defaultDate={costDraft?.date}
+          defaultCost={costDraft?.amount || undefined}
+          onClose={() => { setModal(null); setCostDraft(null) }}
+          onDone={() => { setModal(null); setCostDraft(null); afterRecord(); qc.invalidateQueries({ queryKey: ['cost-records'] }) }}
         />
       )}
     </>

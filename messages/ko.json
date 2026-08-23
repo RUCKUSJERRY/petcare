@@ -96,7 +96,9 @@
     "care": "생활관리",
     "map": "지도",
     "lost": "실종",
-    "walks": "산책"
+    "walks": "산책",
+    "costsTab": "비용",
+    "achievementsTab": "성취"
   },
   "common": {
     "cancel": "취소",
@@ -124,6 +126,7 @@
     "title": "🐾 오늘의 기록",
     "pickPet": "어떤 아이의 기록인가요?",
     "weight": "체중",
+    "cost": "비용",
     "manual": "직접입력",
     "scan": "스캔",
     "viewToday": "오늘의 기록 전체 보기"
@@ -1240,6 +1243,7 @@
     "saveBtn": "저장하기",
     "saving": "저장 중…",
     "saved": "저장됐어요 ✓",
+    "saveError": "저장에 실패했어요. 잠시 후 다시 시도해주세요.",
     "stats": "수익화 통계",
     "revenue": "누적 매출",
     "paymentsCount": "결제 건수",

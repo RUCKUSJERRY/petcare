@@ -49,6 +49,7 @@ export default function AdminPage() {
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   // 관리자 여부
   const { data: isAdmin, isLoading: checking } = useQuery<boolean>({
@@ -95,13 +96,17 @@ export default function AdminPage() {
   const save = async () => {
     setSaving(true)
     setSaved(false)
+    setSaveError(false)
     const n = parseInt(price.replace(/[^0-9]/g, ''), 10)
     const priceVal = Number.isFinite(n) && n > 0 ? String(n) : '3900'
     const nonNeg = (s: string, fallback: string) => {
       const v = parseInt(s.replace(/[^0-9]/g, ''), 10)
       return Number.isFinite(v) && v >= 0 ? String(v) : fallback
     }
-    await supabase.from('app_settings').upsert([
+    // 업서트 결과의 error 를 무시하고 항상 '저장됨'을 띄우던 문제가 있었다 — RLS 회귀·네트워크로
+    // 저장이 거부돼도 관리자에겐 성공으로 보이고, 무효화된 쿼리는 예전 값만 다시 불러왔다.
+    // 이제 error 를 확인해 실패 시 실패 상태를 표시하고, 캐시 무효화는 성공했을 때만 한다.
+    const { error } = await supabase.from('app_settings').upsert([
       { key: 'premium_price_krw', value: priceVal },
       { key: 'ads_enabled', value: ads ? 'true' : 'false' },
       { key: 'ad_cooldown_min', value: nonNeg(cooldown, '3') },
@@ -110,6 +115,10 @@ export default function AdminPage() {
       { key: 'anniversary_push_active', value: annivPush ? 'true' : 'false' },
     ], { onConflict: 'key' })
     setSaving(false)
+    if (error) {
+      setSaveError(true)
+      return
+    }
     setSaved(true)
     qc.invalidateQueries({ queryKey: ['app-settings'] })
     qc.invalidateQueries({ queryKey: ['admin-settings'] })
@@ -193,6 +202,9 @@ export default function AdminPage() {
         <button onClick={save} disabled={saving} className="btn-primary w-full py-3">
           {saving ? t('saving') : saved ? t('saved') : t('saveBtn')}
         </button>
+        {saveError && (
+          <p className="text-sm text-red-600 text-center" role="alert">{t('saveError')}</p>
+        )}
       </section>
 
       {/* 핵심 지표 (투자자/운영용 KPI) */}

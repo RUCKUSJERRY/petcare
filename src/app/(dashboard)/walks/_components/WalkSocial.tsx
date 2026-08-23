@@ -64,8 +64,15 @@ export function WalkSocial({
     setPending(true)
     const next = !liked
     setLiked(next); setCount(c => c + (next ? 1 : -1))
+    // 좋아요는 멱등(idempotent)하게 처리한다. 로컬 liked 상태가 DB와 어긋나면(초기 조회 실패로
+    // liked=false 인데 이미 행이 있거나, 다른 탭/기기에서 눌렀을 때) insert 는 PK((walk_id,user_id))
+    // 충돌로 에러가 나고, 그 롤백이 하트를 실제와 반대로 되돌리던 문제가 있었다. 커뮤니티 좋아요와
+    // 동일하게 upsert(중복 무시)/delete 로 항상 올바른 상태로 수렴시킨다. (community/_actions.ts 참고)
     const { error } = next
-      ? await supabase.from('walk_likes').insert({ walk_id: walkId, user_id: uid })
+      ? await supabase.from('walk_likes').upsert(
+          { walk_id: walkId, user_id: uid },
+          { onConflict: 'walk_id,user_id', ignoreDuplicates: true },
+        )
       : await supabase.from('walk_likes').delete().eq('walk_id', walkId).eq('user_id', uid)
     if (error) { setLiked(!next); setCount(c => c + (next ? -1 : 1)) }
     setPending(false)

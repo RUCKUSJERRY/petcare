@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PetScopeToggle } from '@/components/ui/PetScopeToggle'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { cn, formatWon, careCategoryIcon, todayKST } from '@/lib/utils'
@@ -125,6 +126,9 @@ export default function CostsPage() {
           </button>
         </div>
       </div>
+
+      {/* 형제 활동 화면(성취)으로 바로 이동 — 예전엔 비용↔성취 이동에 더보기를 거쳐야 했다. */}
+      <SectionTabs section="activity" />
 
       {isLoading ? (
         <CardSkeletonList count={4} />

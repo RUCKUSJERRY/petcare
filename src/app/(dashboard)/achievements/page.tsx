@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CardSkeletonList } from '@/components/ui/Skeleton'
 import { PetAvatar } from '@/components/ui/PetAvatar'
@@ -40,6 +41,9 @@ export default function AchievementsPage() {
   return (
     <div className="px-4 py-6 space-y-5">
       <PageHeader title={t('title')} fallbackHref="/dashboard" />
+
+      {/* 형제 활동 화면(비용)으로 바로 이동 — 비용↔성취 상호 이동에 더보기를 거치지 않도록. */}
+      <SectionTabs section="activity" />
 
       {!pet ? (
         // 예전엔 아이가 없거나 미선택일 때 CTA 없는 막다른 빈 화면이었다. 두 경우를 구분해

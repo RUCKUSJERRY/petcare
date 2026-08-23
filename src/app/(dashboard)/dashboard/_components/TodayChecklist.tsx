@@ -75,6 +75,9 @@ export function TodayChecklist() {
     qc.invalidateQueries({ queryKey: ['weekly-report', selectedPetId] })
     qc.invalidateQueries({ queryKey: ['life-pattern', selectedPetId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
+    // 지난달 회고 카드도 기록을 집계한다. QuickLogBar·RecordForm 등 동일 기록 쓰기 경로는 이미
+    // 무효화하는데 이 홈 체크리스트만 누락돼, 여기서 체크하면 회고가 최대 60초간 stale 했다.
+    qc.invalidateQueries({ queryKey: ['monthly-recap', selectedPetId] })
   }
 
   const check = async (item: TodayCareCheckItem) => {
@@ -100,6 +103,8 @@ export function TodayChecklist() {
       //  새 수동 산책을 반영하지 못했다 — 실제 목록 키는 ['walks',...] 프리픽스다.)
       qc.invalidateQueries({ queryKey: ['walks'] })
       qc.invalidateQueries({ queryKey: ['walk-goal'] })
+      // 회고 거리 합산 반영 (산책 저장 경로와 동일 기준)
+      qc.invalidateQueries({ queryKey: ['monthly-recap', selectedPetId] })
     }
   }
 

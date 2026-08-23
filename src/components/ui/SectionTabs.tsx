@@ -24,6 +24,13 @@ const SECTIONS = {
     { href: '/lost', key: 'lost', icon: '🐾' },
     { href: '/walks', key: 'walks', icon: '🦮' },
   ],
+  // 비용·성취는 더보기 '활동' 그룹으로 묶여 있으면서도 상단 스트립이 없어, 둘을 오가려면 매번
+  // 더보기를 거쳐야 했다(발견성 낮음). 두 화면에만 서로를 잇는 스트립을 둔다. 산책·실종은 이미
+  // '지도' 스트립으로 상호 이동이 되므로 이중 소속(혼선)을 피해 여기 넣지 않는다.
+  activity: [
+    { href: '/costs', key: 'costsTab', icon: '🧾' },
+    { href: '/achievements', key: 'achievementsTab', icon: '🏅' },
+  ],
 } as const
 
 // 경로 세그먼트 단위 매칭: '/walk'가 '/walks'를 잘못 포함하지 않도록 한다. (BottomNav와 동일 규칙)
