@@ -135,7 +135,8 @@ export function QuickRecordFab() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label={tc('close')}
-                className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+                // 히트 영역을 44px로 — 보이는 원(32px)은 유지하되 투명한 before로 탭 영역만 넓힌다.
+                className="relative w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center before:absolute before:content-[''] before:-inset-1.5"
               >
                 ✕
               </button>

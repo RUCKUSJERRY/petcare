@@ -109,7 +109,10 @@ export function AppHeader() {
                   // 선택됐는지'(앱 전체 범위를 좌우하는 상태)를 알 수 없다 — aria-pressed 로 노출한다.
                   aria-pressed={selectedPetId === pet.id}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border',
+                    // 탭 타깃 확대: py-1.5(~30px)는 오탭이 잦았다. 헤더의 '내 아이' 버튼(h-10=40px)과
+                    // 같은 높이로 맞춰(min-h-10) 헤더 높이 변화 없이 히트 영역을 넓힌다. 이 칩은 앱 전체
+                    // 데이터 범위를 좌우하는 컨트롤이라 오탭 시 파급이 커, 크기를 우선 키웠다.
+                    'flex items-center gap-1.5 px-3 py-1.5 min-h-10 rounded-full text-xs font-medium transition-all shrink-0 border',
                     selectedPetId === pet.id
                       ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
                       : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-300'
@@ -124,7 +127,7 @@ export function AppHeader() {
               <Link
                 href="/pets/new"
                 aria-label={t('addPetAria')}
-                className="shrink-0 w-9 h-9 rounded-full border border-dashed border-gray-300 text-gray-500 flex items-center justify-center text-lg leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
+                className="shrink-0 w-10 h-10 rounded-full border border-dashed border-gray-300 text-gray-500 flex items-center justify-center text-lg leading-none hover:border-primary-400 hover:text-primary-500 transition-colors"
               >
                 +
               </Link>

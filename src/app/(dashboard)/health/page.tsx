@@ -9,6 +9,7 @@ import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTabs } from '@/components/ui/SectionTabs'
+import { PetScopeToggle } from '@/components/ui/PetScopeToggle'
 import { GuideSearchInput } from '@/components/ui/GuideSearchInput'
 import { StickyAffiliateBanner } from '@/components/ui/StickyAffiliateBanner'
 import { fetchHealthGuides } from '../_actions/guides'
@@ -39,10 +40,15 @@ export default function HealthPage() {
 
   const isLoading = petsLoading || guidesLoading
 
-  const pets = selectedPetId
-    ? (petsAll ?? []).filter(p => p.id === selectedPetId)
+  // 보기 범위: 기본은 헤더에서 고른 아이. 여러 아이를 키우면 '전체'로 전환해 모든 아이의 건강
+  // 정보를 함께 볼 수 있다(비용·일정 화면과 통일). 헤더 아이 칩은 '해제'가 없어(홈이 빈 화면처럼
+  // 보이던 문제로 제거됨), 이 토글이 없으면 다견 보호자가 '전체 보기'에 도달할 방법이 없었다.
+  const [showAll, setShowAll] = useState(false)
+  const multiPet = (petsAll?.length ?? 0) >= 2
+  const effectivePetId = showAll ? null : selectedPetId
+  const pets = effectivePetId
+    ? (petsAll ?? []).filter(p => p.id === effectivePetId)
     : (petsAll ?? [])
-  // 헤더 칩으로 특정 아이를 고르면 그 아이 기준으로 필터됨을 상단 라벨로 알린다(음식·일정 화면과 통일).
   const activePet = selectedPetId ? (petsAll ?? []).find(p => p.id === selectedPetId) : null
 
   const petGuides = pets.map((pet: Pet) => {
@@ -79,11 +85,19 @@ export default function HealthPage() {
     <div className="px-4 py-6 space-y-6">
       <div className="flex items-center justify-between gap-2">
         <PageHeader title={t('title')} />
-        {activePet && (
+        {multiPet && activePet ? (
+          <PetScopeToggle
+            showAll={showAll}
+            onChange={setShowAll}
+            petName={activePet.name}
+            petSpecies={activePet.species}
+            petPhotoUrl={activePet.photo_url}
+          />
+        ) : activePet ? (
           <span className="text-sm text-primary-600 font-medium shrink-0">
             {activePet.species === 'cat' ? '🐱' : '🐶'} {t('petBasis', { name: activePet.name })}
           </span>
-        )}
+        ) : null}
       </div>
 
       <SectionTabs section="info" />

@@ -68,7 +68,8 @@ export default function SchedulePage() {
   const activePet = selectedPetId ? (myPets ?? []).find(p => p.id === selectedPetId) : null
   // 기본 뷰는 '캘린더' — 앱을 열면 이번 달 일정 전반을 한눈에 본다.
   // (지난/임박 정리는 '목록' 탭, 지난 일정이 있으면 상단 경보 배너로도 유도한다.)
-  // 'today' 는 탭에서는 뺐지만(빠른기록 FAB·홈 요약카드가 대체) ?view=today 딥링크로는 유지한다.
+  // 'today' 는 탭 첫 자리로도 노출한다 — 하단탭 '일정'을 눌러 "오늘 뭘 챙기지"를 확인하려는
+  // 사용자가 캘린더에 도착해 오늘 뷰로 갈 보이는 진입점이 없던 문제를 없앤다. ?view=today 딥링크도 유지.
   const [view, setView] = useState<View>('calendar')
   const [showAdd, setShowAdd] = useState(false)
   // 캘린더에서 특정 날짜를 눌러 추가할 때 그 날짜를 폼 기본값으로 넘긴다
@@ -297,7 +298,8 @@ export default function SchedulePage() {
           value={search} onChange={e => setSearch(e.target.value)} />
         {search && (
           <button onClick={() => setSearch('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full text-gray-400 hover:bg-gray-100"
+            // 탭 타깃 확대: 보이는 크기는 유지하되 투명 before로 히트 영역을 44px로 넓힌다.
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full text-gray-400 hover:bg-gray-100 before:absolute before:content-[''] before:-inset-2"
             aria-label={tc('close')}>✕</button>
         )}
       </div>
@@ -322,7 +324,7 @@ export default function SchedulePage() {
       {!q && (
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 rounded-lg p-0.5 flex-1">
-            {([['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
+            {([['today', t('viewToday')], ['calendar', t('viewCalendar')], ['list', t('viewList')], ['history', t('viewHistory')]] as const).map(([v, label]) => (
               <button key={v} onClick={() => setView(v)}
                 className={cn('flex-1 py-1.5 rounded-md text-sm font-medium transition-colors',
                   view === v ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500')}>
