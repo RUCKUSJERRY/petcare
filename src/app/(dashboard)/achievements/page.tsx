@@ -29,6 +29,13 @@ export default function AchievementsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['achievements', selectedPetId],
     enabled: !!selectedPetId,
+    // 이 화면은 홈 카드처럼 상주하지 않고 사용자가 '진입'하는 목적지 페이지다. 레벨·뱃지는 누적
+    // 기록 수·산책 수로 계산되는데, 그 값을 바꾸는 쓰기 경로(원탭·직접·스캔·비용·산책 저장/삭제 등)가
+    // 여러 곳에 흩어져 있어 이 캐시 키를 개별 무효화로 챙기다 한 곳이라도 빠지면(실제로 어느 경로도
+    // 무효화하지 않았다) 진입 시 옛 카운트가 최대 60초간 남아 캐릭터 카드(pet-care-points)와도
+    // 어긋났다. 진입 시마다 새로 읽어(staleTime 0) 어떤 쓰기 경로를 거쳤든 항상 최신을 보장한다
+    // — 카운트는 head 쿼리 2건으로 가볍다.
+    staleTime: 0,
     queryFn: async () => {
       const [recCnt, walkCnt] = await Promise.all([
         supabase.from('records').select('id', { count: 'exact', head: true }).eq('pet_id', selectedPetId!),

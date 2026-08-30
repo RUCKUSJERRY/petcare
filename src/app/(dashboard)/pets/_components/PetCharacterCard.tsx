@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { addDays, computeLogStreak, computeLongestStreak, todayKST } from '@/lib/utils'
 import { DAILY_LOG_CATEGORIES } from '@/lib/records'
+import { useTodayLog, useWalkedToday } from '@/hooks/useTodayActivity'
 import { computeTodayCare } from '@/lib/todayCare'
 import { petMood, petSpeech } from '@/lib/petMood'
 import { computeCareLevel, computeCarePoints } from '@/lib/careLevel'
@@ -35,32 +36,9 @@ export function PetCharacterCard({ petId, petName }: { petId: string; petName: s
   const supabase = createClient()
   const today = todayKST()
 
-  // 오늘 생활기록(밥·물·배변 등) — QuickLogBar·홈 요약카드와 동일 키·형태로 캐시 공유.
-  const { data: todayLogs = [] } = useQuery({
-    queryKey: ['today-log', petId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('records')
-        .select('id, category, event_at')
-        .eq('pet_id', petId)
-        .eq('event_on', today)
-        .order('event_at', { ascending: false })
-      return (data ?? []) as { id: string; category: string; event_at: string | null }[]
-    },
-  })
-
-  // 오늘 산책 여부 — 홈 요약카드와 동일 키로 캐시 공유.
-  const { data: walkedToday = false } = useQuery({
-    queryKey: ['today-walk', petId],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('walks')
-        .select('id', { count: 'exact', head: true })
-        .eq('pet_id', petId)
-        .gte('started_at', `${today}T00:00:00+09:00`)
-      return (count ?? 0) > 0
-    },
-  })
+  // 오늘 생활기록·산책 — QuickLogBar·홈 요약카드·오늘 돌봄 체크와 동일 키·형태로 캐시 공유(공용 훅).
+  const { data: todayLogs = [] } = useTodayLog(petId)
+  const { data: walkedToday = false } = useWalkedToday(petId)
 
   // 생활기록 연속일 — 현재 연속(current)과 자기 최고 기록(best)을 한 번의 조회로 함께 계산한다.
   // 최근 STREAK_WINDOW_DAYS 로 범위를 좁혀 조회(무제한 방지)하고, 같은 날짜 집합에서 두 값을 파생.

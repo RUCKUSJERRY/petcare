@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
-import { todayKST } from '@/lib/utils'
+import { useTodayLog, useWalkedToday } from '@/hooks/useTodayActivity'
 import { logDailyRecord, logManualWalk } from '@/lib/careActions'
 import { computeTodayCare, type TodayCareCheckItem } from '@/lib/todayCare'
 
@@ -31,36 +31,12 @@ export function TodayChecklist() {
   // 다른 타일처럼 눌렀는데 실수로 GPS 추적 화면으로 튕겨 들어가던 문제를 없앤다.
   const [walkSheet, setWalkSheet] = useState(false)
 
-  // QuickLogBar 와 동일한 키·조회 형태를 공유한다 — 같은 키에 서로 다른 select 를 쓰면
-  // 먼저 마운트된 쪽의 데이터 형태가 캐시를 차지해 반대쪽이 깨진다. 형태를 맞춰,
-  // 한쪽에서 원탭 기록하면(같은 키 무효화) 이 체크리스트도 즉시 함께 갱신되게 한다.
-  const { data: todayLogs = [] } = useQuery({
-    queryKey: ['today-log', selectedPetId],
-    enabled: !!selectedPetId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('records')
-        .select('id, category, event_at')
-        .eq('pet_id', selectedPetId!)
-        .eq('event_on', todayKST())
-        .order('event_at', { ascending: false })
-      return (data ?? []) as { id: string; category: string; event_at: string | null }[]
-    },
-  })
+  // QuickLogBar·홈 요약카드·캐릭터 카드와 ['today-log']·['today-walk'] 캐시를 공유한다(공용 훅).
+  // 한쪽에서 원탭 기록하면(같은 키 무효화) 이 체크리스트도 즉시 함께 갱신된다.
+  const { data: todayLogs = [] } = useTodayLog(selectedPetId)
   const todayCategories = todayLogs.map(r => r.category)
 
-  const { data: walkedToday = false } = useQuery({
-    queryKey: ['today-walk', selectedPetId],
-    enabled: !!selectedPetId,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('walks')
-        .select('id', { count: 'exact', head: true })
-        .eq('pet_id', selectedPetId!)
-        .gte('started_at', `${todayKST()}T00:00:00+09:00`)
-      return (count ?? 0) > 0
-    },
-  })
+  const { data: walkedToday = false } = useWalkedToday(selectedPetId)
 
   if (!pet || !selectedPetId) return null
 

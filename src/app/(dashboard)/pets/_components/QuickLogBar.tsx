@@ -1,15 +1,14 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { careCategoryIcon, todayKST } from '@/lib/utils'
+import { careCategoryIcon } from '@/lib/utils'
 import { CATEGORY_GROUPS, CATEGORY_CONFIG } from '@/lib/records'
 import { logDailyRecord } from '@/lib/careActions'
+import { useTodayLog } from '@/hooks/useTodayActivity'
 import type { RecordCategory } from '@/types'
-
-type TodayLog = { id: string; category: string; event_at: string | null }
 
 const hhmm = (iso: string | null) => {
   if (!iso) return ''
@@ -64,19 +63,8 @@ export function QuickLogBar({
     }
   }, [])
 
-  const { data: todayLogs = [] } = useQuery({
-    queryKey: ['today-log', petId],
-    enabled: !!petId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('records')
-        .select('id, category, event_at')
-        .eq('pet_id', petId!)
-        .eq('event_on', todayKST())
-        .order('event_at', { ascending: false })
-      return (data ?? []) as TodayLog[]
-    },
-  })
+  // 오늘 생활기록 — 홈 요약카드·오늘 돌봄 체크·캐릭터 카드와 ['today-log', petId] 캐시를 공유한다.
+  const { data: todayLogs = [] } = useTodayLog(petId)
 
   // 카테고리별 오늘 횟수 + 마지막 시각
   const stat = new Map<string, { count: number; last: string | null }>()
@@ -182,6 +170,11 @@ export function QuickLogBar({
       return
     }
     invalidate()
+    // 되돌리기도 기록 건수를 바꾸므로 저장과 대칭으로 onLogged 를 호출한다. 아이 상세 화면에선
+    // 이 콜백이 캐릭터·성장 카드(연속·레벨·기분: ['pet-streak']·['pet-care-points'])까지 갱신하는데,
+    // 예전엔 undo 가 이를 부르지 않아 방금 되돌린 기록이 사라진 뒤에도 그 카드들이 최대 60초간
+    // 옛 연속·레벨을 보여줬다. (invalidate() 는 공용 캐시만 무효화하고 이 카드 전용 키는 다루지 않는다.)
+    onLogged?.()
   }
 
   const onP = tone === 'onPrimary'

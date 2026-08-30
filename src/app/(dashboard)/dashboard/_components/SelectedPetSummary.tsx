@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { calcPetAge, careCategoryIcon, ddayBadge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, togetherMilestone, daysUntil, todayKST } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useTodayLog, useWalkedToday } from '@/hooks/useTodayActivity'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
@@ -35,40 +35,16 @@ export function SelectedPetSummary({
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
   const qc = useQueryClient()
-  const supabase = createClient()
   const [detailId, setDetailId] = useState<string | null>(null)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 홈 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
   // (QuickRecordFab 과 동일 패턴 — 앱 전반의 기록 진입을 일관되게)
   const [modal, setModal] = useState<null | 'weight' | 'manual' | 'scan'>(null)
 
   // 오늘 돌봄 완료 정도 — 아바타 기분·말풍선에 '지금 이 순간'의 신호를 더하기 위해 조회한다.
-  // TodayChecklist·QuickLogBar 와 동일한 캐시 키·조회 형태를 공유해, 한쪽에서 원탭 기록하면
-  // 이 요약 카드의 표정·대사도 즉시 함께 갱신된다(추가 네트워크 없이 캐시 공유).
-  const { data: todayLogs = [] } = useQuery({
-    queryKey: ['today-log', selectedPetId],
-    enabled: !!selectedPetId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('records')
-        .select('id, category, event_at')
-        .eq('pet_id', selectedPetId!)
-        .eq('event_on', todayKST())
-        .order('event_at', { ascending: false })
-      return (data ?? []) as { id: string; category: string; event_at: string | null }[]
-    },
-  })
-  const { data: walkedToday = false } = useQuery({
-    queryKey: ['today-walk', selectedPetId],
-    enabled: !!selectedPetId,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('walks')
-        .select('id', { count: 'exact', head: true })
-        .eq('pet_id', selectedPetId!)
-        .gte('started_at', `${todayKST()}T00:00:00+09:00`)
-      return (count ?? 0) > 0
-    },
-  })
+  // TodayChecklist·QuickLogBar·캐릭터 카드와 동일한 캐시 키·조회 형태를 공용 훅으로 공유해,
+  // 한쪽에서 원탭 기록하면 이 요약 카드의 표정·대사도 즉시 함께 갱신된다(추가 네트워크 없이 캐시 공유).
+  const { data: todayLogs = [] } = useTodayLog(selectedPetId)
+  const { data: walkedToday = false } = useWalkedToday(selectedPetId)
 
   if (!selectedPetId) return null
 
