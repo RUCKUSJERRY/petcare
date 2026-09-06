@@ -81,6 +81,8 @@ export function TodayChecklist() {
       qc.invalidateQueries({ queryKey: ['walk-goal'] })
       // 회고 거리 합산 반영 (산책 저장 경로와 동일 기준)
       qc.invalidateQueries({ queryKey: ['monthly-recap', selectedPetId] })
+      // 아이 상세 성장 레벨(PetCharacterCard)은 산책 수도 반영 — 저장·삭제 경로와 동일 기준.
+      qc.invalidateQueries({ queryKey: ['pet-care-points', selectedPetId] })
     }
   }
 

@@ -395,6 +395,10 @@ export default function WalkTrackPage() {
       // 지난달 회고 카드는 산책 거리를 합산한다. 편집·삭제 경로(walks/[id])는 이미 무효화하는데
       // 최초 저장 경로만 누락돼, 새 산책이 회고 거리에 최대 60초간 반영되지 않았다.
       qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
+      // 아이 상세의 성장 레벨 카드(PetCharacterCard)는 기록 수 + 산책 수로 레벨을 계산한다.
+      // 기록 경로만 이 키를 무효화하고 산책 경로들은 누락돼, 산책 직후 아이 상세를 열면
+      // 레벨/포인트가 최대 60초간 옛 산책 수를 반영했다 — 저장·삭제·수동 산책 3경로에 함께 추가.
+      qc.invalidateQueries({ queryKey: ['pet-care-points', petId] })
     }
     router.replace(`/walks/${(data as { id: string }).id}`)
   }

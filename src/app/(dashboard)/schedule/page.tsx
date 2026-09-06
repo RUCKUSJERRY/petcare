@@ -66,11 +66,11 @@ export default function SchedulePage() {
   const multiPet = (myPets?.length ?? 0) >= 2
   const scopePetId = showAll ? null : selectedPetId
   const activePet = selectedPetId ? (myPets ?? []).find(p => p.id === selectedPetId) : null
-  // 기본 뷰는 '캘린더' — 앱을 열면 이번 달 일정 전반을 한눈에 본다.
-  // (지난/임박 정리는 '목록' 탭, 지난 일정이 있으면 상단 경보 배너로도 유도한다.)
-  // 'today' 는 탭 첫 자리로도 노출한다 — 하단탭 '일정'을 눌러 "오늘 뭘 챙기지"를 확인하려는
-  // 사용자가 캘린더에 도착해 오늘 뷰로 갈 보이는 진입점이 없던 문제를 없앤다. ?view=today 딥링크도 유지.
-  const [view, setView] = useState<View>('calendar')
+  // 기본 뷰는 '오늘' — 하단탭 '일정'을 누르는 가장 잦은 의도는 "오늘 뭘 챙기지"인데, 예전엔
+  // 이번 달 캘린더에 도착해 오늘 할 일을 보려면 '오늘' 탭을 한 번 더 눌러야 했다(불필요한 탭).
+  // 이제 열자마자 오늘 예정·지난 일정을 바로 보여주고, 캘린더는 의도적으로 탭해 들어간다.
+  // (특정 날짜로 진입하는 ?focus 딥링크는 아래 effect 에서 캘린더로 전환, ?view=today 딥링크도 유지.)
+  const [view, setView] = useState<View>('today')
   const [showAdd, setShowAdd] = useState(false)
   // 캘린더에서 특정 날짜를 눌러 추가할 때 그 날짜를 폼 기본값으로 넘긴다
   const [addDate, setAddDate] = useState<string | null>(null)

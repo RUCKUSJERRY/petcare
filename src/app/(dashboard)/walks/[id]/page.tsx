@@ -115,6 +115,8 @@ export default function WalkDetailPage({ params }: { params: { id: string } }) {
       qc.invalidateQueries({ queryKey: ['today-walk', walk.pet_id] }) // 홈 '오늘의 돌봄' 산책 체크·기분
       qc.invalidateQueries({ queryKey: ['weekly-report', walk.pet_id] }) // 주간 리포트 활동 합계
       qc.invalidateQueries({ queryKey: ['monthly-recap', walk.pet_id] }) // 월초 회고 거리 합계(접두 매칭)
+      // 아이 상세 성장 레벨(PetCharacterCard)은 산책 수도 세므로, 삭제도 저장의 거울상으로 무효화.
+      qc.invalidateQueries({ queryKey: ['pet-care-points', walk.pet_id] })
     }
     router.replace('/walks')
   }
