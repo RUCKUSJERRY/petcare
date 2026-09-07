@@ -23,6 +23,9 @@ const ACTIVITY_ITEMS: Item[] = [
   { href: '/achievements', icon: '🏅', key: 'achievements' },
   { href: '/walks', icon: '🦮', key: 'walks' },
   { href: '/lost', icon: '🐾', key: 'lost' },
+  // 지도(주변 병원·약국·카페)는 예전 하단탭이었으나 '내 아이' 탭 승격으로 이곳으로 옮겨왔다 —
+  // 허브에 상시 진입점을 둬 지도 탭 제거로 발견성이 낮아지지 않게 한다(지도/실종/산책 섹션 스트립과 연결).
+  { href: '/map', icon: '🗺️', key: 'map' },
 ]
 
 export default async function MorePage() {

@@ -54,6 +54,7 @@
   "nav": {
     "label": "주요 메뉴",
     "home": "홈",
+    "pets": "내 아이",
     "map": "지도",
     "schedule": "일정",
     "community": "커뮤니티",
@@ -81,6 +82,8 @@
     "walksDesc": "산책 이력·목표",
     "lost": "실종센터",
     "lostDesc": "실종 신고·제보",
+    "map": "주변 지도",
+    "mapDesc": "동물병원·약국·카페 찾기",
     "sectionAccount": "계정·설정",
     "coCare": "공동 관리",
     "coCareDesc": "가족과 함께 돌보기·초대",
@@ -96,7 +99,7 @@
     "care": "생활관리",
     "map": "지도",
     "lost": "실종",
-    "walks": "산책",
+    "walks": "산책 기록",
     "costsTab": "비용",
     "achievementsTab": "성취"
   },
@@ -438,7 +441,7 @@
     "sightingErrFail": "제보 등록에 실패했어요. 잠시 후 다시 시도해주세요."
   },
   "walks": {
-    "title": "산책하기",
+    "title": "산책 기록",
     "notFound": "산책 기록을 찾을 수 없어요. 삭제되었거나 접근 권한이 없어요.",
     "startWalk": "산책 시작하기",
     "tabMine": "내 산책",
@@ -833,6 +836,8 @@
     "searchEmpty": "검색 결과가 없어요",
     "addScan": "사진/스캔",
     "scanNeedPet": "상단에서 아이를 먼저 선택한 뒤 스캔해주세요.",
+    "scanPickTitle": "어느 아이의 기록인가요?",
+    "scanPickHint": "스캔한 기록을 저장할 아이를 선택하세요.",
     "addTitleItem": "기록 추가",
     "exportRecords": "기록 내보내기",
     "costs": "케어 비용",

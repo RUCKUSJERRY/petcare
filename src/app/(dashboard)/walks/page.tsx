@@ -57,7 +57,7 @@ function WalkStatsCard({ walks }: { walks: WalkRow[] }) {
                   <div className="w-full bg-primary-100 rounded-md relative" style={{ height: `${Math.max(pct, b.distance_m > 0 ? 8 : 2)}%` }}>
                     <div className="absolute inset-0 bg-primary-400 rounded-md" />
                   </div>
-                  <span className="text-[10px] text-gray-400">{label}</span>
+                  <span className="text-[11px] text-gray-400">{label}</span>
                 </div>
               )
             })}

@@ -141,7 +141,7 @@ function Stat({ icon, label, value }: { icon: string; label: string; value: stri
     <div className="bg-gray-50 rounded-xl py-2.5 px-1">
       <div className="text-lg leading-none" aria-hidden>{icon}</div>
       <div className="text-sm font-bold text-gray-900 mt-1 truncate">{value}</div>
-      <div className="text-[10px] text-gray-400 mt-0.5">{label}</div>
+      <div className="text-xs text-gray-400 mt-0.5 truncate">{label}</div>
     </div>
   )
 }

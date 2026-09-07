@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { PetScopeToggle } from '@/components/ui/PetScopeToggle'
+import { PetAvatar } from '@/components/ui/PetAvatar'
 import { cn, careCategoryIcon, daysUntil, elapsedBadge, ddayToneClass, todayKST } from '@/lib/utils'
 import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
 import { RecordForm } from '../pets/_components/RecordForm'
@@ -81,6 +82,10 @@ export default function SchedulePage() {
   const [focusDate, setFocusDate] = useState<string | undefined>(undefined)
   const [showScan, setShowScan] = useState(false)
   const [scanNotice, setScanNotice] = useState(false)
+  // 스캔 저장 대상 아이. '전체' 범위(여러 아이 함께 보기)에서는 헤더 선택 아이로 조용히 정해지지
+  // 않도록, 스캔 전에 명시적으로 고른 아이를 여기 담아 RecordsScanModal 에 넘긴다.
+  const [scanPetId, setScanPetId] = useState<string | null>(null)
+  const [scanPickOpen, setScanPickOpen] = useState(false)
   // 내보내기 팝업 차단은 native alert() 대신 앱 톤의 인라인 안내로 알린다(다른 안내와 통일).
   const [exportBlocked, setExportBlocked] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -187,6 +192,18 @@ export default function SchedulePage() {
     setMenuOpen(false)
     if (!selectedPetId) { setScanNotice(true); return }
     setScanNotice(false)
+    // '전체' 범위로 여러 아이를 함께 보는 중이면, 스캔 결과가 헤더에서 선택된 아이로 조용히
+    // 저장돼 엉뚱한 아이에 기록될 수 있다(사용자는 '전체'를 보고 있어 대상이 불명확). 대상 아이를
+    // 명시적으로 고르게 한 뒤 스캔한다. 단일 아이 범위(범위=선택 아이)면 그대로 진행한다.
+    if (showAll && multiPet) { setScanPickOpen(true); return }
+    setScanPetId(selectedPetId)
+    requestAd(() => setShowScan(true))
+  }
+
+  // '전체' 범위에서 스캔 대상 아이를 고르면, 그 아이로 스캔을 연다.
+  const pickScanPet = (id: string) => {
+    setScanPickOpen(false)
+    setScanPetId(id)
     requestAd(() => setShowScan(true))
   }
 
@@ -532,9 +549,39 @@ export default function SchedulePage() {
 
       {adNode}
 
-      {showScan && selectedPetId && (
-        <RecordsScanModal petId={selectedPetId}
+      {showScan && scanPetId && (
+        <RecordsScanModal petId={scanPetId}
           onClose={() => { setShowScan(false); qc.invalidateQueries({ queryKey: ['care-schedule'] }) }} />
+      )}
+
+      {/* 스캔 대상 아이 선택 시트 — '전체' 범위 + 여러 아이일 때만. 스캔 결과가 어느 아이에
+          저장될지 명시적으로 고르게 해, 헤더 선택 아이로 조용히 저장되는 오탐을 막는다. */}
+      {scanPickOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+          onClick={() => setScanPickOpen(false)}>
+          <div className="w-full max-w-lg bg-white rounded-t-2xl p-4 space-y-3"
+            onClick={e => e.stopPropagation()}>
+            <div className="mx-auto w-10 h-1 rounded-full bg-gray-200" />
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-gray-900">{t('scanPickTitle')}</p>
+              <button type="button" onClick={() => setScanPickOpen(false)} aria-label={tc('close')}
+                className="relative w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center before:absolute before:content-[''] before:-inset-1.5">
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">{t('scanPickHint')}</p>
+            <div className="flex flex-col gap-1.5">
+              {(myPets ?? []).map(p => (
+                <button key={p.id} type="button" onClick={() => pickScanPet(p.id)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-primary-300 text-left transition-colors">
+                  <PetAvatar photoUrl={p.photo_url} species={p.species}
+                    className="w-7 h-7" emojiClassName="text-base leading-none" />
+                  <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {detailId && (

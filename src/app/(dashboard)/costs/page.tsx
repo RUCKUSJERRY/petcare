@@ -205,7 +205,7 @@ export default function CostsPage() {
                           : active ? 'bg-primary-600' : 'bg-primary-400 group-hover:bg-primary-500')}
                       style={{ height: `${Math.max(pct, m.total > 0 ? 6 : 2)}%` }}
                     />
-                    <span className={cn('text-[9px]', active ? 'text-primary-600 font-bold' : 'text-gray-400')}>{m.month}</span>
+                    <span className={cn('text-[11px]', active ? 'text-primary-600 font-bold' : 'text-gray-400')}>{m.month}</span>
                   </button>
                 )
               })}

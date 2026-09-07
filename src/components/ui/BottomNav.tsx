@@ -5,12 +5,15 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
-// 하단 5탭. '더보기'는 하단탭에 상시 자리가 없던 화면들(음식·건강·활동·생활관리 정보, 비용,
-// 성취 등)을 모으는 허브(/more)로 보낸다. 예전엔 📚'정보' 탭이 실제로는 음식(/foods)으로 떨어져
-// 아이콘·라벨과 목적지가 어긋났고, 비용·성취·건강은 홈 타일로만 접근돼 발견성이 낮았다.
+// 하단 5탭. 반려동물 관리 앱의 가장 잦은 일상 화면인 '내 아이'(/pets)를 상시 탭으로 승격한다.
+// 예전엔 매일 쓰는 내 아이 목록이 헤더의 라벨 없는 🐾 아이콘 뒤에만 있어 발견성이 낮았고,
+// 상대적으로 덜 쓰는 '지도'(주변 병원·약국·카페 찾기)가 상위 탭 한 자리를 차지했다. 지도는
+// '더보기' 허브(위치·활동 그룹)로 옮겨 여전히 한 번에 닿게 하고, 그 자리에 '내 아이'를 둔다.
+// '더보기'는 하단탭에 상시 자리가 없는 화면들(음식·건강·활동·생활관리 정보, 비용·성취, 지도·실종·산책)을
+// 모으는 허브(/more)다.
 const navItems = [
   { href: '/dashboard', key: 'home', icon: '🏠', tour: 'nav-dashboard' },
-  { href: '/map', key: 'map', icon: '🗺️', tour: 'nav-map' },
+  { href: '/pets', key: 'pets', icon: '🐾', tour: 'nav-pets' },
   { href: '/schedule', key: 'schedule', icon: '🗓️', tour: 'nav-schedule' },
   { href: '/community', key: 'community', icon: '💬', tour: 'nav-community' },
   { href: '/more', key: 'more', icon: '⋯', tour: 'nav-more' },
@@ -21,11 +24,11 @@ const navItems = [
 const matchPath = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(prefix + '/')
 
-// '더보기' 탭에 묶이는 하위 페이지들 — 허브(/more)에서 진입하는 정보·비용·성취 화면.
+// '더보기' 탭에 묶이는 하위 페이지들 — 허브(/more)에서 진입하는 정보·비용·성취·위치(지도/실종/산책) 화면.
+// 지도(/map)·실종(/lost)·산책기록(/walks)은 예전 '지도' 탭 소속이었으나, 지도 탭을 '내 아이'로
+// 교체하면서 '더보기' 그룹으로 옮겼다(진입은 /more 허브 + 각 화면 상단 지도 섹션 스트립으로 유지).
 // (레거시 /info 허브 경로도 포함해 예전 링크·북마크가 여전히 '더보기'로 표시되게 한다.)
-const MORE_SUBPATHS = ['/more', '/foods', '/health', '/walk', '/care', '/info', '/costs', '/achievements']
-// '지도' 탭에 묶이는 하위 페이지 (실종 신고/제보·산책하기는 지도 탭에서 진입)
-const MAP_SUBPATHS = ['/lost', '/walks']
+const MORE_SUBPATHS = ['/more', '/foods', '/health', '/symptoms', '/walk', '/walks', '/care', '/info', '/costs', '/achievements', '/map', '/lost']
 
 export function BottomNav() {
   const pathname = usePathname()
@@ -38,9 +41,7 @@ export function BottomNav() {
           const isActive =
             item.key === 'more'
               ? MORE_SUBPATHS.some(p => matchPath(pathname, p))
-              : item.href === '/map'
-                ? matchPath(pathname, '/map') || MAP_SUBPATHS.some(p => matchPath(pathname, p))
-                : matchPath(pathname, item.href)
+              : matchPath(pathname, item.href)
           return (
             <Link
               key={item.key}

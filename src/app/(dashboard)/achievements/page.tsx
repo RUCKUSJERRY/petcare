@@ -165,13 +165,13 @@ function BadgeTile({ badge }: { badge: Badge }) {
         {badge.label}
       </div>
       {badge.earned ? (
-        <div className="text-[10px] text-primary-600 font-semibold mt-0.5">✓</div>
+        <div className="text-xs text-primary-600 font-semibold mt-0.5">✓</div>
       ) : (
         <>
           <div className="h-1 rounded-full bg-gray-200 overflow-hidden mt-1.5">
             <div className="h-full rounded-full bg-gray-300" style={{ width: `${badge.progressPct}%` }} />
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">{badge.current}/{badge.threshold}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{badge.current}/{badge.threshold}</div>
         </>
       )}
     </div>
