@@ -57,8 +57,10 @@ export function BottomNav() {
               {isActive && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary-500" />
               )}
-              {/* 활성 시 아이콘 뒤 둥근 배경으로 직관적으로 강조 */}
+              {/* 활성 시 아이콘 뒤 둥근 배경으로 직관적으로 강조.
+                  이모지는 옆의 텍스트 라벨과 중복 낭독되지 않도록 aria-hidden(코드베이스 전역 규칙). */}
               <span
+                aria-hidden
                 className={cn(
                   'flex items-center justify-center w-9 h-7 rounded-full text-xl leading-none transition-colors',
                   isActive && 'bg-primary-50'

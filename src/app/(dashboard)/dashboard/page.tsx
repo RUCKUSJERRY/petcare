@@ -207,7 +207,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500">{t('communityRecent')}</h2>
             <div className="flex items-center gap-3">
-              <Link href="/community" className="text-xs text-gray-400 font-medium">
+              <Link href="/community" className="text-xs text-gray-500 font-medium">
                 {tCommon('more')}
               </Link>
               <Link href="/community/new" className="text-xs text-primary-600 font-semibold">

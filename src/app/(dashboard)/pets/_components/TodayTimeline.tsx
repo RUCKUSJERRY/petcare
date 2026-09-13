@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { careCategoryIcon, todayKST } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 type Row = {
   id: string
@@ -67,14 +68,8 @@ export function TodayTimeline({
 
   if (rows.length === 0) {
     // 홈 인라인(onPrimary)에서는 카드가 커지지 않게 한 줄 힌트만
-    if (onP) return <p className="text-xs text-white/70 py-1">{t('emptyTodayHint')}</p>
-    return (
-      <div className="card text-center py-10 text-gray-400">
-        <div className="text-3xl mb-2">🐾</div>
-        <p className="text-sm">{t('emptyToday')}</p>
-        <p className="text-xs mt-1.5">{t('emptyTodayHint')}</p>
-      </div>
-    )
+    if (onP) return <p className="text-xs text-white/85 py-1">{t('emptyTodayHint')}</p>
+    return <EmptyState icon="🐾" title={t('emptyToday')} hint={t('emptyTodayHint')} />
   }
 
   const shown = limit ? rows.slice(0, limit) : rows
@@ -90,7 +85,7 @@ export function TodayTimeline({
       {shown.map(r => (
         <button key={r.id} onClick={() => onSelect(r.id)} className="w-full text-left">
           <div className={rowCls}>
-            <span className={`text-xs font-semibold tabular-nums shrink-0 text-center ${onP ? 'text-white/80 w-9' : 'text-gray-400 w-10'}`}>
+            <span className={`text-xs font-semibold tabular-nums shrink-0 text-center ${onP ? 'text-white/80 w-9' : 'text-gray-500 w-10'}`}>
               {hhmm(r.event_at)}
             </span>
             <span className={`shrink-0 ${onP ? 'text-base' : 'text-xl'}`} aria-hidden>{careCategoryIcon(r.category)}</span>
@@ -105,14 +100,14 @@ export function TodayTimeline({
                   <div className="flex items-center gap-1.5">
                     {showPetName && r.pet && (
                       <>
-                        <span className="text-xs text-gray-400">{r.pet.species === 'cat' ? '🐱' : '🐶'} {r.pet.name}</span>
+                        <span className="text-xs text-gray-500">{r.pet.species === 'cat' ? '🐱' : '🐶'} {r.pet.name}</span>
                         <span className="text-xs text-gray-300">·</span>
                       </>
                     )}
-                    <span className="text-xs text-gray-400">{r.category}</span>
+                    <span className="text-xs text-gray-500">{r.category}</span>
                   </div>
                   <p className="text-sm font-semibold text-gray-900 truncate">{r.title}</p>
-                  {r.memo && <p className="text-xs text-gray-400 truncate">{r.memo}</p>}
+                  {r.memo && <p className="text-xs text-gray-500 truncate">{r.memo}</p>}
                 </>
               )}
             </div>
@@ -121,7 +116,7 @@ export function TodayTimeline({
         </button>
       ))}
       {more > 0 && (
-        <p className={`text-xs text-center pt-0.5 ${onP ? 'text-white/70' : 'text-gray-400'}`}>
+        <p className={`text-xs text-center pt-0.5 ${onP ? 'text-white/70' : 'text-gray-500'}`}>
           {t('moreCount', { count: more })}
         </p>
       )}

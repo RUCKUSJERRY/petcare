@@ -5,6 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { careCategoryIcon, todayKST, addDays } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 type Row = {
   id: string
@@ -101,14 +102,8 @@ export function RecordFeed({
   }
 
   if (rows.length === 0) {
-    if (onP) return <p className="text-xs text-white/70 py-1">{t('emptyTodayHint')}</p>
-    return (
-      <div className="card text-center py-10 text-gray-400">
-        <div className="text-3xl mb-2">🐾</div>
-        <p className="text-sm">{t('feedEmpty')}</p>
-        <p className="text-xs mt-1.5">{t('emptyTodayHint')}</p>
-      </div>
-    )
+    if (onP) return <p className="text-xs text-white/85 py-1">{t('emptyTodayHint')}</p>
+    return <EmptyState icon="🐾" title={t('feedEmpty')} hint={t('emptyTodayHint')} />
   }
 
   const rowCls = onP
@@ -135,7 +130,7 @@ export function RecordFeed({
               )}
               <button onClick={() => onSelect(r.id)} className="w-full text-left">
                 <div className={rowCls}>
-                  <span className={`text-xs font-semibold tabular-nums shrink-0 text-center ${onP ? 'text-white/80 w-9' : 'text-gray-400 w-10'}`}>
+                  <span className={`text-xs font-semibold tabular-nums shrink-0 text-center ${onP ? 'text-white/80 w-9' : 'text-gray-500 w-10'}`}>
                     {hhmm(r.event_at) || '·'}
                   </span>
                   <span className={`shrink-0 ${onP ? 'text-base' : 'text-xl'}`} aria-hidden>{careCategoryIcon(r.category)}</span>
@@ -150,14 +145,14 @@ export function RecordFeed({
                         <div className="flex items-center gap-1.5">
                           {showPetName && r.pet && (
                             <>
-                              <span className="text-xs text-gray-400">{r.pet.species === 'cat' ? '🐱' : '🐶'} {r.pet.name}</span>
+                              <span className="text-xs text-gray-500">{r.pet.species === 'cat' ? '🐱' : '🐶'} {r.pet.name}</span>
                               <span className="text-xs text-gray-300">·</span>
                             </>
                           )}
-                          <span className="text-xs text-gray-400">{r.category}</span>
+                          <span className="text-xs text-gray-500">{r.category}</span>
                         </div>
                         <p className="text-sm font-semibold text-gray-900 truncate">{r.title}</p>
-                        {r.memo && <p className="text-xs text-gray-400 truncate">{r.memo}</p>}
+                        {r.memo && <p className="text-xs text-gray-500 truncate">{r.memo}</p>}
                       </>
                     )}
                   </div>
@@ -170,7 +165,7 @@ export function RecordFeed({
         {/* 무한 스크롤 센티넬 */}
         <div ref={sentinelRef} />
         {isFetchingNextPage && (
-          <p className={`text-xs text-center py-1 ${onP ? 'text-white/70' : 'text-gray-400'}`}>{t('loadingMore')}</p>
+          <p className={`text-xs text-center py-1 ${onP ? 'text-white/70' : 'text-gray-500'}`}>{t('loadingMore')}</p>
         )}
       </div>
     </div>

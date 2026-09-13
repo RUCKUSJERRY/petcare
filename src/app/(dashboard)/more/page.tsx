@@ -77,7 +77,7 @@ function Section({
             <span className="text-2xl shrink-0" aria-hidden>{it.icon}</span>
             <div className="min-w-0">
               <div className="text-sm font-semibold text-gray-900 truncate">{t(it.key)}</div>
-              <div className="text-xs text-gray-400 mt-0.5 truncate">{t(`${it.key}Desc`)}</div>
+              <div className="text-xs text-gray-500 mt-0.5 truncate">{t(`${it.key}Desc`)}</div>
             </div>
           </Link>
         ))}

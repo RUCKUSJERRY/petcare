@@ -204,7 +204,7 @@ export function QuickLogBar({
                       type="button"
                       onClick={() => handleTap(cat)}
                       disabled={busy === cat}
-                      className={`relative shrink-0 snap-start whitespace-nowrap flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium transition-colors disabled:opacity-60 ${
+                      className={`relative shrink-0 snap-start whitespace-nowrap flex items-center justify-center gap-1 rounded-full px-3 py-2 min-h-10 text-xs font-medium transition-colors disabled:opacity-60 ${
                         active ? (onP ? 'bg-white text-primary-600' : 'bg-primary-500 text-white border border-primary-500') : chipBase
                       }`}
                     >
@@ -238,7 +238,7 @@ export function QuickLogBar({
               type="button"
               onClick={() => log(subFor, opt)}
               disabled={busy === subFor}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors disabled:opacity-60 ${onP ? 'bg-white text-primary-600' : 'bg-primary-500 text-white'}`}
+              className={`px-3 py-2 min-h-10 rounded-full text-xs font-semibold transition-colors disabled:opacity-60 ${onP ? 'bg-white text-primary-600' : 'bg-primary-500 text-white'}`}
             >
               {opt}
             </button>
