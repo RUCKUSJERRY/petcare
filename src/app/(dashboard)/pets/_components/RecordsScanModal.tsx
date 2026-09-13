@@ -194,7 +194,6 @@ export function RecordsScanModal({
 
     if (saved.size > 0) {
       // QuickLogBar 와 동일한 전체 무효화 세트 — 홈 타임라인·피드·오늘 기록도 즉시 갱신.
-      qc.invalidateQueries({ queryKey: ['records', petId] })
       qc.invalidateQueries({ queryKey: ['care-schedule'] })
       qc.invalidateQueries({ queryKey: ['today-log', petId] })
       qc.invalidateQueries({ queryKey: ['today-timeline', petId] })

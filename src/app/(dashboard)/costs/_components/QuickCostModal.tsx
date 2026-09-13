@@ -81,7 +81,6 @@ export function QuickCostModal({
     qc.invalidateQueries({ queryKey: ['today-timeline', null] })
     qc.invalidateQueries({ queryKey: ['record-feed', targetPet] })
     qc.invalidateQueries({ queryKey: ['record-feed', null] })
-    qc.invalidateQueries({ queryKey: ['records', targetPet] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     // 빠른 비용 입력은 항목으로 생활기록 카테고리(식사·물·배변·투약 등)도 고를 수 있다 —
     // 오늘 날짜로 그런 지출을 남기면 records 한 건이 '오늘의 돌봄'(today-log)·생활 패턴(life-pattern)

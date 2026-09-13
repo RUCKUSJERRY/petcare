@@ -70,7 +70,9 @@ export default function NotificationsPage() {
     if (!n.read) {
       qc.setQueryData<NotificationItem[]>(['notifications'], prev =>
         prev?.map(it => (it.id === n.id ? { ...it, read: true } : it)))
-      qc.setQueryData<number>(['notifications-unread'], c => Math.max(0, (c ?? 1) - 1))
+      // 배지 카운트 미로드(undefined) 시 임의로 0으로 만들지 않는다 — 값이 있을 때만 1 줄인다.
+      // (NotificationBell 과 동일한 가드: '로드 전 1→0' 가정이 실제 미읽음 수와 무관하게 배지를 끄는 것 방지.)
+      qc.setQueryData<number>(['notifications-unread'], c => (c == null ? c : Math.max(0, c - 1)))
       supabase.from('notifications').update({ read: true }).eq('id', n.id)
         .then(() => qc.invalidateQueries({ queryKey: ['notifications-unread'] }))
     }

@@ -44,6 +44,12 @@ export function PetCharacterCard({ petId, petName }: { petId: string; petName: s
   // 최근 STREAK_WINDOW_DAYS 로 범위를 좁혀 조회(무제한 방지)하고, 같은 날짜 집합에서 두 값을 파생.
   const { data: streakData, isLoading: streakLoading } = useQuery({
     queryKey: ['pet-streak', petId],
+    // 아이 상세는 상주 카드가 아니라 '진입'하는 목적지 화면이고, 연속·레벨을 바꾸는 쓰기 경로
+    // (원탭·직접·스캔·비용·산책 저장/삭제 등)가 여러 화면에 흩어져 있다. 개별 무효화로 챙기면
+    // 한 곳만 빠져도 재진입 시 옛 연속·레벨이 최대 60초간 남는다(예: 홈에서 밥 기록 후 상세 복귀).
+    // 진입 시마다 새로 읽어(staleTime 0) 어느 경로를 거쳤든 항상 최신을 보장한다 — 최근 구간
+    // 좁힌 조회라 가볍다. (achievements 화면과 동일한 판단.)
+    staleTime: 0,
     queryFn: async () => {
       const { data } = await supabase
         .from('records')
@@ -61,6 +67,9 @@ export function PetCharacterCard({ petId, petName }: { petId: string; petName: s
   // 성장 레벨 — 누적 기록 수 + 산책 수(가중)로 계산(head 카운트라 가볍다).
   const { data: level, isLoading: levelLoading } = useQuery({
     queryKey: ['pet-care-points', petId],
+    // 연속일과 같은 이유로 진입 시마다 새로 읽는다(staleTime 0) — 누적 기록·산책 수가 여러 쓰기
+    // 경로로 바뀌므로. head 카운트 2건이라 가볍다.
+    staleTime: 0,
     queryFn: async () => {
       const [recRes, walkRes] = await Promise.all([
         supabase.from('records').select('id', { count: 'exact', head: true }).eq('pet_id', petId),

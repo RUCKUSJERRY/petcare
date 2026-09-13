@@ -236,7 +236,6 @@ export const RecordForm = forwardRef<RecordFormHandle, {
 
     setSavingState(false)
     // 홈 타임라인·피드·오늘 기록까지 즉시 갱신 (QuickLogBar 와 동일한 무효화 세트)
-    qc.invalidateQueries({ queryKey: ['records', effectivePetId] })
     qc.invalidateQueries({ queryKey: ['care-schedule'] })
     qc.invalidateQueries({ queryKey: ['today-log', effectivePetId] })
     qc.invalidateQueries({ queryKey: ['today-timeline', effectivePetId] })

@@ -46,7 +46,6 @@ export function RecordDetailModal({
     // (예전엔 costs 화면에서 금액 수정/삭제 후에도 월·항목 집계가 옛값으로 남았다.)
     qc.invalidateQueries({ queryKey: ['cost-records'] })
     if (record) {
-      qc.invalidateQueries({ queryKey: ['records', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['today-log', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['today-timeline', record.pet_id] })
       qc.invalidateQueries({ queryKey: ['record-feed', record.pet_id] })
