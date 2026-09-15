@@ -53,9 +53,12 @@ export async function POST(req: Request) {
   }
 
   let messages: UIMessage[]
+  let threadId: string | undefined
   try {
     const body = await req.json()
     messages = body?.messages
+    // 클라이언트가 대화 스레드 id 를 함께 보낸다(대화 저장용). 없으면 저장은 건너뛴다.
+    threadId = typeof body?.threadId === 'string' ? body.threadId : (typeof body?.id === 'string' ? body.id : undefined)
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
   }
@@ -69,12 +72,52 @@ export async function POST(req: Request) {
   supabase.from('ai_usage').insert({ user_id: user.id, kind: 'chat' })
     .then(({ error }) => { if (error) console.error('[chat] usage insert failed', error) })
 
+  // ── 대화 저장(2단계) — 모두 best-effort. 테이블 미적용/실패해도 스트리밍은 정상 진행 ──
+  const lastMsg = messages[messages.length - 1]
+  const userText = lastMsg?.role === 'user' ? uiMessageText(lastMsg) : ''
+  if (threadId) {
+    try {
+      // 첫 사용자 메시지면 스레드 제목을 만든다(그 메시지 앞부분).
+      const isFirstTurn = messages.filter(m => m.role === 'user').length === 1
+      await supabase.from('chat_threads').upsert(
+        {
+          id: threadId,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+          ...(isFirstTurn && userText ? { title: userText.slice(0, 40) } : {}),
+        },
+        { onConflict: 'id' },
+      )
+      if (userText) {
+        await supabase.from('chat_messages').insert({ thread_id: threadId, user_id: user.id, role: 'user', content: userText })
+      }
+    } catch (e) {
+      console.error('[chat] persist user failed', e)
+    }
+  }
+
   const modelMessages = await convertToModelMessages(messages)
   const result = streamText({
     model,
     system,
     messages: modelMessages,
     temperature: 0.4,
+    // 응답 완료 시 어시스턴트 메시지 저장 + 스레드 갱신(best-effort)
+    onFinish: async ({ text }) => {
+      if (!threadId || !text) return
+      try {
+        await supabase.from('chat_messages').insert({ thread_id: threadId, user_id: user.id, role: 'assistant', content: text })
+        await supabase.from('chat_threads').update({ updated_at: new Date().toISOString() }).eq('id', threadId)
+      } catch (e) {
+        console.error('[chat] persist assistant failed', e)
+      }
+    },
   })
   return result.toUIMessageStreamResponse()
+}
+
+/** UIMessage 의 텍스트 파트만 이어붙인다. */
+function uiMessageText(m: UIMessage): string {
+  const parts = (m.parts ?? []) as Array<{ type: string; text?: string }>
+  return parts.filter(p => p.type === 'text').map(p => p.text ?? '').join('')
 }

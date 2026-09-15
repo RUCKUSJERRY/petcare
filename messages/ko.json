@@ -1018,7 +1018,12 @@
     "placeholder": "메시지를 입력하세요…",
     "send": "보내기",
     "back": "뒤로",
-    "error": "답변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+    "error": "답변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+    "history": "기록",
+    "newChat": "새 대화",
+    "historyTitle": "대화 기록",
+    "historyEmpty": "아직 저장된 대화가 없어요.",
+    "untitled": "제목 없는 대화"
   },
   "petDetail": {
     "recordSection": "기록",

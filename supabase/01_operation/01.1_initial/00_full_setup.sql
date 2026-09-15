@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-08-02T01:45:37.223Z
+--  생성 시각: 2026-09-15T07:51:54.138Z
 -- =============================================================
 
 
@@ -73,6 +73,28 @@ create table if not exists public.breeds (
   species         text not null default 'dog' check (species in ('dog','cat')),
   created_at      timestamptz default now(),
   updated_at      timestamptz default now()
+);
+
+-- ── 02.1_table/chat_messages.sql ──
+-- chat_messages : AI 케어 도우미 대화 메시지
+-- user_id 는 RLS 단순화를 위한 비정규화(스레드 소유자와 동일)
+create table if not exists public.chat_messages (
+  id          uuid primary key default gen_random_uuid(),
+  thread_id   uuid not null,
+  user_id     uuid not null,
+  role        text not null check (role in ('user','assistant')),
+  content     text not null,
+  created_at  timestamptz not null default now()
+);
+
+-- ── 02.1_table/chat_threads.sql ──
+-- chat_threads : AI 케어 도우미 대화 스레드(대화방)
+create table if not exists public.chat_threads (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null,
+  title       text,                       -- 첫 사용자 메시지에서 생성(없으면 null)
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
 );
 
 -- ── 02.1_table/comments.sql ──
@@ -543,6 +565,23 @@ alter table public.breed_food_rules add constraint breed_food_rules_breed_id_fke
 alter table public.breed_food_rules drop constraint if exists breed_food_rules_food_id_fkey;
 alter table public.breed_food_rules add constraint breed_food_rules_food_id_fkey
   foreign key (food_id) references public.food_items(id) on delete cascade;
+
+-- ── 02.2_index_fk/chat_messages.sql ──
+-- chat_messages : FK + 인덱스
+alter table public.chat_messages drop constraint if exists chat_messages_thread_id_fkey;
+alter table public.chat_messages add constraint chat_messages_thread_id_fkey
+  foreign key (thread_id) references public.chat_threads(id) on delete cascade;
+alter table public.chat_messages drop constraint if exists chat_messages_user_id_fkey;
+alter table public.chat_messages add constraint chat_messages_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+create index if not exists idx_chat_messages_thread_at on public.chat_messages (thread_id, created_at);
+
+-- ── 02.2_index_fk/chat_threads.sql ──
+-- chat_threads : FK + 인덱스
+alter table public.chat_threads drop constraint if exists chat_threads_user_id_fkey;
+alter table public.chat_threads add constraint chat_threads_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+create index if not exists idx_chat_threads_user_updated on public.chat_threads (user_id, updated_at desc);
 
 -- ── 02.2_index_fk/comments.sql ──
 -- comments : 외래키 + 인덱스 (parent_id 자기참조는 테이블 정의에 포함)
@@ -1297,6 +1336,28 @@ create policy "breed_food_rules 공개 읽기" on public.breed_food_rules for se
 alter table public.breeds enable row level security;
 drop policy if exists "breeds 공개 읽기" on public.breeds;
 create policy "breeds 공개 읽기" on public.breeds for select using (true);
+
+-- ── 02.6_policy/chat_messages.sql ──
+-- chat_messages : RLS (본인 대화만 조회/생성/삭제)
+alter table public.chat_messages enable row level security;
+drop policy if exists "chat_messages_select_own" on public.chat_messages;
+drop policy if exists "chat_messages_insert_own" on public.chat_messages;
+drop policy if exists "chat_messages_delete_own" on public.chat_messages;
+create policy "chat_messages_select_own" on public.chat_messages for select using (auth.uid() = user_id);
+create policy "chat_messages_insert_own" on public.chat_messages for insert with check (auth.uid() = user_id);
+create policy "chat_messages_delete_own" on public.chat_messages for delete using (auth.uid() = user_id);
+
+-- ── 02.6_policy/chat_threads.sql ──
+-- chat_threads : RLS (본인 대화만 조회/생성/수정/삭제)
+alter table public.chat_threads enable row level security;
+drop policy if exists "chat_threads_select_own" on public.chat_threads;
+drop policy if exists "chat_threads_insert_own" on public.chat_threads;
+drop policy if exists "chat_threads_update_own" on public.chat_threads;
+drop policy if exists "chat_threads_delete_own" on public.chat_threads;
+create policy "chat_threads_select_own" on public.chat_threads for select using (auth.uid() = user_id);
+create policy "chat_threads_insert_own" on public.chat_threads for insert with check (auth.uid() = user_id);
+create policy "chat_threads_update_own" on public.chat_threads for update using (auth.uid() = user_id);
+create policy "chat_threads_delete_own" on public.chat_threads for delete using (auth.uid() = user_id);
 
 -- ── 02.6_policy/comments.sql ──
 -- comments : RLS (공개 읽기, 본인 댓글 작성/수정/삭제)
