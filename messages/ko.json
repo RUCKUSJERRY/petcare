@@ -1024,7 +1024,10 @@
     "newChat": "새 대화",
     "historyTitle": "대화 기록",
     "historyEmpty": "아직 저장된 대화가 없어요.",
-    "untitled": "제목 없는 대화"
+    "untitled": "제목 없는 대화",
+    "delete": "삭제",
+    "deleting": "삭제 중…",
+    "deleteConfirmTitle": "이 대화를 삭제할까요?"
   },
   "petDetail": {
     "recordSection": "기록",
