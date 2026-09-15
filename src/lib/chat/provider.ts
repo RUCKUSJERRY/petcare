@@ -1,4 +1,4 @@
-import { createOpenAI } from '@ai-sdk/openai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { LanguageModel } from 'ai'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAppSetting } from '@/lib/settings'
@@ -17,8 +17,11 @@ export type ChatProvider = 'upstage' | 'openai' | 'anthropic' | 'gemini'
 function upstageModel(): LanguageModel | null {
   const apiKey = process.env.UPSTAGE_API_KEY
   if (!apiKey) return null
-  // Upstage 는 OpenAI 호환이라 createOpenAI 로 baseURL 만 바꿔 쓴다(스캔 OCR 과 동일한 방식).
-  const upstage = createOpenAI({
+  // Upstage(Solar)는 OpenAI '호환' 서드파티다. @ai-sdk/openai 의 기본 provider 는 OpenAI 전용
+  // Responses API(/v1/responses)를 호출해 Upstage 가 400 을 준다 → 항상 Chat Completions 를
+  // 쓰는 openai-compatible 어댑터로 연결한다(baseURL 뒤에 /chat/completions 를 붙임).
+  const upstage = createOpenAICompatible({
+    name: 'upstage',
     baseURL: process.env.UPSTAGE_CHAT_URL || 'https://api.upstage.ai/v1',
     apiKey,
   })
