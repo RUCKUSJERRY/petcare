@@ -20,6 +20,7 @@ export function AppHeader() {
   const pathname = usePathname()
   const petsActive = pathname.startsWith('/pets')
   const profileActive = pathname.startsWith('/profile')
+  const chatActive = pathname.startsWith('/chat')
 
   const { data: pets } = useMyPets()
   // 첫 아이 자동 선택을 마운트당 1회만 수행 (수동 해제는 존중)
@@ -136,6 +137,21 @@ export function AppHeader() {
             <Link href="/pets/new" className="text-sm font-medium text-primary-600">{t('registerPet')}</Link>
           )}
         </div>
+
+        {/* AI 케어 도우미 — 어느 화면에서든 한 번에 진입(전역 접근점). */}
+        <Link
+          href="/chat"
+          aria-label={t('chatAria')}
+          aria-current={chatActive ? 'page' : undefined}
+          className={cn(
+            'w-10 h-10 rounded-full border flex items-center justify-center shrink-0 text-base leading-none transition-colors',
+            chatActive
+              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
+              : 'border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          <span aria-hidden>🤖</span>
+        </Link>
 
         {/* 알림 종 (드롭다운) */}
         <NotificationBell />

@@ -5,6 +5,7 @@ import { DefaultChatTransport, type UIMessage } from 'ai'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { ChatHistoryDrawer } from './ChatHistoryDrawer'
 
 // 제안 프롬프트 — 빈 화면에서 무엇을 물어볼 수 있는지 안내(첫 사용 진입장벽 완화)
 const SUGGESTIONS = [
@@ -38,6 +39,7 @@ export function ChatConversation({
     transport: new DefaultChatTransport({ api: '/api/chat', body: { threadId } }),
   })
   const [input, setInput] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
   const busy = status === 'submitted' || status === 'streaming'
 
@@ -54,24 +56,32 @@ export function ChatConversation({
 
   return (
     <div className="flex flex-col min-h-[calc(100dvh-3.5rem)] px-4">
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 py-3">
-        <Link href="/more" aria-label={t('back')} className="text-gray-400 shrink-0">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+      {/* 상단 툴바 — AppHeader(56px) 아래에 고정돼 스크롤해도 '기록/새 대화'가 항상 보인다. */}
+      <div className="sticky top-[56px] z-30 bg-gray-50 flex items-center gap-2 py-2">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          aria-label={t('history')}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 className="font-bold text-gray-900 flex-1 truncate">{t('title')}</h1>
+        <Link
+          href="/chat"
+          aria-label={t('newChat')}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-primary-600 hover:bg-primary-50"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-bold text-gray-900 leading-tight">{t('title')}</h1>
-          <p className="text-[11px] text-gray-500 leading-tight">{t('disclaimer')}</p>
-        </div>
-        <Link href="/chat/history" className="text-xs font-medium text-gray-500 shrink-0 px-2 py-1">
-          {t('history')}
-        </Link>
-        <Link href="/chat" className="text-xs font-semibold text-primary-600 shrink-0 px-2 py-1">
-          {t('newChat')}
-        </Link>
       </div>
+
+      {/* 좌측 대화 목록 드로어 */}
+      <ChatHistoryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} currentThreadId={threadId} />
 
       {/* 대화 영역 */}
       <div className="flex-1 space-y-3 pb-28">
@@ -80,6 +90,7 @@ export function ChatConversation({
             <div className="text-center space-y-1">
               <div className="text-4xl" aria-hidden>🐾</div>
               <p className="text-sm text-gray-600">{t('empty')}</p>
+              <p className="text-[11px] text-gray-400 px-6">{t('disclaimer')}</p>
             </div>
             <div className="space-y-2">
               {SUGGESTIONS.map(s => (
