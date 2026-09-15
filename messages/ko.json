@@ -64,6 +64,8 @@
     "title": "더보기",
     "sectionInfo": "우리 아이 정보",
     "sectionActivity": "기록·활동",
+    "chatbot": "AI 케어 도우미",
+    "chatbotDesc": "궁금한 걸 바로 물어보세요",
     "foods": "음식 가이드",
     "foodsDesc": "사료·간식·안전한 음식",
     "health": "건강 정보",
@@ -154,6 +156,7 @@
     "walksTitle": "산책하기",
     "costsTitle": "케어 비용",
     "achievementsTitle": "성취",
+    "chatbotTitle": "AI 도우미",
     "communityRecent": "커뮤니티 최근 글",
     "write": "글쓰기 →",
     "greet_morning": "좋은 아침이에요",
@@ -1007,6 +1010,15 @@
     "pickCamera": "📷 촬영",
     "pickGallery": "🖼️ 갤러리",
     "pickFile": "📄 파일"
+  },
+  "chat": {
+    "title": "AI 케어 도우미",
+    "disclaimer": "참고용 안내예요. 응급·이상 증상은 동물병원을 먼저 찾아주세요.",
+    "empty": "반려동물 돌봄, 뭐든 물어보세요.",
+    "placeholder": "메시지를 입력하세요…",
+    "send": "보내기",
+    "back": "뒤로",
+    "error": "답변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
   },
   "petDetail": {
     "recordSection": "기록",

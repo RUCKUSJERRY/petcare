@@ -1,0 +1,140 @@
+'use client'
+
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+
+// 제안 프롬프트 — 빈 화면에서 무엇을 물어볼 수 있는지 안내(첫 사용 진입장벽 완화)
+const SUGGESTIONS = [
+  '강아지 양치, 어떻게 시작하면 좋을까?',
+  '고양이가 사료를 잘 안 먹어요',
+  '산책은 하루에 얼마나 시켜야 해?',
+  '중성화 수술 후 주의할 점 알려줘',
+]
+
+/** UIMessage 의 텍스트 파트만 합쳐 문자열로 */
+function messageText(parts: { type: string; text?: string }[]): string {
+  return parts.filter(p => p.type === 'text').map(p => p.text ?? '').join('')
+}
+
+export default function ChatPage() {
+  const t = useTranslations('chat')
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat' }),
+  })
+  const [input, setInput] = useState('')
+  const endRef = useRef<HTMLDivElement>(null)
+  const busy = status === 'submitted' || status === 'streaming'
+
+  // 새 메시지/스트리밍마다 맨 아래로
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, status])
+
+  const submit = (text: string) => {
+    const v = text.trim()
+    if (!v || busy) return
+    sendMessage({ text: v })
+    setInput('')
+  }
+
+  return (
+    <div className="flex flex-col min-h-[calc(100dvh-3.5rem)] px-4">
+      {/* 헤더 */}
+      <div className="flex items-center gap-2 py-3">
+        <Link href="/more" aria-label={t('back')} className="text-gray-400 shrink-0">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </Link>
+        <div className="min-w-0">
+          <h1 className="font-bold text-gray-900 leading-tight">{t('title')}</h1>
+          <p className="text-[11px] text-gray-500 leading-tight">{t('disclaimer')}</p>
+        </div>
+      </div>
+
+      {/* 대화 영역 */}
+      <div className="flex-1 space-y-3 pb-28">
+        {messages.length === 0 && (
+          <div className="pt-6 space-y-4">
+            <div className="text-center space-y-1">
+              <div className="text-4xl" aria-hidden>🐾</div>
+              <p className="text-sm text-gray-600">{t('empty')}</p>
+            </div>
+            <div className="space-y-2">
+              {SUGGESTIONS.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => submit(s)}
+                  className="w-full text-left text-sm bg-white border border-gray-200 rounded-xl px-3 py-2.5 hover:border-primary-300 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map(m => {
+          const mine = m.role === 'user'
+          return (
+            <div key={m.id} className={mine ? 'flex justify-end' : 'flex justify-start'}>
+              <div
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                  mine ? 'bg-primary-500 text-white' : 'bg-white border border-gray-200 text-gray-800'
+                }`}
+              >
+                {messageText(m.parts) || (m.role === 'assistant' && busy ? '…' : '')}
+              </div>
+            </div>
+          )
+        })}
+
+        {/* 응답 대기(어시스턴트 메시지가 아직 안 생겼을 때) */}
+        {status === 'submitted' && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-gray-200 rounded-2xl px-3.5 py-2.5 text-sm text-gray-400">…</div>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs text-red-500 text-center">{t('error')}</p>
+        )}
+
+        <div ref={endRef} />
+      </div>
+
+      {/* 입력 바 — 하단 탭 위에 고정 */}
+      <form
+        onSubmit={e => { e.preventDefault(); submit(input) }}
+        className="sticky bottom-20 bg-gray-50 py-2"
+      >
+        <div className="flex items-end gap-2">
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(input) }
+            }}
+            rows={1}
+            placeholder={t('placeholder')}
+            className="flex-1 resize-none rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-400 max-h-32"
+          />
+          <button
+            type="submit"
+            disabled={busy || !input.trim()}
+            className="btn-primary shrink-0 rounded-full w-11 h-11 flex items-center justify-center disabled:opacity-40"
+            aria-label={t('send')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}

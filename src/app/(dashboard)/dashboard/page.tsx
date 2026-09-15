@@ -159,6 +159,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         {pets && pets.length > 0 ? (
           <>
+            {/* AI 케어 도우미 — 궁금증을 바로 물어보는 챗봇(체류·재방문 유도). 상시 진입점을 홈 타일로. */}
+            <QuickTile href="/chat" icon="🤖" label={t('chatbotTitle')} />
             {/* 성취(레벨·뱃지)는 예전엔 주간 리포트 카드의 배지 하나로만 들어갈 수 있어
                 거의 발견되지 않았다 — 홈 타일로 상시 진입점을 준다(리텐션 시스템 노출).
                 건강(/health)은 '오늘의 정보' 카드에서 상시 연결되므로 타일 중복을 제거했다. */}
@@ -169,8 +171,9 @@ export default async function DashboardPage() {
             <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
           </>
         ) : (
-          // 아직 아이가 없으면 성취·건강·비용은 의미가 없어(아이 기준) 지도·산책만 노출한다.
+          // 아직 아이가 없어도 AI 도우미·산책·지도는 유용하므로 노출한다.
           <>
+            <QuickTile href="/chat" icon="🤖" label={t('chatbotTitle')} />
             <QuickTile href="/walks/track?autostart=1" icon="🦮" label={t('walksTitle')} />
             <QuickTile href="/map" icon="🗺️" label={t('mapTitle')} />
           </>

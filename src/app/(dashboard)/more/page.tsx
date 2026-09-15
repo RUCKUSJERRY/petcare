@@ -11,6 +11,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 type Item = { href: string; icon: string; key: string }
 
 const INFO_ITEMS: Item[] = [
+  { href: '/chat', icon: '🤖', key: 'chatbot' },
   { href: '/foods', icon: '🍽️', key: 'foods' },
   { href: '/health', icon: '🩺', key: 'health' },
   { href: '/symptoms', icon: '🩹', key: 'symptoms' },
