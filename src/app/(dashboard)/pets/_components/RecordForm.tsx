@@ -83,6 +83,12 @@ export const RecordForm = forwardRef<RecordFormHandle, {
     name: record?.place_name || '', lat: record?.place_lat ?? null, lng: record?.place_lng ?? null,
   })
   const [cost, setCost] = useState(record?.cost != null ? String(record.cost) : (defaultCost ?? ''))
+  // 일상기록(식사·물·배변 등)에선 비용·장소를 거의 안 써, 날짜 바로 밑 명당을 비우고 '추가 정보'로
+  // 접어 메모·사진을 앞으로 당긴다. 편집 등으로 기존 비용/장소 값이 있으면 펼친 채 시작해
+  // 데이터가 접힘 뒤에 숨어 유실로 오인되지 않게 한다. (일정성 기록은 접지 않고 그대로 노출)
+  const [showExtra, setShowExtra] = useState(
+    () => !!record?.cost || !!record?.place_name || !!defaultCost,
+  )
   const [memo, setMemo] = useState(record?.memo || '')
   const initialPhotos = record?.photo_urls?.length ? record.photo_urls : (record?.photo_url ? [record.photo_url] : [])
   const [photoUrls, setPhotoUrls] = useState<string[]>(initialPhotos)
@@ -333,15 +339,31 @@ export const RecordForm = forwardRef<RecordFormHandle, {
         onChange={(d, tm) => { setEventOn(d); if (tm) setEventTime(tm) }}
       />
 
-      {/* 비용 */}
-      <div>
-        <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
-        <input className="input" type="number" inputMode="numeric" min={0} placeholder={t('costPlaceholder')}
-          value={cost} onChange={e => setCost(e.target.value)} />
-      </div>
-
-      {/* 장소 (카카오 검색) */}
-      <PlacePicker value={place} onChange={setPlace} placeholder={t('placePlaceholder')} />
+      {/* 비용 + 장소(카카오 검색). 일상기록에선 거의 안 쓰므로 '추가 정보'로 접어 두고,
+          일정성 기록(진료·미용 등 비용·장소가 중요한 유형)에선 그대로 펼쳐 노출한다. */}
+      {(() => {
+        const costPlaceFields = (
+          <>
+            <div>
+              <label className="text-xs text-gray-500 block mb-0.5">{t('cost')}</label>
+              <input className="input" type="number" inputMode="numeric" min={0} placeholder={t('costPlaceholder')}
+                value={cost} onChange={e => setCost(e.target.value)} />
+            </div>
+            <PlacePicker value={place} onChange={setPlace} placeholder={t('placePlaceholder')} />
+          </>
+        )
+        if (!isDailyLog) return costPlaceFields
+        return (
+          <div className="space-y-3">
+            <button type="button" onClick={() => setShowExtra(s => !s)}
+              aria-expanded={showExtra}
+              className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+              <span aria-hidden>{showExtra ? '▲' : '▼'}</span> {t('extraInfo')}
+            </button>
+            {showExtra && costPlaceFields}
+          </div>
+        )
+      })()}
 
       {/* 카테고리별 상세 필드 */}
       {config.fields.map(f => (

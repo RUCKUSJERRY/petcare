@@ -8,7 +8,6 @@ import Link from 'next/link'
 import type { CareAlert, Pet, PostListItem, Species } from '@/types'
 import { PetSection } from './_components/PetSection'
 import { HomeGreeting } from './_components/HomeGreeting'
-import { TodayChecklist } from './_components/TodayChecklist'
 import { TodayInfoCard } from './_components/TodayInfoCard'
 import { FoodSafetySearch } from './_components/FoodSafetySearch'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
@@ -148,10 +147,9 @@ export default async function DashboardPage() {
       {/* 펫 영역 (요약 카드 + 다른 아이들 목록 + 건강 일정 알림). 제목·등록은 '내 아이' 탭으로 일원화 */}
       <PetSection pets={(pets ?? []) as Pet[]} vaccAlerts={vaccAlerts} streakByPet={streakByPet} loadError={petsLoadError} />
 
-      {/* 오늘의 돌봄 체크 — 매일 챙기는 핵심 4가지(밥·물·배변·산책)를 체크리스트로.
-          하루 습관 루프를 '목표 달성'으로 만들어 재방문·기록 지속(리텐션)을 유도한다.
-          선택된 아이가 있을 때만 스스로 노출된다(클라이언트). */}
-      {pets && pets.length > 0 && <TodayChecklist />}
+      {/* 오늘 핵심 돌봄(밥·물·배변·산책)은 별도 체크리스트 카드 대신 요약카드(SelectedPetSummary)의
+          '기록하기' 영역에서 한 곳에 모아 처리한다 — 밥·물·배변은 원탭 칩, 산책은 WalkQuickLog,
+          진행(N/4)·완주 축하는 요약카드에서 함께 노출(입력 동선 이중화 제거). */}
 
       {/* 바로가기 — 하단 탭에 이미 있는 목적지(일정·지도)를 다시 얹지 않고, '숨어 있어 찾기 어려운'
           화면(성취·비용)과 가장 잦은 의도(산책 지금 시작)를 홈 상단부에 노출한다.

@@ -18,7 +18,8 @@ type Row = {
   pet: { name: string; species: string } | null
 }
 
-const PAGE = 15
+// SNS 피드처럼 한 번에 넉넉히 보여주고, 바닥 근처에서 다음 묶음을 이어 로딩한다.
+const PAGE = 20
 
 const hhmm = (iso: string | null) => {
   if (!iso) return ''
@@ -111,8 +112,12 @@ export function RecordFeed({
     : 'card flex items-center gap-3 hover:shadow-md transition-shadow'
 
   let lastDate = ''
+  // 홈 인라인 피드는 화면 대부분을 차지하는 넉넉한 높이의 '피드 창'으로 둔다 — 예전 짧은
+  // 박스(max-h-72≈288px)는 손가락이 늘 박스 위에 놓여 페이지 대신 작은 박스만 스크롤되는
+  // 갇힘(scroll trap)이 잦았다. 창을 크게 해 이 안을 스크롤하는 것이 곧 SNS 피드 탐색이 되게 하고,
+  // 끝에 닿으면 자연히 페이지 스크롤로 이어진다.
   const containerCls = scroll
-    ? `max-h-72 overflow-y-auto scrollbar-none ${onP ? 'pr-0.5' : ''}`
+    ? `max-h-[65vh] overflow-y-auto scrollbar-none ${onP ? 'pr-0.5' : ''}`
     : ''
 
   return (

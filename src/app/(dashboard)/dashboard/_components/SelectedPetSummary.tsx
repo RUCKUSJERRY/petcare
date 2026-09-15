@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useTodayLog, useWalkedToday } from '@/hooks/useTodayActivity'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
+import { WalkQuickLog } from './WalkQuickLog'
 import { RecordFeed } from '@/app/(dashboard)/pets/_components/RecordFeed'
 import { RecordDetailModal } from '@/app/(dashboard)/pets/_components/RecordDetailModal'
 import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntryModals'
@@ -34,6 +35,9 @@ export function SelectedPetSummary({
 }) {
   const { selectedPetId } = useSelectedPet()
   const t = useTranslations('summary')
+  // 오늘 돌봄 진행(N/4) 표시·산책 액션 문구는 todayCare 네임스페이스를 공유한다
+  // (예전 TodayChecklist 와 동일 문구원천 — 걷어낸 뒤에도 습관 신호를 요약카드에 남긴다).
+  const tCare = useTranslations('todayCare')
   const qc = useQueryClient()
   const [detailId, setDetailId] = useState<string | null>(null)
   // 상세 입력(체중·직접·스캔)은 페이지 이동 대신 현재 홈 화면 위 모달로 연다 → 저장 후 원래 자리로 복귀.
@@ -159,7 +163,7 @@ export function SelectedPetSummary({
       </div>
 
       {/* 오늘 핵심 돌봄(밥·물·배변·산책) 완주 축하 리본 — 하루를 마친 순간의 즉각 보상.
-          미션 리스트(TodayChecklist)와 달리, 캐릭터 카드에서 '완주' 자체를 밝게 자축한다. */}
+          위 진행(N/4) 배지가 '몇 개 남았는지'를, 이 리본이 '다 챙김'을 자축해 습관 루프를 닫는다. */}
       {todayCare.total > 0 && todayCare.doneCount >= todayCare.total && (
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-300/95 text-amber-900 px-3 py-2 shadow-sm">
           <span aria-hidden className="text-base leading-none animate-bounce">🎉</span>
@@ -189,9 +193,18 @@ export function SelectedPetSummary({
         </Link>
       )}
 
-      {/* 기록하기 — 육아앱식 원탭 생활기록 + 오늘 타임라인 + 상세 입력(체중/직접/스캔) */}
+      {/* 기록하기 — 육아앱식 원탭 생활기록 + 오늘 타임라인 + 상세 입력(체중/직접/스캔).
+          오늘 핵심 돌봄 진행(N/4)을 헤더에 함께 노출해, 별도 체크리스트 카드 없이도 '오늘 몇 개
+          남았는지'라는 습관 루프 신호를 유지한다(완주 시엔 아래 축하 리본이 대신 알린다). */}
       <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-semibold text-white/70">{t('recordSection')}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-white/70">{t('recordSection')}</p>
+          {todayCare.total > 0 && !todayCare.allDone && (
+            <span className="text-[11px] font-semibold text-white/85 bg-white/15 rounded-full px-2 py-0.5">
+              {tCare('progress', { done: todayCare.doneCount, total: todayCare.total })}
+            </span>
+          )}
+        </div>
         <Link href={`/schedule?pet=${pet.id}&view=today`} className="text-xs text-white/70 hover:text-white">
           {t('recordMore')} ›
         </Link>
@@ -199,6 +212,9 @@ export function SelectedPetSummary({
       <div className="mt-1.5 space-y-2">
         {/* 원탭 칩(가로 스크롤): 탭하면 지금 시각으로 바로 기록 */}
         <QuickLogBar petId={pet.id} tone="onPrimary" onOpenDetail={setDetailId} />
+        {/* 산책도 밥·물·배변과 같은 자리에서 — 산책은 records 가 아니라 walks 라 칩에 못 들어가므로
+            별도 액션으로 둔다(지금 GPS 시작 / 산책했어요 기록만 선택 시트). */}
+        <WalkQuickLog petId={pet.id} walkedToday={walkedToday} tone="onPrimary" />
         {/* 기록 시간순 흐름(무한 스크롤 피드) — 항목을 누르면 상세로 진입 */}
         <RecordFeed petId={pet.id} tone="onPrimary" scroll onSelect={setDetailId} />
         {/* 상세 입력: 체중·직접 입력·영수증 스캔 — 페이지 이동 없이 홈에서 바로 모달로 연다 */}
