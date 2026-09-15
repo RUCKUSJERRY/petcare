@@ -3,8 +3,9 @@ import { isUserPremiumServer } from '@/lib/plan'
 import { getAppSetting } from '@/lib/settings'
 import { resolveChatModel } from '@/lib/chat/provider'
 import { buildSystemPrompt, type ChatPetContext } from '@/lib/chat/context'
+import { buildChatTools } from '@/lib/chat/tools'
 import { todayKST } from '@/lib/utils'
-import { streamText, convertToModelMessages, type UIMessage } from 'ai'
+import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -64,9 +65,11 @@ export async function POST(req: Request) {
   }
   if (!Array.isArray(messages)) return NextResponse.json({ error: 'messages required' }, { status: 400 })
 
-  // 컨텍스트: 사용자의 반려동물 요약(멤버십 RLS 로 본인 아이만 조회됨)
-  const { data: pets } = await supabase.from('pets').select('name, species, birth_year, birth_month')
-  const system = buildSystemPrompt((pets ?? []) as ChatPetContext[])
+  // 컨텍스트: 사용자의 반려동물 요약(멤버십 RLS 로 본인 아이만 조회됨). id 는 도구(기록 생성)에 필요.
+  const { data: pets } = await supabase.from('pets').select('id, name, species, birth_year, birth_month')
+  const petRows = (pets ?? []) as Array<{ id: string; name: string } & ChatPetContext>
+  const system = buildSystemPrompt(petRows as ChatPetContext[])
+  const tools = buildChatTools(supabase, petRows.map(p => ({ id: p.id, name: p.name })))
 
   // 사용량 1건 기록(best-effort — 테이블 없거나 실패해도 대화는 진행)
   supabase.from('ai_usage').insert({ user_id: user.id, kind: 'chat' })
@@ -102,6 +105,9 @@ export async function POST(req: Request) {
     system,
     messages: modelMessages,
     temperature: 0.4,
+    tools,
+    // 도구 호출 후 그 결과로 최종 답변까지 이어가도록 여러 스텝 허용(무한루프 방지 상한).
+    stopWhen: stepCountIs(5),
     // 응답 완료 시 어시스턴트 메시지 저장 + 스레드 갱신(best-effort)
     onFinish: async ({ text }) => {
       if (!threadId || !text) return

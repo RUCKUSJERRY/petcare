@@ -5,7 +5,16 @@ import { DefaultChatTransport, type UIMessage } from 'ai'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { useQueryClient } from '@tanstack/react-query'
 import { ChatHistoryDrawer } from './ChatHistoryDrawer'
+
+// 챗봇이 도구(기록 생성/산책)로 데이터를 바꿀 수 있으므로, 응답 완료 시 관련 캐시를 무효화해
+// 홈·타임라인·일정 등이 다음 진입 때 최신으로 보이게 한다(챗은 별도 화면이라 비용 부담 낮음).
+const RECORD_CACHE_KEYS = [
+  'today-log', 'today-timeline', 'record-feed', 'care-schedule',
+  'life-pattern', 'weekly-report', 'monthly-recap', 'cost-records',
+  'walks', 'today-walk', 'pet-care-points', 'achievements',
+]
 
 // 제안 프롬프트 — 빈 화면에서 무엇을 물어볼 수 있는지 안내(첫 사용 진입장벽 완화)
 const SUGGESTIONS = [
@@ -32,11 +41,17 @@ export function ChatConversation({
   initialMessages: UIMessage[]
 }) {
   const t = useTranslations('chat')
+  const qc = useQueryClient()
   const { messages, sendMessage, status } = useChat({
     id: threadId,
     messages: initialMessages,
     // threadId 를 함께 보내 서버가 이 스레드에 대화를 저장하게 한다.
     transport: new DefaultChatTransport({ api: '/api/chat', body: { threadId } }),
+    // 응답 완료 시 기록 관련 캐시 무효화(챗봇이 기록을 생성했을 수 있으므로) + 대화 목록 갱신.
+    onFinish: () => {
+      RECORD_CACHE_KEYS.forEach(k => qc.invalidateQueries({ queryKey: [k] }))
+      qc.invalidateQueries({ queryKey: ['chat-threads'] })
+    },
   })
   const [input, setInput] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
