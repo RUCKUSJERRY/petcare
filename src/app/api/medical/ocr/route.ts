@@ -124,11 +124,13 @@ async function tryUpstage(base64: string, mimeType: string): Promise<ProviderRes
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: UPSTAGE_MODEL,
+        // IE 는 content 에 '이미지 1개'만 받는다(텍스트 프롬프트를 함께 넣으면 400
+        // "'content' should contain a single item"). 추출 지시는 프롬프트가 아니라 아래
+        // response_format 스키마의 필드 description(분류·날짜 규칙 등)으로 전달한다.
         messages: [
           {
             role: 'user',
             content: [
-              { type: 'text', text: PROMPT },
               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
             ],
           },
