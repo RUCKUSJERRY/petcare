@@ -227,8 +227,10 @@ export function RecordsScanModal({
 
   const includedCount = rows.filter(r => r.include).length
 
+  // 바깥 영역 클릭으로는 닫지 않는다 — 인식·검토 중이던 입력이 실수로 날아가는 것 방지.
+  // 닫기는 헤더의 ✕ 버튼으로만(명시적).
   return (
-    <div className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center">
       <div
         className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] flex flex-col"
         onClick={e => e.stopPropagation()}

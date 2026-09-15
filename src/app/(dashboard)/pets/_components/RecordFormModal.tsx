@@ -30,8 +30,10 @@ export function RecordFormModal({
   const formRef = useRef<RecordFormHandle>(null)
   const [saving, setSaving] = useState(false)
 
+  // 바깥 영역 클릭으로는 닫지 않는다 — 작성 중이던 입력이 실수로 통째로 날아가는 것 방지.
+  // 닫기는 헤더의 ✕ 버튼으로만(명시적).
   return (
-    <div className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] bg-black/40 flex items-end sm:items-center justify-center">
       <div
         role="dialog"
         aria-modal="true"
