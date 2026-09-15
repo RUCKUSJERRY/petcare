@@ -13,7 +13,8 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 // 업스테이지 Information Extract (OpenAI 호환 chat.completions). 모델·엔드포인트는 env로 교체 가능.
 // 엔드포인트 경로는 콘솔 문서 기준으로 확정하되, 다르면 UPSTAGE_OCR_URL 한 줄로 교정한다.
 const UPSTAGE_MODEL = process.env.UPSTAGE_MODEL || 'information-extract'
-const UPSTAGE_OCR_URL = process.env.UPSTAGE_OCR_URL || 'https://api.upstage.ai/v1/information-extraction/chat/completions'
+// OpenAI 호환 경로: 공식 예제가 base_url=…/v1 + chat.completions.create 라 실제 호출은 /v1/chat/completions.
+const UPSTAGE_OCR_URL = process.env.UPSTAGE_OCR_URL || 'https://api.upstage.ai/v1/chat/completions'
 
 type OcrRecord = Record<string, unknown>
 type ProviderResult = { records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }
