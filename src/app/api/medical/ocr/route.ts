@@ -8,13 +8,17 @@ export const runtime = 'nodejs'
 export const maxDuration = 30
 
 // Gemini 모델 (무료 등급 가능). 필요 시 GEMINI_MODEL로 교체.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+// gemini-2.0-flash 는 폐기되어 404 (API가 gemini-3.6-flash 로 안내) → 현행 모델로 기본값 갱신.
+// (Gemini 는 폴백 provider. 값이 또 바뀌면 GEMINI_MODEL env 로 교체.)
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
 
 // 업스테이지 Information Extract (OpenAI 호환 chat.completions). 모델·엔드포인트는 env로 교체 가능.
 // 엔드포인트 경로는 콘솔 문서 기준으로 확정하되, 다르면 UPSTAGE_OCR_URL 한 줄로 교정한다.
 const UPSTAGE_MODEL = process.env.UPSTAGE_MODEL || 'information-extract'
-// OpenAI 호환 경로: 공식 예제가 base_url=…/v1 + chat.completions.create 라 실제 호출은 /v1/chat/completions.
-const UPSTAGE_OCR_URL = process.env.UPSTAGE_OCR_URL || 'https://api.upstage.ai/v1/chat/completions'
+// Information Extract 전용 엔드포인트. 범용 /v1/chat/completions 는 Solar 챗 모델만 받아
+// information-extract 모델에 400(model invalid)을 준다 → IE 전용 경로로 호출한다.
+// 문서 기준과 다르면 UPSTAGE_OCR_URL 한 줄로 교정.
+const UPSTAGE_OCR_URL = process.env.UPSTAGE_OCR_URL || 'https://api.upstage.ai/v1/information-extraction/chat/completions'
 
 type OcrRecord = Record<string, unknown>
 type ProviderResult = { records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }
