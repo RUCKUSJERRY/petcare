@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { isUserPremiumServer } from '@/lib/plan'
-import { getFreeOcrMonthlyServer } from '@/lib/settings'
+import { getFreeOcrMonthlyServer, getOcrProviderOrderServer, type OcrProvider } from '@/lib/settings'
 import { todayKST } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
@@ -10,7 +10,13 @@ export const maxDuration = 30
 // Gemini 모델 (무료 등급 가능). 필요 시 GEMINI_MODEL로 교체.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 
+// 업스테이지 Information Extract (OpenAI 호환 chat.completions). 모델·엔드포인트는 env로 교체 가능.
+// 엔드포인트 경로는 콘솔 문서 기준으로 확정하되, 다르면 UPSTAGE_OCR_URL 한 줄로 교정한다.
+const UPSTAGE_MODEL = process.env.UPSTAGE_MODEL || 'information-extract'
+const UPSTAGE_OCR_URL = process.env.UPSTAGE_OCR_URL || 'https://api.upstage.ai/v1/information-extraction/chat/completions'
+
 type OcrRecord = Record<string, unknown>
+type ProviderResult = { records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }
 
 /**
  * imageUrl이 우리 Supabase 스토리지의 public 객체 URL인지 검증한다.
@@ -68,8 +74,8 @@ const PROMPT = `너는 동물병원 영수증·세부내역서·진료이력서�
 - cost는 콤마·'원' 제거한 숫자. 합계만 있으면 합계를 첫 건에 넣어도 돼.
 - 확실하지 않은 값은 비워 둬(빈 문자열 또는 0). 없는 정보를 지어내지 마.`
 
-/** 1차: Gemini(LLM)로 구조화 추출. 실패/미설정/쿼터초과면 null + 사유 반환 */
-async function tryGemini(base64: string, mimeType: string): Promise<{ records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }> {
+/** Gemini(LLM)로 구조화 추출. 실패/미설정/쿼터초과면 error 사유 반환 */
+async function tryGemini(base64: string, mimeType: string): Promise<ProviderResult> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return { error: 'not_configured' }
   try {
@@ -101,6 +107,70 @@ async function tryGemini(base64: string, mimeType: string): Promise<{ records: O
     console.error('[ocr] gemini exception', err)
     return { error: 'failed' }
   }
+}
+
+/** 업스테이지 Information Extract(OpenAI 호환)로 구조화 추출. Gemini 와 동일한 records 스키마를 요구한다. */
+async function tryUpstage(base64: string, mimeType: string): Promise<ProviderResult> {
+  const apiKey = process.env.UPSTAGE_API_KEY
+  if (!apiKey) return { error: 'not_configured' }
+  try {
+    const res = await fetch(UPSTAGE_OCR_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: UPSTAGE_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: PROMPT },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+            ],
+          },
+        ],
+        // OpenAI 호환 구조화 출력 — 우리 records 스키마를 그대로 요구한다.
+        response_format: { type: 'json_schema', json_schema: { name: 'records', schema: RESPONSE_SCHEMA } },
+      }),
+      // Gemini 와 동일하게 빠르게 실패시켜 폴백(다른 provider·Tesseract)이 늦지 않게 한다.
+      signal: AbortSignal.timeout(20000),
+    })
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      console.error('[ocr] upstage error', res.status, detail.slice(0, 200))
+      return { error: res.status === 429 ? 'rate_limited' : 'failed' }
+    }
+    const data = await res.json()
+    // OpenAI 호환 응답: choices[0].message.content 안에 JSON 문자열이 담긴다.
+    const text: string | undefined = data?.choices?.[0]?.message?.content
+    if (!text) return { error: 'failed' }
+    const parsed = JSON.parse(text)
+    const records = Array.isArray(parsed?.records) ? parsed.records : []
+    if (records.length === 0) return { error: 'failed' }
+    return { records }
+  } catch (err) {
+    console.error('[ocr] upstage exception', err)
+    return { error: 'failed' }
+  }
+}
+
+/**
+ * provider 우선순위대로 시도한다(upstage↔gemini). primary 가 미설정/한도/실패면 secondary 로 폴백.
+ * - 어느 하나라도 records 를 주면 그걸 사용(source 표기).
+ * - 모두 실패면 가장 설명적인 사유를 반환: 실제 모델이 돌아간 'failed' > 쿼터 'rate_limited' > 'not_configured'.
+ *   (호출부는 이 사유로 과금 여부·클라이언트 폴백 메시지를 정한다.)
+ */
+async function runExtraction(
+  base64: string, mimeType: string, order: OcrProvider[],
+): Promise<{ records: OcrRecord[]; source: OcrProvider } | { error: 'not_configured' | 'rate_limited' | 'failed' }> {
+  const run = (p: OcrProvider) => (p === 'upstage' ? tryUpstage(base64, mimeType) : tryGemini(base64, mimeType))
+  let worst: 'not_configured' | 'rate_limited' | 'failed' = 'not_configured'
+  const rank = { not_configured: 0, rate_limited: 1, failed: 2 } as const
+  for (const p of order) {
+    const r = await run(p)
+    if ('records' in r) return { records: r.records, source: p }
+    if (rank[r.error] > rank[worst]) worst = r.error
+  }
+  return { error: worst }
 }
 
 // 사용자당 시간당 OCR 호출 상한 (외부 LLM 비용/쿼터 남용 방지)
@@ -193,8 +263,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid imageUrl' }, { status: 400 })
   }
 
-  // Gemini 미설정이면 클라이언트가 무료 OCR(Tesseract)로 폴백하도록 신호만 보낸다.
-  if (!process.env.GEMINI_API_KEY) {
+  // provider 우선순위(관리자 app_settings → env → 기본 upstage). 두 provider 키가 모두 없으면
+  // 클라이언트가 무료 OCR(Tesseract)로 폴백하도록 신호만 보낸다.
+  const providerOrder = await getOcrProviderOrderServer(supabase)
+  if (!process.env.UPSTAGE_API_KEY && !process.env.GEMINI_API_KEY) {
     return NextResponse.json(
       { error: 'not_configured', message: 'AI 인식이 설정되지 않았어요.' },
       { status: 503 }
@@ -209,8 +281,8 @@ export async function POST(req: Request) {
     if (!imgRes.ok) throw new Error('image fetch failed')
     mimeType = imgRes.headers.get('content-type') || 'image/jpeg'
     const buf = Buffer.from(await imgRes.arrayBuffer())
-    if (buf.byteLength > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: 'image_too_large', message: '이미지가 너무 커요.' }, { status: 413 })
+    if (buf.byteLength > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'image_too_large', message: '파일이 너무 커요.' }, { status: 413 })
     }
     base64 = buf.toString('base64')
   } catch {
@@ -224,22 +296,23 @@ export async function POST(req: Request) {
     .from('ai_usage').insert({ user_id: user.id, kind: 'ocr' }).select('id').maybeSingle()
   if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
 
-  const gemini = await tryGemini(base64, mimeType)
+  const result = await runExtraction(base64, mimeType, providerOrder)
 
   // 과금 없는 경로면 예약을 되돌려, 무료 사용자의 한도가 헛되이 깎이지 않게 한다.
   //  - 'rate_limited'(429): 쿼터로 거절되어 과금 없음 → 예약 취소.
-  //  - 성공/'failed'(모델이 실행됨): Gemini가 실행되어 과금 → 예약 유지.
-  const costIncurred = 'records' in gemini || gemini.error === 'failed'
+  //  - 'not_configured': 모델이 안 돌았으니 과금 없음 → 예약 취소.
+  //  - 성공/'failed'(모델이 실행됨): provider 가 실행되어 과금 → 예약 유지.
+  const costIncurred = 'records' in result || result.error === 'failed'
   if (!costIncurred && usageRow) {
     await supabase.from('ai_usage').delete().eq('id', usageRow.id)
   }
 
-  if ('records' in gemini) {
-    return NextResponse.json({ ok: true, records: gemini.records, source: 'gemini', limit: OCR_HOURLY_LIMIT, remaining })
+  if ('records' in result) {
+    return NextResponse.json({ ok: true, records: result.records, source: result.source, limit: OCR_HOURLY_LIMIT, remaining })
   }
 
-  // Gemini 실패/한도초과 → 클라이언트 무료 OCR 폴백 유도
-  const message = gemini.error === 'rate_limited'
+  // 모든 provider 실패/한도초과 → 클라이언트 무료 OCR 폴백 유도
+  const message = result.error === 'rate_limited'
     ? 'AI 사용량 한도를 초과했어요. 무료 인식으로 대체할게요.'
     : '진료 내용을 인식하지 못했어요.'
   return NextResponse.json({ error: 'ocr_failed', message }, { status: 502 })

@@ -109,3 +109,12 @@ export function validateImage(file: File, maxMB = 10): string | null {
   if (file.size > maxMB * 1024 * 1024) return `파일 크기는 ${maxMB}MB 이하여야 해요`
   return null
 }
+
+/** 스캔(영수증·문서) 업로드용 검증 — 이미지 + PDF 허용. (오피스 문서는 후속 단계에서 확장) */
+export function validateScanFile(file: File, maxMB = 10): string | null {
+  const isImage = file.type.startsWith('image/')
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+  if (!isImage && !isPdf) return '이미지 또는 PDF 파일만 올릴 수 있어요'
+  if (file.size > maxMB * 1024 * 1024) return `파일 크기는 ${maxMB}MB 이하여야 해요`
+  return null
+}

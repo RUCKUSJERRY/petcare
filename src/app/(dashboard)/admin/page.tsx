@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [upsellDismiss, setUpsellDismiss] = useState('1440')
   const [bannerDismiss, setBannerDismiss] = useState('1440')
   const [annivPush, setAnnivPush] = useState(true)
+  const [ocrProvider, setOcrProvider] = useState('upstage')
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -78,6 +79,7 @@ export default function AdminPage() {
       setUpsellDismiss(settings.get('upsell_dismiss_min') ?? '1440')
       setBannerDismiss(settings.get('banner_dismiss_min') ?? '1440')
       setAnnivPush(settings.get('anniversary_push_active') !== 'false')
+      setOcrProvider(settings.get('ocr_provider') === 'gemini' ? 'gemini' : 'upstage')
       setLoaded(true)
     }
   }, [settings, loaded])
@@ -113,6 +115,7 @@ export default function AdminPage() {
       { key: 'upsell_dismiss_min', value: nonNeg(upsellDismiss, '1440') },
       { key: 'banner_dismiss_min', value: nonNeg(bannerDismiss, '1440') },
       { key: 'anniversary_push_active', value: annivPush ? 'true' : 'false' },
+      { key: 'ocr_provider', value: ocrProvider === 'gemini' ? 'gemini' : 'upstage' },
     ], { onConflict: 'key' })
     setSaving(false)
     if (error) {
@@ -163,6 +166,18 @@ export default function AdminPage() {
             value={price} onChange={e => setPrice(e.target.value)}
           />
           <p className="text-[11px] text-gray-400 mt-1">{t('priceHint')}</p>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-gray-500 block mb-1">{t('ocrProviderLabel')}</label>
+          <select
+            className="input"
+            value={ocrProvider}
+            onChange={e => setOcrProvider(e.target.value)}
+          >
+            <option value="upstage">{t('ocrProviderUpstage')}</option>
+            <option value="gemini">{t('ocrProviderGemini')}</option>
+          </select>
+          <p className="text-[11px] text-gray-400 mt-1">{t('ocrProviderHint')}</p>
         </div>
         <label className="flex items-center justify-between py-1">
           <span className="text-sm text-gray-700">{t('adsLabel')}</span>

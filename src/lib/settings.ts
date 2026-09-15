@@ -40,3 +40,19 @@ export async function getAnniversaryPushActiveServer(client: SupabaseClient): Pr
   const raw = await getAppSetting(client, 'anniversary_push_active')
   return raw !== 'false'
 }
+
+/** 스캔(영수증·문서) AI 추출에 쓰는 기본 provider. 관리자가 app_settings 로 라이브 전환한다. */
+export type OcrProvider = 'upstage' | 'gemini'
+export const DEFAULT_OCR_PROVIDER: OcrProvider = 'upstage'
+/**
+ * 서버가 신뢰하는 스캔 provider 우선순위.
+ * app_settings.ocr_provider(관리자) → env OCR_PROVIDER → 기본값 순으로 정한다.
+ * 반환은 [primary, secondary] — primary 가 미설정/실패면 secondary 로 폴백(무중단),
+ * secondary 마저 안 되면 호출부가 브라우저 무료 OCR(Tesseract)로 떨어뜨린다.
+ */
+export async function getOcrProviderOrderServer(client: SupabaseClient): Promise<OcrProvider[]> {
+  const raw = (await getAppSetting(client, 'ocr_provider')) || process.env.OCR_PROVIDER || DEFAULT_OCR_PROVIDER
+  const primary: OcrProvider = raw === 'gemini' ? 'gemini' : 'upstage'
+  const secondary: OcrProvider = primary === 'upstage' ? 'gemini' : 'upstage'
+  return [primary, secondary]
+}

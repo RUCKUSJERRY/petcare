@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { uploadImage, validateImage } from '@/lib/upload'
+import { uploadImage, validateScanFile } from '@/lib/upload'
 import { parseOcrText, recognizeImageText } from '@/lib/ocr'
 import { todayKST } from '@/lib/utils'
 import type { RecordCategory } from '@/types'
@@ -77,6 +77,7 @@ export function RecordsScanModal({
   const qc = useQueryClient()
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [rows, setRows] = useState<Row[]>([])
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -90,8 +91,10 @@ export function RecordsScanModal({
     const file = e.target.files?.[0]
     e.target.value = '' // 같은 파일 재선택 허용
     if (!file) return
-    const invalid = validateImage(file)
+    const invalid = validateScanFile(file)
     if (invalid) { setError(invalid); return }
+    // PDF 등 비이미지 문서는 브라우저 Tesseract·이미지 미리보기가 불가하므로 분기한다.
+    const isImage = file.type.startsWith('image/')
     setPhase('scanning'); setError(null); setNotice(null); setRawText(null)
     // 인식 실패해도 막히지 않도록: 빈 입력 행으로 넘어가 직접 입력
     const fallbackToManual = (msg: string) => {
@@ -99,8 +102,10 @@ export function RecordsScanModal({
       setRows([emptyRow()])
       setPhase('review')
     }
-    // 2차: 브라우저 무료 OCR(Tesseract) — 날짜·금액만 채우고 원문 제공
+    // 2차: 브라우저 무료 OCR(Tesseract) — 이미지에서만 날짜·금액을 채우고 원문 제공.
+    // 문서(PDF 등)는 Tesseract 대상이 아니라 바로 직접 입력으로 안내한다.
     const localFallback = async () => {
+      if (!isImage) { fallbackToManual(t('fallbackManual')); return }
       setNotice(t('tesseractRunning'))
       try {
         const text = await recognizeImageText(file)
@@ -119,7 +124,9 @@ export function RecordsScanModal({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('로그인이 필요해요')
       const url = await uploadImage('pet-photos', file, user.id)
-      setPhotoUrl(url)
+      // 이미지 원본만 기록의 사진으로 첨부한다(상세 화면이 <img>로 렌더). PDF 등 문서 원본
+      // 첨부·뷰어는 후속 단계에서 다룬다 — 지금은 추출값 저장에 집중해 깨진 이미지를 피한다.
+      if (isImage) setPhotoUrl(url)
       const res = await fetch('/api/medical/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,12 +245,15 @@ export function RecordsScanModal({
             <div className="text-center py-8 space-y-3">
               <div className="text-4xl">🧾</div>
               <p className="text-sm text-gray-600">{t.rich('pickDesc', { br: () => <br /> })}</p>
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <button onClick={() => cameraRef.current?.click()} className="btn-primary px-5 py-2.5 text-sm">
                   {t('pickCamera')}
                 </button>
                 <button onClick={() => galleryRef.current?.click()} className="btn-secondary px-5 py-2.5 text-sm">
                   {t('pickGallery')}
+                </button>
+                <button onClick={() => fileRef.current?.click()} className="btn-secondary px-5 py-2.5 text-sm">
+                  {t('pickFile')}
                 </button>
               </div>
               <p className="text-xs text-gray-400">{t('aiNotice')}</p>
@@ -324,9 +334,10 @@ export function RecordsScanModal({
           </div>
         )}
 
-        {/* 촬영(카메라) / 갤러리(보관함) 분리 */}
+        {/* 촬영(카메라) / 갤러리(사진) / 파일(사진·PDF 문서) 분리 */}
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={scan} />
         <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={scan} />
+        <input ref={fileRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={scan} />
       </div>
     </div>
   )
