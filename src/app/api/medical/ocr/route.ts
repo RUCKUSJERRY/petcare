@@ -5,7 +5,10 @@ import { todayKST } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30
+// 문서(PDF) 경로는 Document Parse(구조화) 후 그 텍스트에서 다시 추출하므로 이미지 1회 호출보다
+// 오래 걸린다. 30초로는 파싱 중 함수가 강제 종료돼(로그상 status '---') PDF 스캔이 실패했다.
+// 60초로 올리고, 아래 REQUEST_DEADLINE 로 파싱+추출 합계가 이 한도를 넘지 않게 예산을 나눈다.
+export const maxDuration = 60
 
 // Gemini 모델 (무료 등급 가능). 필요 시 GEMINI_MODEL로 교체.
 // gemini-2.0-flash 는 폐기되어 404 (API가 gemini-3.6-flash 로 안내) → 현행 모델로 기본값 갱신.
@@ -189,7 +192,7 @@ async function runExtraction(
 }
 
 /** 문서(PDF 등)를 Upstage Document Parse 로 레이아웃 구조(markdown)로 변환. 실패 시 null. */
-async function parseDocumentToMarkdown(buf: Buffer, mimeType: string): Promise<string | null> {
+async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs: number): Promise<string | null> {
   const key = process.env.UPSTAGE_API_KEY
   if (!key) return null
   try {
@@ -201,7 +204,7 @@ async function parseDocumentToMarkdown(buf: Buffer, mimeType: string): Promise<s
       method: 'POST',
       headers: { Authorization: `Bearer ${key}` }, // multipart 는 Content-Type 자동 설정
       body: form,
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     if (!res.ok) {
       console.error('[ocr] document-parse error', res.status, (await res.text().catch(() => '')).slice(0, 200))
@@ -215,17 +218,23 @@ async function parseDocumentToMarkdown(buf: Buffer, mimeType: string): Promise<s
   }
 }
 
-/** 구조화된 텍스트(Document Parse 결과)에서 records 를 추출. Solar(구조화 출력) → Gemini 폴백. */
-async function extractRecordsFromText(text: string): Promise<ProviderResult> {
+/**
+ * 구조화된 텍스트(Document Parse 결과)에서 records 를 추출. Solar(구조화 출력) → Gemini 폴백.
+ * deadline(절대 시각, Date.now() 기준 ms)까지만 시도해 문서 경로 전체가 maxDuration 을 넘지 않게 한다.
+ */
+async function extractRecordsFromText(text: string, deadline: number): Promise<ProviderResult> {
   const body = `${PROMPT}\n\n---\n아래는 문서를 구조화한 텍스트야. 이 내용에서 기록을 추출해:\n${text}`
   const pickRecords = (raw: string | undefined): OcrRecord[] => {
     if (!raw) return []
     try { const p = JSON.parse(raw); return Array.isArray(p?.records) ? p.records : [] } catch { return [] }
   }
+  // 남은 예산에서 이 단계에 줄 타임아웃. 2초 미만이면 호출을 건너뛴다(무의미한 실패 방지).
+  const budget = (cap: number) => Math.min(cap, deadline - Date.now())
 
   // 1) Upstage Solar (Chat Completions + json_schema)
   const upKey = process.env.UPSTAGE_API_KEY
-  if (upKey) {
+  const solarTimeout = budget(20000)
+  if (upKey && solarTimeout > 2000) {
     try {
       const res = await fetch(`${UPSTAGE_CHAT_URL}/chat/completions`, {
         method: 'POST',
@@ -236,7 +245,7 @@ async function extractRecordsFromText(text: string): Promise<ProviderResult> {
           response_format: { type: 'json_schema', json_schema: { name: 'records', schema: RESPONSE_SCHEMA } },
           temperature: 0,
         }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(solarTimeout),
       })
       if (res.ok) {
         const records = pickRecords((await res.json())?.choices?.[0]?.message?.content)
@@ -251,7 +260,8 @@ async function extractRecordsFromText(text: string): Promise<ProviderResult> {
 
   // 2) Gemini 텍스트 폴백 (responseSchema)
   const gKey = process.env.GEMINI_API_KEY
-  if (gKey) {
+  const gemTimeout = budget(15000)
+  if (gKey && gemTimeout > 2000) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${gKey}`
       const res = await fetch(endpoint, {
@@ -261,7 +271,7 @@ async function extractRecordsFromText(text: string): Promise<ProviderResult> {
           contents: [{ parts: [{ text: body }] }],
           generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA },
         }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(gemTimeout),
       })
       if (res.ok) {
         const records = pickRecords((await res.json())?.candidates?.[0]?.content?.parts?.[0]?.text)
@@ -407,11 +417,13 @@ export async function POST(req: Request) {
     const r = await runExtraction(buf.toString('base64'), mimeType, providerOrder)
     result = 'records' in r ? { records: r.records, source: r.source } : r
   } else {
-    const markdown = await parseDocumentToMarkdown(buf, mimeType)
+    // 문서 경로 예산: maxDuration(60s) 안에서 파싱+추출을 끝내도록 내부 마감을 둔다(응답 직렬화 여유 5s).
+    const deadline = Date.now() + 55000
+    const markdown = await parseDocumentToMarkdown(buf, mimeType, Math.min(40000, deadline - Date.now()))
     if (!markdown) {
       result = { error: 'failed' }
     } else {
-      const r = await extractRecordsFromText(markdown)
+      const r = await extractRecordsFromText(markdown, deadline)
       result = 'records' in r ? { records: r.records, source: 'document-parse' } : r
     }
   }
