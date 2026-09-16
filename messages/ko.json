@@ -66,8 +66,6 @@
     "sectionActivity": "기록·활동",
     "chatbot": "AI 케어 도우미",
     "chatbotDesc": "궁금한 걸 바로 물어보세요",
-    "parse": "문서 정리",
-    "parseDesc": "진료기록·검사지를 구조화",
     "foods": "음식 가이드",
     "foodsDesc": "사료·간식·안전한 음식",
     "health": "건강 정보",
@@ -1030,18 +1028,6 @@
     "delete": "삭제",
     "deleting": "삭제 중…",
     "deleteConfirmTitle": "이 대화를 삭제할까요?"
-  },
-  "parse": {
-    "title": "문서 정리",
-    "desc": "진료기록·검사지·처방전을 구조화해 보여드려요",
-    "back": "뒤로",
-    "pickDesc": "PDF 또는 사진을 올리면 표·항목을 살려 읽기 좋게 정리해요.",
-    "pick": "📄 문서 올리기",
-    "hint": "PDF·이미지 지원 · AI 인식 결과이니 원본과 대조해 주세요.",
-    "parsing": "📑 문서를 정리하는 중…",
-    "parsingNote": "페이지가 많으면 조금 걸려요",
-    "failed": "문서를 정리하지 못했어요. 다른 문서로 시도해 주세요.",
-    "again": "다른 문서 올리기"
   },
   "petDetail": {
     "recordSection": "기록",

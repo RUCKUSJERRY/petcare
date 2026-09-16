@@ -28,7 +28,7 @@ const matchPath = (pathname: string, prefix: string) =>
 // 지도(/map)·실종(/lost)·산책기록(/walks)은 예전 '지도' 탭 소속이었으나, 지도 탭을 '내 아이'로
 // 교체하면서 '더보기' 그룹으로 옮겼다(진입은 /more 허브 + 각 화면 상단 지도 섹션 스트립으로 유지).
 // (레거시 /info 허브 경로도 포함해 예전 링크·북마크가 여전히 '더보기'로 표시되게 한다.)
-const MORE_SUBPATHS = ['/more', '/chat', '/parse', '/foods', '/health', '/symptoms', '/walk', '/walks', '/care', '/info', '/costs', '/achievements', '/map', '/lost']
+const MORE_SUBPATHS = ['/more', '/chat', '/foods', '/health', '/symptoms', '/walk', '/walks', '/care', '/info', '/costs', '/achievements', '/map', '/lost']
 
 export function BottomNav() {
   const pathname = usePathname()

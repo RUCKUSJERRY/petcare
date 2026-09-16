@@ -12,7 +12,6 @@ type Item = { href: string; icon: string; key: string }
 
 const INFO_ITEMS: Item[] = [
   { href: '/chat', icon: '🤖', key: 'chatbot' },
-  { href: '/parse', icon: '📄', key: 'parse' },
   { href: '/foods', icon: '🍽️', key: 'foods' },
   { href: '/health', icon: '🩺', key: 'health' },
   { href: '/symptoms', icon: '🩹', key: 'symptoms' },

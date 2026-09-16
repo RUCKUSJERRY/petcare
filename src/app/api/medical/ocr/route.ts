@@ -20,6 +20,14 @@ const UPSTAGE_MODEL = process.env.UPSTAGE_MODEL || 'information-extract'
 // 문서 기준과 다르면 UPSTAGE_OCR_URL 한 줄로 교정.
 const UPSTAGE_OCR_URL = process.env.UPSTAGE_OCR_URL || 'https://api.upstage.ai/v1/information-extraction/chat/completions'
 
+// 문서(PDF 등) 경로용 Document Parse(Document Digitization). 이미지가 아닌 파일은
+// 먼저 이걸로 레이아웃 구조(markdown)로 변환한 뒤, 그 텍스트에서 기록을 추출한다.
+const UPSTAGE_PARSE_URL = process.env.UPSTAGE_PARSE_URL || 'https://api.upstage.ai/v1/document-digitization'
+const UPSTAGE_PARSE_MODEL = process.env.UPSTAGE_PARSE_MODEL || 'document-parse'
+// 텍스트 구조화 출력용 Solar 챗 (Document Parse 결과에서 필드 추출). Gemini 로 폴백.
+const UPSTAGE_CHAT_URL = process.env.UPSTAGE_CHAT_URL || 'https://api.upstage.ai/v1'
+const UPSTAGE_CHAT_MODEL = process.env.UPSTAGE_CHAT_MODEL || 'solar-pro2'
+
 type OcrRecord = Record<string, unknown>
 type ProviderResult = { records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }
 
@@ -180,6 +188,95 @@ async function runExtraction(
   return { error: worst }
 }
 
+/** 문서(PDF 등)를 Upstage Document Parse 로 레이아웃 구조(markdown)로 변환. 실패 시 null. */
+async function parseDocumentToMarkdown(buf: Buffer, mimeType: string): Promise<string | null> {
+  const key = process.env.UPSTAGE_API_KEY
+  if (!key) return null
+  try {
+    const form = new FormData()
+    form.append('document', new Blob([new Uint8Array(buf)], { type: mimeType }), 'document')
+    form.append('model', UPSTAGE_PARSE_MODEL)
+    form.append('output_formats', '["markdown"]')
+    const res = await fetch(UPSTAGE_PARSE_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` }, // multipart 는 Content-Type 자동 설정
+      body: form,
+      signal: AbortSignal.timeout(45000),
+    })
+    if (!res.ok) {
+      console.error('[ocr] document-parse error', res.status, (await res.text().catch(() => '')).slice(0, 200))
+      return null
+    }
+    const data = await res.json()
+    return data?.content?.markdown ?? data?.markdown ?? data?.content?.text ?? data?.content?.html ?? null
+  } catch (err) {
+    console.error('[ocr] document-parse exception', err)
+    return null
+  }
+}
+
+/** 구조화된 텍스트(Document Parse 결과)에서 records 를 추출. Solar(구조화 출력) → Gemini 폴백. */
+async function extractRecordsFromText(text: string): Promise<ProviderResult> {
+  const body = `${PROMPT}\n\n---\n아래는 문서를 구조화한 텍스트야. 이 내용에서 기록을 추출해:\n${text}`
+  const pickRecords = (raw: string | undefined): OcrRecord[] => {
+    if (!raw) return []
+    try { const p = JSON.parse(raw); return Array.isArray(p?.records) ? p.records : [] } catch { return [] }
+  }
+
+  // 1) Upstage Solar (Chat Completions + json_schema)
+  const upKey = process.env.UPSTAGE_API_KEY
+  if (upKey) {
+    try {
+      const res = await fetch(`${UPSTAGE_CHAT_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${upKey}` },
+        body: JSON.stringify({
+          model: UPSTAGE_CHAT_MODEL,
+          messages: [{ role: 'user', content: body }],
+          response_format: { type: 'json_schema', json_schema: { name: 'records', schema: RESPONSE_SCHEMA } },
+          temperature: 0,
+        }),
+        signal: AbortSignal.timeout(20000),
+      })
+      if (res.ok) {
+        const records = pickRecords((await res.json())?.choices?.[0]?.message?.content)
+        if (records.length) return { records }
+      } else {
+        console.error('[ocr] solar text-extract error', res.status)
+      }
+    } catch (err) {
+      console.error('[ocr] solar text-extract exception', err)
+    }
+  }
+
+  // 2) Gemini 텍스트 폴백 (responseSchema)
+  const gKey = process.env.GEMINI_API_KEY
+  if (gKey) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${gKey}`
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: body }] }],
+          generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA },
+        }),
+        signal: AbortSignal.timeout(20000),
+      })
+      if (res.ok) {
+        const records = pickRecords((await res.json())?.candidates?.[0]?.content?.parts?.[0]?.text)
+        if (records.length) return { records }
+      } else {
+        console.error('[ocr] gemini text-extract error', res.status)
+      }
+    } catch (err) {
+      console.error('[ocr] gemini text-extract exception', err)
+    }
+  }
+
+  return { error: 'failed' }
+}
+
 // 사용자당 시간당 OCR 호출 상한 (외부 LLM 비용/쿼터 남용 방지)
 const OCR_HOURLY_LIMIT = 30
 
@@ -280,21 +377,21 @@ export async function POST(req: Request) {
     )
   }
 
-  // 이미지 내려받아 base64 인코딩
-  let base64: string
+  // 파일 내려받기 (이미지/문서 공통). 이미지가 아니면(문서) Document Parse 경로로 처리한다.
+  let buf: Buffer
   let mimeType: string
   try {
-    const imgRes = await fetch(imageUrl)
-    if (!imgRes.ok) throw new Error('image fetch failed')
-    mimeType = imgRes.headers.get('content-type') || 'image/jpeg'
-    const buf = Buffer.from(await imgRes.arrayBuffer())
+    const fileRes = await fetch(imageUrl)
+    if (!fileRes.ok) throw new Error('file fetch failed')
+    mimeType = fileRes.headers.get('content-type') || 'image/jpeg'
+    buf = Buffer.from(await fileRes.arrayBuffer())
     if (buf.byteLength > 10 * 1024 * 1024) {
       return NextResponse.json({ error: 'image_too_large', message: '파일이 너무 커요.' }, { status: 413 })
     }
-    base64 = buf.toString('base64')
   } catch {
-    return NextResponse.json({ error: 'image_fetch_failed', message: '이미지를 불러오지 못했어요.' }, { status: 502 })
+    return NextResponse.json({ error: 'image_fetch_failed', message: '파일을 불러오지 못했어요.' }, { status: 502 })
   }
+  const isImage = mimeType.startsWith('image/')
 
   // 사용량 슬롯을 '유료 호출 직전'에 먼저 예약(선점)한다.
   // 예전엔 Gemini 응답(최대 15초) 이후에야 insert 해서, 그 사이 병렬 요청들이 모두 한도 검사를
@@ -303,7 +400,21 @@ export async function POST(req: Request) {
     .from('ai_usage').insert({ user_id: user.id, kind: 'ocr' }).select('id').maybeSingle()
   if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
 
-  const result = await runExtraction(base64, mimeType, providerOrder)
+  // 이미지: Information Extract(→Gemini) 로 이미지에서 바로 추출.
+  // 문서(PDF 등): Document Parse 로 구조화(markdown) 후 그 텍스트에서 추출.
+  let result: { records: OcrRecord[]; source: string } | { error: 'not_configured' | 'rate_limited' | 'failed' }
+  if (isImage) {
+    const r = await runExtraction(buf.toString('base64'), mimeType, providerOrder)
+    result = 'records' in r ? { records: r.records, source: r.source } : r
+  } else {
+    const markdown = await parseDocumentToMarkdown(buf, mimeType)
+    if (!markdown) {
+      result = { error: 'failed' }
+    } else {
+      const r = await extractRecordsFromText(markdown)
+      result = 'records' in r ? { records: r.records, source: 'document-parse' } : r
+    }
+  }
 
   // 과금 없는 경로면 예약을 되돌려, 무료 사용자의 한도가 헛되이 깎이지 않게 한다.
   //  - 'rate_limited'(429): 쿼터로 거절되어 과금 없음 → 예약 취소.
