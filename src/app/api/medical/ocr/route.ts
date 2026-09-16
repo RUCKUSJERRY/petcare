@@ -199,6 +199,7 @@ async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs:
     const form = new FormData()
     form.append('document', new Blob([new Uint8Array(buf)], { type: mimeType }), 'document')
     form.append('model', UPSTAGE_PARSE_MODEL)
+    // output_formats 는 JSON 문자열(= JSON.stringify(['markdown']))로 넣는다. markdown 만 요청.
     form.append('output_formats', '["markdown"]')
     const res = await fetch(UPSTAGE_PARSE_URL, {
       method: 'POST',
@@ -210,8 +211,10 @@ async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs:
       console.error('[ocr] document-parse error', res.status, (await res.text().catch(() => '')).slice(0, 200))
       return null
     }
+    // 응답 스키마상 결과는 content.markdown 에 담긴다(요청한 output_formats 키). 비어 있으면 null.
     const data = await res.json()
-    return data?.content?.markdown ?? data?.markdown ?? data?.content?.text ?? data?.content?.html ?? null
+    const markdown: unknown = data?.content?.markdown
+    return typeof markdown === 'string' && markdown.trim() ? markdown : null
   } catch (err) {
     console.error('[ocr] document-parse exception', err)
     return null
