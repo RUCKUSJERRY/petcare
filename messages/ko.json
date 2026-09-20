@@ -548,6 +548,8 @@
     "noGuides": "현재 나이에 해당하는 가이드가 없어요",
     "petBasis": "{name} 기준",
     "checklistTitle": "이 시기 건강 체크리스트",
+    "seasonalTitle": "{season} 케어 포인트",
+    "seasonalMore": "지금 계절에 챙기면 좋은 안전·관리 포인트",
     "guidesTitle": "맞춤 건강 정보",
     "searchPlaceholder": "건강 정보 검색 (예: 예방접종, 치아)",
     "searchEmpty": "검색 결과가 없어요",

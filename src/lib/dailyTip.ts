@@ -2,6 +2,7 @@ import type { Species } from '@/types'
 import { careGuidesForSpecies } from './careGuideData'
 import { foodGuidesForSpecies } from './foodGuideData'
 import { healthChecklistFor, type LifeStage } from './healthChecklist'
+import { seasonalCareFor } from './seasonalCare'
 
 /**
  * '오늘의 케어 팁' — 매일 하나씩 바뀌는 짧은 관리 팁.
@@ -26,8 +27,10 @@ export interface DailyTip {
  *
  * @param stage 생략 시 종 공통 팁만. 넘기면 그 생애단계(퍼피/시니어 등) 맞춤 팁을 더해
  *   '우리 아이 나이대'에 맞는 팁이 섞여 나온다(정보 고도화 — 나이 맞춤). '미상'이면 성체 기준.
+ * @param month 넘기면 그 달(1~12)의 계절 케어 포인트(여름 열사병·겨울 부동액 등)를 더해
+ *   '지금 이 계절'에 필요한 정보가 오늘의 팁에 섞여 나온다(정보 고도화 — 계절 맞춤).
  */
-export function tipPool(species: Species, stage?: LifeStage | '미상'): DailyTip[] {
+export function tipPool(species: Species, stage?: LifeStage | '미상', month?: number): DailyTip[] {
   const pool: DailyTip[] = []
 
   // 생활관리 가이드의 팁(tips)·주기(frequency) 한 줄 — 짧고 실천적이라 팁에 적합
@@ -52,6 +55,16 @@ export function tipPool(species: Species, stage?: LifeStage | '미상'): DailyTi
     }
   }
 
+  // 계절 맞춤 팁 — 지금 달의 계절 케어 포인트(여름 열사병·겨울 부동액 등)를 팁으로 재사용해,
+  // 그 시기에 꼭 필요한 안전·관리 정보가 오늘의 팁에 섞여 나오게 한다. 더보기는 건강 정보(/health)로.
+  // (계절이 지나면 소용없는 정보라, 해당 달에만 풀에 들어가 자연히 시기 맞춤이 된다.)
+  if (month != null) {
+    const seasonal = seasonalCareFor(species, month)
+    for (const point of seasonal.points) {
+      pool.push({ icon: seasonal.icon, category: `${seasonal.label} 케어`, text: point, href: '/health' })
+    }
+  }
+
   return pool
 }
 
@@ -69,9 +82,13 @@ function hashString(s: string): number {
  * 풀이 비면 null(방어적 — 정상적으로는 항상 콘텐츠가 있다).
  *
  * @param stage 생략 가능. 넘기면 종 공통 팁 + 그 생애단계 맞춤 팁에서 고른다(나이 맞춤).
+ *
+ * 날짜(dateStr)의 달로 계절 케어 팁도 함께 풀에 섞는다 — 그 시기에 필요한 안전 정보(여름
+ * 열사병·겨울 부동액 등)가 오늘의 팁·데일리 팁 푸시에 자연히 노출된다(계절 맞춤 정보 고도화).
  */
 export function getDailyTip(species: Species, dateStr: string, stage?: LifeStage | '미상'): DailyTip | null {
-  const pool = tipPool(species, stage)
+  const month = Number(dateStr.slice(5, 7))
+  const pool = tipPool(species, stage, Number.isFinite(month) ? month : undefined)
   if (pool.length === 0) return null
   return pool[hashString(dateStr) % pool.length]
 }

@@ -32,7 +32,23 @@ describe('dailyTip', () => {
   it('고른 팁은 항상 유효한 가이드 링크를 가진다', () => {
     const tip = getDailyTip('dog', '2026-03-15')
     expect(tip).not.toBeNull()
-    expect(['/care', '/foods']).toContain(tip!.href)
+    // getDailyTip 은 날짜의 달로 계절 팁(/health)도 함께 섞으므로 /health 도 유효한 링크다.
+    expect(['/care', '/foods', '/health']).toContain(tip!.href)
+  })
+
+  it('getDailyTip 은 날짜의 달로 계절 케어 팁을 풀에 섞는다', () => {
+    // tipPool 에 month 를 주면 계절 팁(/health)이 추가되고, 안 주면 없다.
+    const withMonth = tipPool('dog', undefined, 7) // 7월 = 여름
+    const withoutMonth = tipPool('dog')
+    expect(withMonth.length).toBeGreaterThan(withoutMonth.length)
+    expect(withMonth.some(t => t.category.includes('여름'))).toBe(true)
+    expect(withoutMonth.some(t => t.href === '/health')).toBe(false)
+  })
+
+  it('여름·겨울 팁 풀은 서로 다른 계절 팁을 갖는다', () => {
+    const summer = tipPool('dog', undefined, 7).filter(t => t.href === '/health').map(t => t.text)
+    const winter = tipPool('dog', undefined, 1).filter(t => t.href === '/health').map(t => t.text)
+    expect(summer).not.toEqual(winter)
   })
 
   it('생애단계를 넘기면 그 단계 맞춤 팁(건강 체크리스트)이 풀에 더해진다', () => {

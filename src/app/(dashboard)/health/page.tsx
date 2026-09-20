@@ -2,8 +2,9 @@
 
 import { useTranslations } from 'next-intl'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
-import { calcPetAge, guideMatchScore, lifeStageColor, stageLabel } from '@/lib/utils'
+import { calcPetAge, guideMatchScore, lifeStageColor, stageLabel, todayKST } from '@/lib/utils'
 import { healthChecklistFor } from '@/lib/healthChecklist'
+import { seasonalCareFor } from '@/lib/seasonalCare'
 import { useQuery } from '@tanstack/react-query'
 import { useMyPets } from '@/hooks/useMyPets'
 import Link from 'next/link'
@@ -40,6 +41,10 @@ export default function HealthPage() {
 
   const isLoading = petsLoading || guidesLoading
 
+  // 이번 계절(월) 케어 포인트 — 종별로 다르며, KST 달 기준으로 결정적으로 계산한다.
+  // (계절 콘텐츠는 정적 lib 이라 조회가 필요 없다.)
+  const currentMonth = Number(todayKST().slice(5, 7))
+
   // 보기 범위: 기본은 헤더에서 고른 아이. 여러 아이를 키우면 '전체'로 전환해 모든 아이의 건강
   // 정보를 함께 볼 수 있다(비용·일정 화면과 통일). 헤더 아이 칩은 '해제'가 없어(홈이 빈 화면처럼
   // 보이던 문제로 제거됨), 이 토글이 없으면 다견 보호자가 '전체 보기'에 도달할 방법이 없었다.
@@ -75,11 +80,15 @@ export default function HealthPage() {
       : checklist.items
     const filteredGuides = nq ? guides.filter(g => healthGuideMatches(g, nq)) : guides
 
-    return { pet, age, checklist: { ...checklist, items }, guides: filteredGuides }
+    // 이번 계절 케어 포인트 — 검색 중엔 걸리는 포인트만 남겨(다른 정보와 동일하게 좁힘) 카드도 함께 검색된다.
+    const seasonal = seasonalCareFor(pet.species, currentMonth)
+    const seasonalPoints = nq ? seasonal.points.filter(p => p.toLowerCase().includes(nq)) : seasonal.points
+
+    return { pet, age, checklist: { ...checklist, items }, guides: filteredGuides, seasonal: { ...seasonal, points: seasonalPoints } }
   })
 
   // 검색 중 어떤 아이에도 걸리는 내용이 없으면 전체 빈 결과로 안내한다.
-  const anyMatch = petGuides.some(pg => pg.checklist.items.length > 0 || pg.guides.length > 0)
+  const anyMatch = petGuides.some(pg => pg.checklist.items.length > 0 || pg.guides.length > 0 || pg.seasonal.points.length > 0)
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -135,8 +144,8 @@ export default function HealthPage() {
       ) : (
         petGuides
           // 검색 중이면 걸리는 내용이 있는 아이만 보여준다(빈 블록 방지).
-          .filter(pg => !nq || pg.checklist.items.length > 0 || pg.guides.length > 0)
-          .map(({ pet, age, checklist, guides }) => (
+          .filter(pg => !nq || pg.checklist.items.length > 0 || pg.guides.length > 0 || pg.seasonal.points.length > 0)
+          .map(({ pet, age, checklist, guides, seasonal }) => (
           <div key={pet.id} className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-900">{pet.name}</span>
@@ -163,6 +172,27 @@ export default function HealthPage() {
                         <p className="text-sm font-semibold text-gray-800">{it.title}</p>
                         <p className="text-xs text-gray-500 leading-relaxed">{it.detail}</p>
                       </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 이번 계절 케어 포인트 — 그 시기에 꼭 챙길 안전·관리 정보(여름 열사병·겨울 부동액 등).
+                월(KST)로 결정적으로 계산되는 정적 콘텐츠라 종별로 다르다. 검색 중엔 걸린 포인트만 남으며,
+                없으면 카드를 숨긴다(위에서 필터한 seasonal.points 사용). */}
+            {seasonal.points.length > 0 && (
+              <div className="card space-y-2.5 border-l-4 border-amber-300" style={{ borderRadius: '0 12px 12px 0' }}>
+                <div className="flex items-center gap-2">
+                  <span aria-hidden>{seasonal.icon}</span>
+                  <span className="font-bold text-sm text-gray-900">{t('seasonalTitle', { season: seasonal.label })}</span>
+                </div>
+                {!nq && <p className="text-xs text-gray-500">{t('seasonalMore')}</p>}
+                <ul className="space-y-2">
+                  {seasonal.points.map((p, i) => (
+                    <li key={i} className="flex gap-2.5">
+                      <span className="text-amber-500 leading-relaxed shrink-0" aria-hidden>·</span>
+                      <p className="text-xs text-gray-600 leading-relaxed">{p}</p>
                     </li>
                   ))}
                 </ul>
