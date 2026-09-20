@@ -44,4 +44,12 @@ describe('computeCareLevel', () => {
     expect(l.nextThreshold).toBeNull()
     expect(l.progressPct).toBe(100)
   })
+
+  it('다음 레벨 직전(반올림하면 100%)에도 승급 전이면 99%로 표시한다', () => {
+    // 300~600 구간에서 599점 = (599-300)/(600-300) = 99.7% → 반올림 100%지만 아직 레벨업 전이라
+    // 막대가 가득 차면 안 된다(최고 레벨에서만 100%).
+    const l = computeCareLevel(599)
+    expect(l.nextThreshold).toBe(600)
+    expect(l.progressPct).toBe(99)
+  })
 })

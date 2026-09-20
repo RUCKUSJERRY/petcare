@@ -71,7 +71,9 @@ export function computeBadges(input: BadgeInput): Badge[] {
   return BADGE_DEFS.map(def => {
     const current = valueFor(def.category, input)
     const earned = current >= def.threshold
-    const progressPct = earned ? 100 : Math.min(100, Math.round((current / def.threshold) * 100))
+    // 아직 못 채웠으면 최대 99%까지만 — 반올림(예: 299/300=99.67%)이 100%로 올라 '획득 전인데
+    // 막대는 가득 찬' 모순을 막는다. 획득해야만 100%.
+    const progressPct = earned ? 100 : Math.min(99, Math.round((current / def.threshold) * 100))
     return { ...def, earned, current, progressPct }
   })
 }

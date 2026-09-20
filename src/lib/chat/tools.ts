@@ -51,9 +51,17 @@ export function buildChatTools(supabase: SupabaseClient, pets: ChatToolPet[]) {
           : /사료|밥|먹이/.test(category) ? '식사' : '기타'
         const eventOn = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date! : todayKST()
         let eventAt: string | null = null
-        if (time && /^\d{1,2}:\d{2}$/.test(time)) {
-          const [h, m] = time.split(':')
-          eventAt = `${eventOn}T${h.padStart(2, '0')}:${m}:00+09:00`
+        // 시각은 형식뿐 아니라 범위(시 0~23, 분 0~59)까지 확인한다. "29:75" 같은 값이 형식만 통과해
+        // 잘못된 타임스탬프(...T29:75:00...)로 저장되면 insert 실패·쓰레기 값이 될 수 있어서다.
+        const hm = time?.match(/^(\d{1,2}):(\d{2})$/)
+        const hh = hm ? Number(hm[1]) : NaN
+        const mm = hm ? Number(hm[2]) : NaN
+        // 유효한 시각(HH:MM)이면 정규화(예: 9:5 형식은 애초에 매칭 안 됨, 09:05 만 허용)해 보관.
+        const appliedTime = hm && hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59
+          ? `${String(hh).padStart(2, '0')}:${hm[2]}`
+          : null
+        if (appliedTime) {
+          eventAt = `${eventOn}T${appliedTime}:00+09:00`
         } else if (DAILY_LOG_SET.has(cat as RecordCategory)) {
           eventAt = eventOn === todayKST() ? new Date().toISOString() : `${eventOn}T09:00:00+09:00`
         }
@@ -66,7 +74,8 @@ export function buildChatTools(supabase: SupabaseClient, pets: ChatToolPet[]) {
           memo: memo ?? null,
         })
         if (error) return { ok: false, message: '저장에 실패했어요. 잠시 후 다시 시도해 주세요.' }
-        return { ok: true, petName: r.pet.name, category: cat, date: eventOn, time: time ?? null, memo: memo ?? null }
+        // time 은 실제 반영된 값만 돌려준다 — 잘못된 입력("29:75")을 확인 메시지에 그대로 되풀이하지 않도록.
+        return { ok: true, petName: r.pet.name, category: cat, date: eventOn, time: appliedTime, memo: memo ?? null }
       },
     }),
 

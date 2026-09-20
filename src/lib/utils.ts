@@ -476,7 +476,10 @@ export function pathDistanceMeters(path: [number, number][]): number {
 
 /** 거리(m) → "1.234km" / "850m" */
 export function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)}m`
+  // 반올림한 값으로 1000m 경계를 판정한다 — 999.6m 처럼 반올림하면 1000이 되는 값이
+  // "1000m"로 표시되지 않고 "1.00km"가 되도록. (GPS 합산 거리가 이 경계에 자주 걸린다.)
+  const rounded = Math.round(meters)
+  if (rounded < 1000) return `${rounded}m`
   return `${(meters / 1000).toFixed(2)}km`
 }
 

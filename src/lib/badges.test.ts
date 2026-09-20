@@ -39,4 +39,13 @@ describe('computeBadges', () => {
     expect(p.total).toBe(BADGE_DEFS.length)
     expect(p.earned).toBe(2) // record-1 · walk-1
   })
+
+  it('획득 직전(반올림하면 100%)에도 미획득이면 99%로 표시한다', () => {
+    // 임계값 바로 아래(예: 함께한 날 364/365 = 99.7%) → 반올림 100%지만 아직 미획득이라
+    // 막대가 가득 차면 안 된다(획득해야만 100%).
+    const badges = computeBadges({ recordCount: 0, walkCount: 0, togetherDays: 364 })
+    const b = badges.find(x => x.id === 'together-365')!
+    expect(b.earned).toBe(false)
+    expect(b.progressPct).toBe(99)
+  })
 })

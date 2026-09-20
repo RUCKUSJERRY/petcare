@@ -52,8 +52,10 @@ export function computeCareLevel(points: number): CareLevel {
   const current = CARE_LEVELS[idx]
   const isMax = idx === CARE_LEVELS.length - 1
   const next = isMax ? null : CARE_LEVELS[idx + 1]
+  // 다음 레벨이 남아 있으면(=최대 레벨 전) 최대 99%까지만 — 반올림(예: 599/600 구간에서 99.7%)이
+  // 100%로 올라 '레벨업 전인데 막대는 가득 찬' 모순을 막는다. 최대 레벨에서만 100%.
   const progressPct = next
-    ? Math.min(100, Math.round(((p - current.threshold) / (next.threshold - current.threshold)) * 100))
+    ? Math.min(99, Math.round(((p - current.threshold) / (next.threshold - current.threshold)) * 100))
     : 100
   return {
     level: idx + 1,

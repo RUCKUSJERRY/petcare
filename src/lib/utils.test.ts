@@ -396,6 +396,9 @@ describe('산책 거리/포맷 헬퍼', () => {
     expect(formatDistance(0)).toBe('0m')
     expect(formatDistance(850)).toBe('850m')
     expect(formatDistance(1234)).toBe('1.23km')
+    // 반올림하면 1000이 되는 값은 "1000m"가 아니라 "1.00km"로 표기해야 한다(경계 처리).
+    expect(formatDistance(999.6)).toBe('1.00km')
+    expect(formatDistance(999.4)).toBe('999m')
   })
 
   it('formatDuration: 시:분:초 / 분:초', () => {

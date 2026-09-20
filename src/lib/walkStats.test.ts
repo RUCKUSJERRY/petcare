@@ -98,4 +98,15 @@ describe('weeklyGoalProgress', () => {
     const all = weeklyGoalProgress(week(10000, 5), { distanceKm: 8, count: 5 })
     expect(all.achieved).toBe(true)
   })
+
+  it('목표 직전(반올림하면 100%)에도 미달이면 99%로 표시한다', () => {
+    // 4,980m / 5,000m = 99.6% → 반올림 100%지만 아직 미달이라 막대가 가득 차면 안 된다.
+    const p = weeklyGoalProgress(week(4980, 0), { distanceKm: 5, count: 0 })
+    expect(p.distance.met).toBe(false)
+    expect(p.distance.pct).toBe(99)
+    // 횟수도 동일: 목표 직전 미달이면 99% 상한.
+    const c = weeklyGoalProgress(week(0, 199), { distanceKm: 0, count: 200 })
+    expect(c.count.met).toBe(false)
+    expect(c.count.pct).toBe(99)
+  })
 })

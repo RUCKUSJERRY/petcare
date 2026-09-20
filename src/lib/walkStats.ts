@@ -136,13 +136,15 @@ export function weeklyGoalProgress(thisWeek: WalkTotals, goal: WalkGoal): GoalPr
   const goalM = Math.max(0, goal.distanceKm || 0) * 1000
   const goalCount = Math.max(0, goal.count || 0)
 
+  // 목표 미달이면 최대 99%까지만 표시한다 — 반올림(예: 4,980m/5,000m=99.6%)이 100%로 올라
+  // '아직 목표 전인데 막대는 가득 찬' 모순을 막는다. 실제로 달성해야만 100%.
   const distActive = goalM > 0
   const distMet = distActive && thisWeek.distance_m >= goalM
-  const distPct = distActive ? Math.min(100, Math.round((thisWeek.distance_m / goalM) * 100)) : 0
+  const distPct = distActive ? (distMet ? 100 : Math.min(99, Math.round((thisWeek.distance_m / goalM) * 100))) : 0
 
   const cntActive = goalCount > 0
   const cntMet = cntActive && thisWeek.count >= goalCount
-  const cntPct = cntActive ? Math.min(100, Math.round((thisWeek.count / goalCount) * 100)) : 0
+  const cntPct = cntActive ? (cntMet ? 100 : Math.min(99, Math.round((thisWeek.count / goalCount) * 100))) : 0
 
   const hasGoal = distActive || cntActive
   const achieved = hasGoal && (!distActive || distMet) && (!cntActive || cntMet)
