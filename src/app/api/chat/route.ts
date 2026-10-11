@@ -4,7 +4,7 @@ import { getAppSetting } from '@/lib/settings'
 import { resolveChatModel } from '@/lib/chat/provider'
 import { buildSystemPrompt, type ChatPetContext } from '@/lib/chat/context'
 import { buildChatTools } from '@/lib/chat/tools'
-import { todayKST } from '@/lib/utils'
+import { todayKST, parseSettingInt } from '@/lib/utils'
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
@@ -34,8 +34,8 @@ export async function POST(req: Request) {
   const premium = await isUserPremiumServer(supabase, user.id)
   if (!premium) {
     const raw = await getAppSetting(supabase, 'free_chat_daily')
-    const parsed = raw != null ? parseInt(raw.replace(/[^0-9]/g, ''), 10) : NaN
-    const dailyLimit = Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_FREE_CHAT_DAILY
+    const parsed = parseSettingInt(raw)
+    const dailyLimit = parsed != null && parsed >= 0 ? parsed : DEFAULT_FREE_CHAT_DAILY
     const dayStart = `${todayKST()}T00:00:00+09:00`
     const { count: dayCount } = await supabase
       .from('ai_usage').select('id', { count: 'exact', head: true })

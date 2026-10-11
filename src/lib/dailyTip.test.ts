@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getDailyTip, tipPool } from './dailyTip'
+import { getDailyTip, tipPool, tipTargetForPets } from './dailyTip'
+import { calcPetAge, stageLabel } from './utils'
 
 describe('dailyTip', () => {
   it('종별로 비어있지 않은 팁 풀을 만든다', () => {
@@ -69,5 +70,57 @@ describe('dailyTip', () => {
     const puppyHealth = tipPool('dog', '퍼피').filter(t => t.href === '/health').map(t => t.text)
     const seniorHealth = tipPool('dog', '시니어').filter(t => t.href === '/health').map(t => t.text)
     expect(puppyHealth).not.toEqual(seniorHealth)
+  })
+})
+
+// 데일리 팁 푸시(cron)가 홈 카드와 같은 입력으로 getDailyTip 을 부르게 하는 대표 추출.
+// stage 를 안 넘겨 홈과 다른 팁이 뜨던(그리고 나이대 맞춤 팁이 푸시에서 빠지던) 결함 회귀 방지.
+describe('tipTargetForPets', () => {
+  it('단일 반려동물: 그 아이의 종·생애단계를 그대로 돌려준다(홈 카드와 동일 입력)', () => {
+    const r = tipTargetForPets([{ species: 'dog', birth_year: 2024, birth_month: 1 }])
+    expect(r.species).toBe('dog')
+    // 홈 카드와 같은 함수(calcPetAge>stageLabel)로 계산되어야 한다(현재 날짜 기준이라 함께 움직임).
+    expect(r.stage).toBe(stageLabel(calcPetAge(2024, 1, 'dog')))
+  })
+
+  it('다수 종으로 대표 종을 정한다(고양이>강아지면 cat)', () => {
+    const pets = [
+      { species: 'cat' as const, birth_year: 2020, birth_month: 3 },
+      { species: 'cat' as const, birth_year: 2019, birth_month: 6 },
+      { species: 'dog' as const, birth_year: 2021, birth_month: 9 },
+    ]
+    const r = tipTargetForPets(pets)
+    expect(r.species).toBe('cat')
+    // 대표 생애단계는 대표 종(고양이)의 '목록 첫' 아이 기준
+    expect(r.stage).toBe(stageLabel(calcPetAge(2020, 3, 'cat')))
+  })
+
+  it('종 수 동점이면 강아지로 폴백한다', () => {
+    const r = tipTargetForPets([
+      { species: 'cat', birth_year: 2020, birth_month: 1 },
+      { species: 'dog', birth_year: 2020, birth_month: 1 },
+    ])
+    expect(r.species).toBe('dog')
+  })
+
+  it('반려동물이 없으면 dog + stage 미지정(기존 종만 팁과 동일 동작)', () => {
+    const r = tipTargetForPets([])
+    expect(r.species).toBe('dog')
+    expect(r.stage).toBeUndefined()
+  })
+
+  it('생년 미상이면 생애단계는 미상', () => {
+    const r = tipTargetForPets([{ species: 'dog', birth_year: null, birth_month: null }])
+    expect(r.stage).toBe('미상')
+  })
+
+  it('홈 카드와 푸시가 같은 (종·단계)로 같은 날 같은 팁을 고른다', () => {
+    const date = '2026-07-24'
+    // 홈 카드 경로: 선택된 아이의 종·단계로 getDailyTip
+    const homeTip = getDailyTip('dog', date, stageLabel(calcPetAge(2024, 1, 'dog')))
+    // 푸시 경로: 같은 아이 1마리에서 대표 입력을 뽑아 getDailyTip
+    const { species, stage } = tipTargetForPets([{ species: 'dog', birth_year: 2024, birth_month: 1 }])
+    const pushTip = getDailyTip(species, date, stage)
+    expect(pushTip).toEqual(homeTip)
   })
 })

@@ -3,6 +3,7 @@ import { careGuidesForSpecies } from './careGuideData'
 import { foodGuidesForSpecies } from './foodGuideData'
 import { healthChecklistFor, type LifeStage } from './healthChecklist'
 import { seasonalCareFor } from './seasonalCare'
+import { calcPetAge, stageLabel } from './utils'
 
 /**
  * '오늘의 케어 팁' — 매일 하나씩 바뀌는 짧은 관리 팁.
@@ -91,4 +92,40 @@ export function getDailyTip(species: Species, dateStr: string, stage?: LifeStage
   const pool = tipPool(species, stage, Number.isFinite(month) ? month : undefined)
   if (pool.length === 0) return null
   return pool[hashString(dateStr) % pool.length]
+}
+
+/** tipTargetForPets 입력 — 반려동물 1마리의 종·생년월(생애단계 계산용). */
+export interface TipTargetPet {
+  species: Species
+  birth_year: number | null
+  birth_month: number | null
+}
+
+/**
+ * 반려동물 목록에서 '오늘의 팁' 선택에 쓸 대표 (종·생애단계)를 고른다.
+ *
+ * 데일리 팁 푸시(cron)가 홈 '오늘의 정보' 카드와 같은 입력으로 getDailyTip 을 부르게 하기 위한 것.
+ * 예전엔 cron 이 생애단계(stage)를 넘기지 않아, stage 를 넘기는 홈 카드와 팁 풀 길이가 달라져
+ * 같은 날인데 서로 다른 팁이 떴고(라우트 계약 위반), 나이대 맞춤 팁은 푸시로 아예 전달되지 않았다.
+ *
+ * - 대표 종: 보유 다수 종(동점·없음 > dog). (기존 cron 의 대표 종 기준 그대로)
+ * - 대표 생애단계: 그 종의 대표(목록 첫) 아이 기준. 단일 반려 사용자는 홈 카드와 완전히 일치한다.
+ *   (다견·다묘는 홈이 '선택된 아이' 기준이라 정확히 일치하진 않지만, 종 판정과 동일하게 최선의 대표값.)
+ * - 생애단계는 calcPetAge(현재 KST 날짜 기준)로 계산 — 홈 카드와 동일 함수. 생년 미상이면 '미상'.
+ *
+ * @param pets 대표 아이를 '목록 첫'으로 고르므로, 호출부가 결정적 순서(예: created_at)로 넘긴다.
+ */
+export function tipTargetForPets(
+  pets: TipTargetPet[],
+): { species: Species; stage: LifeStage | '미상' | undefined } {
+  let dog = 0
+  let cat = 0
+  for (const p of pets) {
+    if (p.species === 'cat') cat++
+    else dog++
+  }
+  const species: Species = cat > dog ? 'cat' : 'dog'
+  const rep = pets.find(p => p.species === species)
+  const stage = rep ? stageLabel(calcPetAge(rep.birth_year, rep.birth_month, species)) : undefined
+  return { species, stage }
 }

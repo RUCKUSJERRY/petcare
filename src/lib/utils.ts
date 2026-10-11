@@ -52,6 +52,20 @@ export function formatWon(n: number | null | undefined): string {
 }
 
 /**
+ * 운영 설정(app_settings·env) 문자열에서 정수를 안전하게 파싱한다.
+ * "3,900"·"3900원"·"₩3900" 같은 표기는 허용하되, "3900.50" 같은 소수점 값은 정수부(3900)만 취한다.
+ * (예전엔 숫자 아닌 문자를 전부 지우고 parseInt 해 "3900.50" 이 "390050" 으로 이어붙던 결함이 있었다.
+ *  첫 숫자 덩어리만 읽어 소수점 이하·기호·단위를 안전하게 무시한다.) 숫자가 없으면 null — 호출부가 기본값 폴백.
+ */
+export function parseSettingInt(raw: string | null | undefined): number | null {
+  if (raw == null) return null
+  const m = raw.replace(/,/g, '').match(/\d+/)
+  if (!m) return null
+  const n = parseInt(m[0], 10)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
  * (월, 일) 기준 "다음 생일/기념일" 날짜 문자열(YYYY-MM-DD)을 반환.
  * 오늘이 그 날이면 오늘을 반환(D-day). 이미 지났으면 내년.
  * 2/29 처럼 올해 없는 날은 그 달의 마지막 날(2/28)로 보정.

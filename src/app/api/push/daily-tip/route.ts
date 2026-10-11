@@ -1,8 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUser } from '@/lib/push'
 import { cronAuthError, kstDate } from '@/lib/cron'
-import { getDailyTip } from '@/lib/dailyTip'
-import type { Species } from '@/types'
+import { getDailyTip, tipTargetForPets, type TipTargetPet } from '@/lib/dailyTip'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -51,25 +50,26 @@ export async function GET(req: Request) {
 
   const userIds = targets.map(p => p.id)
 
-  // 사용자별 대표 종(보유 반려동물 다수 종; 없으면 dog) — 팁 풀 선택에 사용.
+  // 사용자별 반려동물(종·생년월) — 팁 풀 선택에 쓸 대표 종·생애단계를 뽑는 데 사용.
+  // 홈 '오늘의 정보' 카드가 getDailyTip(종, 오늘, 생애단계)로 고르는 것과 같은 입력을 맞춰,
+  // 같은 날 같은 팁이 뜨게 하고(라우트 계약) 나이대 맞춤 팁도 푸시로 전달되게 한다.
+  // 대표 아이는 '목록 첫'으로 고르므로 created_at 순으로 결정적으로 정렬해 받는다.
   const { data: pets } = await admin
     .from('pets')
-    .select('user_id, species')
+    .select('user_id, species, birth_year, birth_month')
     .in('user_id', userIds)
-  const tally = new Map<string, { dog: number; cat: number }>()
-  for (const p of (pets ?? []) as { user_id: string; species: Species }[]) {
-    const t = tally.get(p.user_id) ?? { dog: 0, cat: 0 }
-    t[p.species]++
-    tally.set(p.user_id, t)
-  }
-  const speciesOf = (uid: string): Species => {
-    const t = tally.get(uid)
-    return t && t.cat > t.dog ? 'cat' : 'dog'
+    .order('created_at')
+  const petsByUser = new Map<string, TipTargetPet[]>()
+  for (const p of (pets ?? []) as (TipTargetPet & { user_id: string })[]) {
+    const arr = petsByUser.get(p.user_id) ?? []
+    arr.push({ species: p.species, birth_year: p.birth_year, birth_month: p.birth_month })
+    petsByUser.set(p.user_id, arr)
   }
 
   let sent = 0
   for (const uid of userIds) {
-    const tip = getDailyTip(speciesOf(uid), today)
+    const { species, stage } = tipTargetForPets(petsByUser.get(uid) ?? [])
+    const tip = getDailyTip(species, today, stage)
     if (!tip) continue
     await sendPushToUser(uid, {
       title: '💡 오늘의 케어 팁',

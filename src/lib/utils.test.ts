@@ -17,6 +17,7 @@ import {
   formatDuration,
   formatPace,
   formatWon,
+  parseSettingInt,
   nextAnniversary,
   daysTogether,
   togetherMilestone,
@@ -169,6 +170,30 @@ describe('formatWon', () => {
     expect(formatWon(null)).toBe('')
     expect(formatWon(undefined)).toBe('')
     expect(formatWon(NaN)).toBe('')
+  })
+})
+
+describe('parseSettingInt', () => {
+  it('일반 정수 문자열', () => {
+    expect(parseSettingInt('3900')).toBe(3900)
+    expect(parseSettingInt('0')).toBe(0)
+  })
+  it('천단위 구분·기호·단위 표기 허용', () => {
+    expect(parseSettingInt('3,900')).toBe(3900)
+    expect(parseSettingInt('12,000원')).toBe(12000)
+    expect(parseSettingInt('₩3900')).toBe(3900)
+  })
+  it('소수점 값은 정수부만 취함 (이어붙기 결함 회귀 방지)', () => {
+    // 예전 구현(비숫자 전부 제거)은 "3900.50" > "390050" 으로 이어붙였다.
+    expect(parseSettingInt('3900.50')).toBe(3900)
+    expect(parseSettingInt('3900.5')).toBe(3900)
+    expect(parseSettingInt('39.00')).toBe(39)
+  })
+  it('숫자 없음·빈값·null 은 null', () => {
+    expect(parseSettingInt(null)).toBeNull()
+    expect(parseSettingInt(undefined)).toBeNull()
+    expect(parseSettingInt('')).toBeNull()
+    expect(parseSettingInt('abc')).toBeNull()
   })
 })
 
