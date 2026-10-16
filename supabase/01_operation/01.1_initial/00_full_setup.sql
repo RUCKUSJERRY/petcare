@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-09-15T07:51:54.138Z
+--  생성 시각: 2026-10-16T16:27:44.004Z
 -- =============================================================
 
 
@@ -27,6 +27,28 @@ create table if not exists public.affiliate_clicks (
   product_id  text not null,
   context     text,
   created_at  timestamptz not null default now()
+);
+
+-- ── 02.1_table/ai_events.sql ──
+-- ai_events : LLM 호출 텔레메트리(옵저버빌리티/비용) 로그
+-- ai_usage(행 수로 레이트리밋)와 목적이 다르다. 여기는 '완료된 호출 1건 = 1행'으로
+-- provider/model/토큰/지연/비용/성공여부/트레이스ID 를 남겨 비용·품질을 관측한다.
+-- 쓰기는 각 기능(챗·OCR 등)이 best-effort 로, 집계 조회는 관리자(service role)가 한다.
+create table if not exists public.ai_events (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid,                       -- 호출 사용자(시스템/크론 호출은 null). 삭제돼도 비용이력 보존 위해 set null
+  feature           text not null,              -- 기능 구분: 'chat' | 'ocr' | 'parse' ...
+  provider          text not null,              -- 'upstage' | 'gemini' | 'openai' ...
+  model             text not null,
+  prompt_tokens     integer,                    -- 미상이면 null (0 과 구분)
+  completion_tokens integer,
+  total_tokens      integer,
+  latency_ms        integer,
+  cost_usd          numeric(12, 6),             -- 단가 미상이면 null (비용 날조 금지)
+  success           boolean not null default true,
+  error_code        text,                       -- 실패 시 분류 코드/메시지 요약
+  request_id        text,                       -- 요청→툴콜→모델호출 상관 추적 ID
+  created_at        timestamptz not null default now()
 );
 
 -- ── 02.1_table/ai_usage.sql ──
@@ -547,6 +569,18 @@ alter table public.affiliate_clicks add constraint affiliate_clicks_user_id_fkey
 
 create index if not exists idx_affiliate_clicks_product on public.affiliate_clicks (product_id, created_at desc);
 create index if not exists idx_affiliate_clicks_created on public.affiliate_clicks (created_at desc);
+
+-- ── 02.2_index_fk/ai_events.sql ──
+-- ai_events : 외래키 + 인덱스
+-- 사용자 삭제 시 비용/사용 이력은 보존하되 소유자만 끊는다(on delete set null) — ai_usage(cascade)와 다른 선택.
+alter table public.ai_events drop constraint if exists ai_events_user_id_fkey;
+alter table public.ai_events add constraint ai_events_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete set null;
+
+-- 기간별 비용/품질 집계(관리자 대시보드)용
+create index if not exists idx_ai_events_created_at on public.ai_events (created_at desc);
+-- 기능·provider·model 별 집계 필터용
+create index if not exists idx_ai_events_feature_provider_model on public.ai_events (feature, provider, model, created_at desc);
 
 -- ── 02.2_index_fk/ai_usage.sql ──
 -- ai_usage : 외래키 + 인덱스
@@ -1306,6 +1340,17 @@ alter table public.affiliate_clicks enable row level security;
 drop policy if exists "affiliate_clicks_insert" on public.affiliate_clicks;
 create policy "affiliate_clicks_insert" on public.affiliate_clicks for insert
   with check (user_id is null or auth.uid() = user_id);
+
+-- ── 02.6_policy/ai_events.sql ──
+-- ai_events : RLS
+-- 쓰기는 본인 user_id 로만(각 기능이 사용자 세션으로 best-effort 기록). 집계 조회는 관리자가
+-- service role(RLS 우회)로 하므로 일반 select 정책은 '본인 것만'으로 최소화한다.
+-- (시스템/크론의 user_id=null 기록은 service role 로 들어오며 RLS 를 우회한다.)
+alter table public.ai_events enable row level security;
+drop policy if exists "ai_events_insert_own" on public.ai_events;
+drop policy if exists "ai_events_select_own" on public.ai_events;
+create policy "ai_events_insert_own" on public.ai_events for insert with check (auth.uid() = user_id);
+create policy "ai_events_select_own" on public.ai_events for select using (auth.uid() = user_id);
 
 -- ── 02.6_policy/ai_usage.sql ──
 -- ai_usage : RLS (본인 사용기록만 조회/생성)

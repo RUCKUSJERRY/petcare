@@ -5,6 +5,7 @@ import { resolveChatModel } from '@/lib/chat/provider'
 import { buildSystemPrompt, type ChatPetContext } from '@/lib/chat/context'
 import { buildChatTools } from '@/lib/chat/tools'
 import { todayKST, parseSettingInt } from '@/lib/utils'
+import { recordAiEvent } from '@/lib/ai/telemetry'
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
@@ -48,10 +49,11 @@ export async function POST(req: Request) {
     }
   }
 
-  const model = await resolveChatModel(supabase)
-  if (!model) {
+  const resolved = await resolveChatModel(supabase)
+  if (!resolved) {
     return NextResponse.json({ error: 'not_configured', message: 'AI 챗봇이 아직 설정되지 않았어요.' }, { status: 503 })
   }
+  const { model, provider, modelName } = resolved
 
   let messages: UIMessage[]
   let threadId: string | undefined
@@ -99,6 +101,10 @@ export async function POST(req: Request) {
     }
   }
 
+  // 텔레메트리: 요청 상관 ID + 호출 시작 시각(지연 측정용). 계측은 모두 best-effort.
+  const requestId = crypto.randomUUID()
+  const startedAt = Date.now()
+
   const modelMessages = await convertToModelMessages(messages)
   const result = streamText({
     model,
@@ -108,8 +114,12 @@ export async function POST(req: Request) {
     tools,
     // 도구 호출 후 그 결과로 최종 답변까지 이어가도록 여러 스텝 허용(무한루프 방지 상한).
     stopWhen: stepCountIs(5),
-    // 응답 완료 시 어시스턴트 메시지 저장 + 스레드 갱신(best-effort)
-    onFinish: async ({ text }) => {
+    // 응답 완료 시: 토큰/지연/비용 텔레메트리 기록 + 어시스턴트 메시지 저장(모두 best-effort)
+    onFinish: async ({ text, usage }) => {
+      await recordAiEvent(supabase, {
+        feature: 'chat', provider, model: modelName, userId: user.id,
+        usage, startedAt, success: true, requestId,
+      })
       if (!threadId || !text) return
       try {
         await supabase.from('chat_messages').insert({ thread_id: threadId, user_id: user.id, role: 'assistant', content: text })
@@ -117,6 +127,15 @@ export async function POST(req: Request) {
       } catch (e) {
         console.error('[chat] persist assistant failed', e)
       }
+    },
+    // 스트리밍 중 오류: 실패 이벤트로 남겨 성공률·장애를 관측 가능하게 한다.
+    onError: ({ error }) => {
+      void recordAiEvent(supabase, {
+        feature: 'chat', provider, model: modelName, userId: user.id,
+        startedAt, success: false,
+        errorCode: error instanceof Error ? error.message.slice(0, 200) : 'stream_error',
+        requestId,
+      })
     },
   })
   return result.toUIMessageStreamResponse()
