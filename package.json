@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:build": "node supabase/build.mjs",
-    "eval:ocr": "node scripts/eval-ocr.mjs"
+    "eval:ocr": "node scripts/eval-ocr.mjs",
+    "rag:demo": "node scripts/rag-demo.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.66",
