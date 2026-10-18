@@ -1,0 +1,19 @@
+{
+  "name": "rag-retrieval-ko-v1",
+  "k": 5,
+  "_note": "검색 품질 라벨셋. query > 관련 docId(사람 판단). 일부 질의는 코퍼스와 다른 표현을 써(예: '토해요'~'구토') lexical 의 한계를 드러내고 vector/하이브리드 이득을 보이도록 구성.",
+  "cases": [
+    { "id": "q-teeth", "query": "강아지 양치 어떻게 시켜요", "relevantDocIds": ["care:teeth"] },
+    { "id": "q-cat-water", "query": "고양이가 물을 잘 안 마셔요", "relevantDocIds": ["food:cat:cat-water"] },
+    { "id": "q-vomit", "query": "우리 개가 자꾸 토해요", "relevantDocIds": ["symptom:vomiting"] },
+    { "id": "q-summer-walk", "query": "더운 날 아스팔트에서 산책해도 될까", "relevantDocIds": ["seasonal:dog:summer"] },
+    { "id": "q-ingest", "query": "이상한 걸 삼킨 것 같아요", "relevantDocIds": ["symptom:ingestion"] },
+    { "id": "q-transition", "query": "사료 바꾸는 방법 알려줘", "relevantDocIds": ["food:dog:transition", "food:cat:transition"] },
+    { "id": "q-bcs", "query": "우리 아이가 살쪘는지 어떻게 알아요", "relevantDocIds": ["food:dog:body-condition", "food:cat:body-condition"] },
+    { "id": "q-limp", "query": "다리를 절뚝거려요", "relevantDocIds": ["symptom:limping"] },
+    { "id": "q-winter", "query": "겨울에 부동액 같은 거 조심해야 하나요", "relevantDocIds": ["seasonal:dog:winter", "seasonal:cat:winter"] },
+    { "id": "q-nails", "query": "발톱 깎는 법", "relevantDocIds": ["care:nails"] },
+    { "id": "q-anorexia", "query": "밥을 통 안 먹어요", "relevantDocIds": ["symptom:anorexia"] },
+    { "id": "q-cat-urine", "query": "고양이가 소변을 못 보고 화장실만 들락거려요", "relevantDocIds": ["symptom:cat-urinary"] }
+  ]
+}
