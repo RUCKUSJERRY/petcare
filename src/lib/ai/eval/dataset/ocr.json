@@ -1,0 +1,63 @@
+{
+  "name": "ocr-vet-ko-v1",
+  "_note": "합성 데이터(실제 개인정보 아님). 동물병원 영수증/증명서 추출 평가용. input 은 Document Parse 결과를 흉내낸 텍스트. fixturePrediction 은 특정 모델/시점 스냅샷(오프라인 결정적 평가용).",
+  "cases": [
+    {
+      "id": "receipt-single-vaccine",
+      "description": "단일 영수증 — 종합백신 1건. 깔끔한 케이스(완벽 추출 기대).",
+      "input": "행복동물병원 진료영수증\n날짜: 2026-01-12\n항목: 종합백신(DHPPL) 2차 접종\n금액: 35,000원\n",
+      "gold": [
+        { "type": "care", "date": "2026-01-12", "clinic": "행복동물병원", "category": "접종", "name": "종합백신 DHPPL", "cost": 35000 }
+      ],
+      "fixturePrediction": [
+        { "type": "care", "date": "2026-01-12", "clinic": "행복동물병원", "category": "접종", "name": "종합백신 DHPPL", "cost": 35000 }
+      ]
+    },
+    {
+      "id": "vaccine-cert-multi",
+      "description": "접종증명서 — 3건(서로 다른 날짜). 모델이 마지막 1건을 놓침(recall 저하).",
+      "input": "예방접종 증명서 / 튼튼동물메디컬\n2025-03-02  종합백신 1차\n2025-03-23  종합백신 2차\n2025-04-15  광견병\n",
+      "gold": [
+        { "type": "care", "date": "2025-03-02", "clinic": "튼튼동물메디컬", "category": "접종", "name": "종합백신 1차" },
+        { "type": "care", "date": "2025-03-23", "clinic": "튼튼동물메디컬", "category": "접종", "name": "종합백신 2차" },
+        { "type": "care", "date": "2025-04-15", "clinic": "튼튼동물메디컬", "category": "접종", "name": "광견병" }
+      ],
+      "fixturePrediction": [
+        { "type": "care", "date": "2025-03-02", "category": "접종", "name": "종합백신 1차" },
+        { "type": "care", "date": "2025-03-23", "category": "접종", "name": "종합백신 2차" }
+      ]
+    },
+    {
+      "id": "medical-visit-wrong-cost",
+      "description": "진료 영수증 — 레코드는 맞게 잡지만 금액을 오독(필드 정확도 저하).",
+      "input": "스마일동물병원 진료비 계산서\n진료일 2026-02-08\n진단: 외이염\n처치: 귀세정, 약물 처방\n합계 48,500원\n",
+      "gold": [
+        { "type": "medical", "date": "2026-02-08", "clinic": "스마일동물병원", "name": "외이염", "cost": 48500 }
+      ],
+      "fixturePrediction": [
+        { "type": "medical", "date": "2026-02-08", "clinic": "스마일동물병원", "name": "외이염", "cost": 4850 }
+      ]
+    },
+    {
+      "id": "mixed-with-spurious",
+      "description": "미용+구충 2건이 정답인데 모델이 존재하지 않는 1건을 추가(precision 저하).",
+      "input": "펫살롱 가온 이용내역\n2026-05-01  전체미용\n2026-05-01  심장사상충 예방약 투약\n",
+      "gold": [
+        { "type": "care", "date": "2026-05-01", "clinic": "펫살롱 가온", "category": "미용", "name": "전체미용" },
+        { "type": "care", "date": "2026-05-01", "category": "심장사상충", "name": "심장사상충 예방약" }
+      ],
+      "fixturePrediction": [
+        { "type": "care", "date": "2026-05-01", "category": "미용", "name": "전체미용" },
+        { "type": "care", "date": "2026-05-01", "category": "심장사상충", "name": "심장사상충 예방약" },
+        { "type": "care", "date": "2026-05-01", "category": "건강검진", "name": "종합검진" }
+      ]
+    },
+    {
+      "id": "no-record",
+      "description": "추출할 기록이 없는 안내문(빈 정답). 모델도 빈 배열(완벽).",
+      "input": "병원 휴무 안내\n설 연휴 기간 휴진합니다. 응급은 야간진료 병원을 이용해 주세요.\n",
+      "gold": [],
+      "fixturePrediction": []
+    }
+  ]
+}
