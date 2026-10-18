@@ -33,9 +33,16 @@ guides(정적 TS)
 (예: "양치" 질의에 어휘 겹침으로 "목욕"이 상위). 조사·동의어·의미 유사는 lexical 이 약하다 — 그래서
 의미 축(vector)을 RRF 로 합치고, 상위 후보를 리랭커로 다시 정렬한다.
 
-## 다음 단계(고도화)
+## 평가 · 고도화 (구현됨)
 
-- 임베딩 생성: 모델 레지스트리(OpenAI 호환 embeddings)로 청크·질의 임베딩 > `setEmbeddings` 주입 > vector/hybrid 활성.
-- 영속화: Supabase pgvector 에 청크 임베딩 저장(대규모·사용자 문서용).
-- 리랭킹: 하이브리드 상위 N 을 교차 인코더/LLM 리랭커로 재정렬.
-- 평가: Eval 하네스를 recall@k 로 확장해 각 단계(lexical > +vector > +rerank) 효과를 숫자로 검증.
+- `evalRetrieval.ts` - recall@k / precision@k / MRR / nDCG@k 채점(순수) + 러너. `dataset/retrieval.json` 라벨셋.
+- `embed.ts` - OpenAI 호환 임베딩으로 청크·질의 벡터화 > vector/hybrid 활성. `embeddingSpecFromEnv`(전용 EMBEDDING_* > openai > upstage).
+- `rerank.ts` - 하이브리드 상위 N 을 LLM 으로 재정렬(cross-encoder 리랭킹의 LLM 판). 프롬프트·파싱은 순수, 실패 시 원순서 보존.
+- CLI `npm run rag:eval [-- --live]`:
+  - 기본: lexical(BM25) recall@k 베이스라인(오프라인). 현재 recall@5 ≈ 83%.
+  - `--live`: 임베딩/챗 키가 있으면 `lexical vs vector vs hybrid vs rerank` 를 한 표로 비교.
+
+## 남은 선택지
+
+- 영속화: Supabase pgvector 에 청크 임베딩 저장(정적 코퍼스는 50청크라 인메모리로 충분 — 대규모·사용자 문서 확장 시).
+- 챗봇 연결: 하이브리드 검색 상위 스니펫을 챗 시스템 프롬프트에 근거로 주입(답변을 앱 정보와 정렬).

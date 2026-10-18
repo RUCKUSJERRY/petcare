@@ -45,6 +45,16 @@ async function main() {
         printReport(vectorR)
         const hybridR = await evalMod.runRetrievalEval(dataset, embed.hybridDocRetriever(index, built), 'hybrid')
         printReport(hybridR)
+        // 리랭킹: 하이브리드 후보를 LLM 으로 재정렬(모델 구성 시)
+        const rerankMod = await server.ssrLoadModule('/src/lib/ai/rag/rerank.ts')
+        const reranker = rerankMod.getDefaultReranker()
+        if (reranker) {
+          const candidates = embed.hybridChunkRetriever(index, built)
+          const rerankR = await evalMod.runRetrievalEval(dataset, rerankMod.makeRerankedDocRetriever(candidates, reranker), 'rerank')
+          printReport(rerankR)
+        } else {
+          console.log('  (rerank: 챗 모델 미구성 — 건너뜀)')
+        }
       }
     } else {
       console.log('\n  (vector/hybrid 비교: npm run rag:eval -- --live, 임베딩 키 필요)')

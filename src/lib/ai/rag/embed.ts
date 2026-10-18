@@ -2,6 +2,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { embedMany } from 'ai'
 import type { RagIndex } from './retriever'
 import { toDocRanking, type DocRetriever } from './evalRetrieval'
+import type { RagChunk } from './types'
 
 /**
  * 임베딩 provider + 벡터/하이브리드 실동작 연결.
@@ -105,5 +106,13 @@ export function hybridDocRetriever(index: RagIndex, embedder: Embedder, pool = 3
   return async (query: string) => {
     const [qv] = await embedder.embed([query])
     return toDocRanking(index.searchHybrid(query, qv ?? null, pool).map(s => s.item))
+  }
+}
+
+/** 하이브리드 검색의 '청크' 후보를 돌려준다(리랭킹 입력용). */
+export function hybridChunkRetriever(index: RagIndex, embedder: Embedder, pool = 20): (query: string) => Promise<RagChunk[]> {
+  return async (query: string) => {
+    const [qv] = await embedder.embed([query])
+    return index.searchHybrid(query, qv ?? null, pool).map(s => s.item)
   }
 }
