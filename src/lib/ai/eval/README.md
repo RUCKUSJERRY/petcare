@@ -7,8 +7,11 @@ AI 기능을 "감"이 아니라 숫자로 판정하기 위한 평가 틀. 첫 �
 - `types.ts` - 케이스/레코드/리포트/예측기 타입
 - `ocrScore.ts` - 채점기(순수). 레코드 정렬(greedy) > 레코드 P/R/F1 + 매칭쌍 필드별 정확도(date/type/category/cost/name)
 - `runOcrEval.ts` - 러너. `runOcrEval(dataset, predict)` 로 예측기만 바꿔 끼운다. `fixturePredictor`(오프라인 재생) 포함
+- `livePredictor.ts` - 실모델 예측기. `buildExtractPrompt`/`parseRecordsFromContent`(순수) + `makeLivePredictor`(generateText 실호출, usage/지연 수집) + `summarizeCalls`(토큰 x 단가 > 비용)
 - `dataset/ocr.json` - 합성 골드셋(실제 개인정보 아님). 각 케이스에 `gold` 와 오프라인용 `fixturePrediction`
-- `../../../scripts/eval-ocr.mjs` - 리포트 출력 CLI (`npm run eval:ocr`)
+- `../../../scripts/eval-ocr.mjs` - 리포트 출력 CLI
+  - `npm run eval:ocr` - 오프라인 fixture(결정적)
+  - `npm run eval:ocr -- --live` - 구성된 각 모델로 실제 추출해 `F1 / P / R / 비용(USD) / 평균지연` 비교
 
 ## 설계 의도
 
@@ -26,7 +29,13 @@ AI 기능을 "감"이 아니라 숫자로 판정하기 위한 평가 틀. 첫 �
    (빈 정답+빈 예측 = 완벽 1. 누락은 recall 로 드러나며 숨기지 않는다.)
 3. 필드 정확도: 매칭쌍에서 날짜/종류/분류/금액 정확 일치율, 이름은 유사도 0.6 이상이면 정답.
 
+## 멀티모델 비교 (옵저버빌리티 + Eval + 멀티모델 결합)
+
+`npm run eval:ocr -- --live` 는 `specsFromEnv()` 로 구성된 각 모델에 같은 데이터셋을 돌려
+품질(F1)과 비용(토큰 x 단가), 지연을 한 표로 비교한다 — "싼 모델로 바꿔도 품질이 유지되나"를
+숫자로 답하는 틀. 단가는 `cost.ts` 기본표 또는 `AI_PRICE_<PROVIDER>_<MODEL>` env 로 설정한다.
+
 ## 확장(다음 단계)
 
-- 라이브 예측기: OCR 추출을 호출하는 `predict` 를 붙여 모델별 비교.
 - 챗 툴콜 정확도 / RAG 검색 품질(recall@k) 로 평가 대상 확대.
+- live 결과(F1·비용)를 라우팅 정책(routing.ts) 갱신 근거로 피드백.
