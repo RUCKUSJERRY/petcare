@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { aggregateAiEvents, type AiEventRow } from '@/lib/ai/stats'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -112,6 +113,24 @@ export async function GET() {
     .sort((a, b) => b[1] - a[1]).slice(0, 5)
     .map(([product_id, count]) => ({ product_id, count }))
 
+  // ── AI 옵저버빌리티/비용 (최근 30일 ai_events 집계) ───────────────────────
+  // 토큰·비용·지연·성공률을 provider/model/feature 로 분해해 'AI가 얼마나·어떻게·얼마에 돌고 있나'를 본다.
+  const { data: aiRows, error: aiErr } = await admin
+    .from('ai_events')
+    .select('provider, model, feature, success, cost_usd, total_tokens, latency_ms, created_at')
+    .gte('created_at', since30)
+    .order('created_at', { ascending: false })
+    .limit(20000)
+  if (aiErr) throw aiErr
+  type AiRow = AiEventRow & { created_at: string }
+  const aiAll = (aiRows ?? []) as AiRow[]
+  const ai = {
+    ...aggregateAiEvents(aiAll),
+    windowDays: 30,
+    calls7d: aiAll.filter(r => r.created_at >= since7).length,
+    calls1d: aiAll.filter(r => r.created_at >= new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).length,
+  }
+
   return NextResponse.json({
     affiliateTotal, affiliate7d,
     subsActive, subsCanceled, subsPastDue,
@@ -123,6 +142,8 @@ export async function GET() {
     // 리텐션 지표
     activeUsers1d, activeUsers7d, activeUsers30d,
     stickiness, recordingRate7d, recordsPerActive7d,
+    // AI 옵저버빌리티/비용 (30일)
+    ai,
   })
   } catch (err) {
     // 집계 중 어떤 쿼리라도 실패하면 가짜 0 대신 명시적 오류로 알린다.

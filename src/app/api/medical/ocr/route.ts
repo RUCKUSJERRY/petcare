@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { isUserPremiumServer } from '@/lib/plan'
 import { getFreeOcrMonthlyServer, getOcrProviderOrderServer, type OcrProvider } from '@/lib/settings'
 import { todayKST } from '@/lib/utils'
+import { recordAiEvent, type AiFeature } from '@/lib/ai/telemetry'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -33,6 +34,21 @@ const UPSTAGE_CHAT_MODEL = process.env.UPSTAGE_CHAT_MODEL || 'solar-pro2'
 
 type OcrRecord = Record<string, unknown>
 type ProviderResult = { records: OcrRecord[] } | { error: 'not_configured' | 'rate_limited' | 'failed' }
+
+/**
+ * OCR 파이프라인의 개별 LLM 호출 1건 텔레메트리. 각 helper 가 실제 호출한 건만 수집 배열에 push 하고,
+ * POST 핸들러가 user_id/request_id 를 붙여 ai_events 로 best-effort 기록한다(옵저버빌리티/비용).
+ * (키 미설정으로 '호출 안 함'은 push 하지 않는다 — 집계 성공률을 왜곡하지 않도록.)
+ */
+interface OcrCall {
+  feature: AiFeature
+  provider: string
+  model: string
+  usage?: unknown
+  latencyMs: number
+  success: boolean
+  errorCode?: string | null
+}
 
 /**
  * imageUrl이 우리 Supabase 스토리지의 public 객체 URL인지 검증한다.
@@ -90,10 +106,13 @@ const PROMPT = `너는 동물병원 영수증·세부내역서·진료이력서�
 - cost는 콤마·'원' 제거한 숫자. 합계만 있으면 합계를 첫 건에 넣어도 돼.
 - 확실하지 않은 값은 비워 둬(빈 문자열 또는 0). 없는 정보를 지어내지 마.`
 
-/** Gemini(LLM)로 구조화 추출. 실패/미설정/쿼터초과면 error 사유 반환 */
-async function tryGemini(base64: string, mimeType: string): Promise<ProviderResult> {
+/** Gemini(LLM)로 구조화 추출. 실패/미설정/쿼터초과면 error 사유 반환. 실제 호출 1건은 events 에 기록. */
+async function tryGemini(base64: string, mimeType: string, events: OcrCall[]): Promise<ProviderResult> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return { error: 'not_configured' }
+  const t0 = Date.now()
+  const log = (success: boolean, errorCode: string | null, usage?: unknown) =>
+    events.push({ feature: 'ocr', provider: 'gemini', model: MODEL, usage, latencyMs: Date.now() - t0, success, errorCode })
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
     // Gemini가 응답을 지연하면 maxDuration까지 요청이 묶여 클라이언트의 무료 OCR(Tesseract)
@@ -110,25 +129,31 @@ async function tryGemini(base64: string, mimeType: string): Promise<ProviderResu
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
       console.error('[ocr] gemini error', res.status, detail.slice(0, 200))
+      log(false, String(res.status))
       return { error: res.status === 429 ? 'rate_limited' : 'failed' }
     }
     const data = await res.json()
     const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) return { error: 'failed' }
-    const parsed = JSON.parse(text)
+    const parsed = text ? JSON.parse(text) : null
     const records = Array.isArray(parsed?.records) ? parsed.records : []
+    // 모델이 돌아 토큰을 소모했으므로(과금) 결과가 비어도 호출 자체는 기록한다(성공=records 유무).
+    log(records.length > 0, records.length > 0 ? null : 'empty', data?.usageMetadata)
     if (records.length === 0) return { error: 'failed' }
     return { records }
   } catch (err) {
     console.error('[ocr] gemini exception', err)
+    log(false, 'exception')
     return { error: 'failed' }
   }
 }
 
 /** 업스테이지 Information Extract(OpenAI 호환)로 구조화 추출. Gemini 와 동일한 records 스키마를 요구한다. */
-async function tryUpstage(base64: string, mimeType: string): Promise<ProviderResult> {
+async function tryUpstage(base64: string, mimeType: string, events: OcrCall[]): Promise<ProviderResult> {
   const apiKey = process.env.UPSTAGE_API_KEY
   if (!apiKey) return { error: 'not_configured' }
+  const t0 = Date.now()
+  const log = (success: boolean, errorCode: string | null, usage?: unknown) =>
+    events.push({ feature: 'ocr', provider: 'upstage', model: UPSTAGE_MODEL, usage, latencyMs: Date.now() - t0, success, errorCode })
   try {
     const res = await fetch(UPSTAGE_OCR_URL, {
       method: 'POST',
@@ -155,18 +180,20 @@ async function tryUpstage(base64: string, mimeType: string): Promise<ProviderRes
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
       console.error('[ocr] upstage error', res.status, detail.slice(0, 200))
+      log(false, String(res.status))
       return { error: res.status === 429 ? 'rate_limited' : 'failed' }
     }
     const data = await res.json()
-    // OpenAI 호환 응답: choices[0].message.content 안에 JSON 문자열이 담긴다.
+    // OpenAI 호환 응답: choices[0].message.content 안에 JSON 문자열이 담긴다. usage 는 data.usage.
     const text: string | undefined = data?.choices?.[0]?.message?.content
-    if (!text) return { error: 'failed' }
-    const parsed = JSON.parse(text)
+    const parsed = text ? JSON.parse(text) : null
     const records = Array.isArray(parsed?.records) ? parsed.records : []
+    log(records.length > 0, records.length > 0 ? null : 'empty', data?.usage)
     if (records.length === 0) return { error: 'failed' }
     return { records }
   } catch (err) {
     console.error('[ocr] upstage exception', err)
+    log(false, 'exception')
     return { error: 'failed' }
   }
 }
@@ -178,9 +205,9 @@ async function tryUpstage(base64: string, mimeType: string): Promise<ProviderRes
  *   (호출부는 이 사유로 과금 여부·클라이언트 폴백 메시지를 정한다.)
  */
 async function runExtraction(
-  base64: string, mimeType: string, order: OcrProvider[],
+  base64: string, mimeType: string, order: OcrProvider[], events: OcrCall[],
 ): Promise<{ records: OcrRecord[]; source: OcrProvider } | { error: 'not_configured' | 'rate_limited' | 'failed' }> {
-  const run = (p: OcrProvider) => (p === 'upstage' ? tryUpstage(base64, mimeType) : tryGemini(base64, mimeType))
+  const run = (p: OcrProvider) => (p === 'upstage' ? tryUpstage(base64, mimeType, events) : tryGemini(base64, mimeType, events))
   let worst: 'not_configured' | 'rate_limited' | 'failed' = 'not_configured'
   const rank = { not_configured: 0, rate_limited: 1, failed: 2 } as const
   for (const p of order) {
@@ -192,9 +219,13 @@ async function runExtraction(
 }
 
 /** 문서(PDF 등)를 Upstage Document Parse 로 레이아웃 구조(markdown)로 변환. 실패 시 null. */
-async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs: number): Promise<string | null> {
+async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs: number, events: OcrCall[]): Promise<string | null> {
   const key = process.env.UPSTAGE_API_KEY
   if (!key) return null
+  const t0 = Date.now()
+  // Document Parse 는 토큰 기반이 아니라 토큰 usage 가 없다(지연·성공률만 관측). feature='parse'.
+  const log = (success: boolean, errorCode: string | null) =>
+    events.push({ feature: 'parse', provider: 'upstage', model: UPSTAGE_PARSE_MODEL, latencyMs: Date.now() - t0, success, errorCode })
   try {
     const form = new FormData()
     form.append('document', new Blob([new Uint8Array(buf)], { type: mimeType }), 'document')
@@ -209,14 +240,18 @@ async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs:
     })
     if (!res.ok) {
       console.error('[ocr] document-parse error', res.status, (await res.text().catch(() => '')).slice(0, 200))
+      log(false, String(res.status))
       return null
     }
     // 응답 스키마상 결과는 content.markdown 에 담긴다(요청한 output_formats 키). 비어 있으면 null.
     const data = await res.json()
     const markdown: unknown = data?.content?.markdown
-    return typeof markdown === 'string' && markdown.trim() ? markdown : null
+    const ok = typeof markdown === 'string' && markdown.trim().length > 0
+    log(ok, ok ? null : 'empty')
+    return ok ? (markdown as string) : null
   } catch (err) {
     console.error('[ocr] document-parse exception', err)
+    log(false, 'exception')
     return null
   }
 }
@@ -225,7 +260,7 @@ async function parseDocumentToMarkdown(buf: Buffer, mimeType: string, timeoutMs:
  * 구조화된 텍스트(Document Parse 결과)에서 records 를 추출. Solar(구조화 출력) → Gemini 폴백.
  * deadline(절대 시각, Date.now() 기준 ms)까지만 시도해 문서 경로 전체가 maxDuration 을 넘지 않게 한다.
  */
-async function extractRecordsFromText(text: string, deadline: number): Promise<ProviderResult> {
+async function extractRecordsFromText(text: string, deadline: number, events: OcrCall[]): Promise<ProviderResult> {
   const body = `${PROMPT}\n\n---\n아래는 문서를 구조화한 텍스트야. 이 내용에서 기록을 추출해:\n${text}`
   const pickRecords = (raw: string | undefined): OcrRecord[] => {
     if (!raw) return []
@@ -238,6 +273,7 @@ async function extractRecordsFromText(text: string, deadline: number): Promise<P
   const upKey = process.env.UPSTAGE_API_KEY
   const solarTimeout = budget(20000)
   if (upKey && solarTimeout > 2000) {
+    const t0 = Date.now()
     try {
       const res = await fetch(`${UPSTAGE_CHAT_URL}/chat/completions`, {
         method: 'POST',
@@ -251,13 +287,17 @@ async function extractRecordsFromText(text: string, deadline: number): Promise<P
         signal: AbortSignal.timeout(solarTimeout),
       })
       if (res.ok) {
-        const records = pickRecords((await res.json())?.choices?.[0]?.message?.content)
+        const data = await res.json()
+        const records = pickRecords(data?.choices?.[0]?.message?.content)
+        events.push({ feature: 'ocr', provider: 'upstage', model: UPSTAGE_CHAT_MODEL, usage: data?.usage, latencyMs: Date.now() - t0, success: records.length > 0, errorCode: records.length > 0 ? null : 'empty' })
         if (records.length) return { records }
       } else {
         console.error('[ocr] solar text-extract error', res.status)
+        events.push({ feature: 'ocr', provider: 'upstage', model: UPSTAGE_CHAT_MODEL, latencyMs: Date.now() - t0, success: false, errorCode: String(res.status) })
       }
     } catch (err) {
       console.error('[ocr] solar text-extract exception', err)
+      events.push({ feature: 'ocr', provider: 'upstage', model: UPSTAGE_CHAT_MODEL, latencyMs: Date.now() - t0, success: false, errorCode: 'exception' })
     }
   }
 
@@ -265,6 +305,7 @@ async function extractRecordsFromText(text: string, deadline: number): Promise<P
   const gKey = process.env.GEMINI_API_KEY
   const gemTimeout = budget(15000)
   if (gKey && gemTimeout > 2000) {
+    const t0 = Date.now()
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${gKey}`
       const res = await fetch(endpoint, {
@@ -277,13 +318,17 @@ async function extractRecordsFromText(text: string, deadline: number): Promise<P
         signal: AbortSignal.timeout(gemTimeout),
       })
       if (res.ok) {
-        const records = pickRecords((await res.json())?.candidates?.[0]?.content?.parts?.[0]?.text)
+        const data = await res.json()
+        const records = pickRecords(data?.candidates?.[0]?.content?.parts?.[0]?.text)
+        events.push({ feature: 'ocr', provider: 'gemini', model: MODEL, usage: data?.usageMetadata, latencyMs: Date.now() - t0, success: records.length > 0, errorCode: records.length > 0 ? null : 'empty' })
         if (records.length) return { records }
       } else {
         console.error('[ocr] gemini text-extract error', res.status)
+        events.push({ feature: 'ocr', provider: 'gemini', model: MODEL, latencyMs: Date.now() - t0, success: false, errorCode: String(res.status) })
       }
     } catch (err) {
       console.error('[ocr] gemini text-extract exception', err)
+      events.push({ feature: 'ocr', provider: 'gemini', model: MODEL, latencyMs: Date.now() - t0, success: false, errorCode: 'exception' })
     }
   }
 
@@ -413,22 +458,35 @@ export async function POST(req: Request) {
     .from('ai_usage').insert({ user_id: user.id, kind: 'ocr' }).select('id').maybeSingle()
   if (usageErr) console.error('[ocr] usage tracking insert failed', usageErr)
 
+  // LLM 호출 텔레메트리 수집(이미지/문서 경로 공통). 아래에서 ai_events 로 best-effort 기록.
+  const aiCalls: OcrCall[] = []
+  const requestId = crypto.randomUUID()
+
   // 이미지: Information Extract(→Gemini) 로 이미지에서 바로 추출.
   // 문서(PDF 등): Document Parse 로 구조화(markdown) 후 그 텍스트에서 추출.
   let result: { records: OcrRecord[]; source: string } | { error: 'not_configured' | 'rate_limited' | 'failed' }
   if (isImage) {
-    const r = await runExtraction(buf.toString('base64'), mimeType, providerOrder)
+    const r = await runExtraction(buf.toString('base64'), mimeType, providerOrder, aiCalls)
     result = 'records' in r ? { records: r.records, source: r.source } : r
   } else {
     // 문서 경로 예산: maxDuration(60s) 안에서 파싱+추출을 끝내도록 내부 마감을 둔다(응답 직렬화 여유 5s).
     const deadline = Date.now() + 55000
-    const markdown = await parseDocumentToMarkdown(buf, mimeType, Math.min(40000, deadline - Date.now()))
+    const markdown = await parseDocumentToMarkdown(buf, mimeType, Math.min(40000, deadline - Date.now()), aiCalls)
     if (!markdown) {
       result = { error: 'failed' }
     } else {
-      const r = await extractRecordsFromText(markdown, deadline)
+      const r = await extractRecordsFromText(markdown, deadline, aiCalls)
       result = 'records' in r ? { records: r.records, source: 'document-parse' } : r
     }
+  }
+
+  // 수집한 LLM 호출들을 ai_events 로 기록(best-effort, user_id/request_id 부여). 스캔 응답을 막지 않도록
+  // await 하되 실패는 recordAiEvent 내부에서 삼킨다.
+  for (const c of aiCalls) {
+    await recordAiEvent(supabase, {
+      feature: c.feature, provider: c.provider, model: c.model, userId: user.id,
+      usage: c.usage, latencyMs: c.latencyMs, success: c.success, errorCode: c.errorCode, requestId,
+    })
   }
 
   // 과금 없는 경로면 예약을 되돌려, 무료 사용자의 한도가 헛되이 깎이지 않게 한다.

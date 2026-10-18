@@ -14,6 +14,12 @@ describe('normalizeUsage', () => {
     })
   })
 
+  it('Gemini(usageMetadata) 형태를 읽는다', () => {
+    expect(normalizeUsage({ promptTokenCount: 512, candidatesTokenCount: 88, totalTokenCount: 600 })).toEqual({
+      inputTokens: 512, outputTokens: 88, totalTokens: 600,
+    })
+  })
+
   it('total 이 없으면 input+output 으로 보완한다', () => {
     expect(normalizeUsage({ inputTokens: 10, outputTokens: 5 })).toEqual({
       inputTokens: 10, outputTokens: 5, totalTokens: 15,

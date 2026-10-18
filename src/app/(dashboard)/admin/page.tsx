@@ -7,6 +7,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatKRW } from '@/lib/pricing'
 
+interface AiAgg {
+  key: string
+  calls: number
+  successes: number
+  successRate: number
+  costUsd: number | null
+  tokens: number
+  avgLatencyMs: number | null
+}
+
 interface Stats {
   affiliateTotal: number
   affiliate7d: number
@@ -32,6 +42,15 @@ interface Stats {
   stickiness: number
   recordingRate7d: number
   recordsPerActive7d: number
+  ai?: {
+    total: AiAgg
+    byProvider: AiAgg[]
+    byModel: AiAgg[]
+    byFeature: AiAgg[]
+    windowDays: number
+    calls7d: number
+    calls1d: number
+  }
 }
 
 export default function AdminPage() {
@@ -144,6 +163,11 @@ export default function AdminPage() {
   }
 
   const won = (n: number) => `₩${formatKRW(n)}`
+  // AI 비용(USD). 단가 미상이면 '—'(aiCostUnknown). 작은 값은 소수 4자리, 큰 값은 2자리.
+  const usd = (n: number | null | undefined) =>
+    n == null ? t('aiCostUnknown') : `$${n.toFixed(n < 1 ? 4 : 2)}`
+  const ms = (n: number | null | undefined) => (n == null ? '—' : `${n.toLocaleString()}ms`)
+  const num = (n: number) => n.toLocaleString()
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -251,6 +275,47 @@ export default function AdminPage() {
           <StatCard label={t('recordsPerActive')} value={stats ? `${stats.recordsPerActive7d}` : '—'} />
         </div>
         <p className="text-[11px] text-gray-400">{t('retentionHint')}</p>
+      </section>
+
+      {/* AI 사용/비용 (ai_events 텔레메트리) */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-gray-900">{t('aiTitle')}</h2>
+        {stats?.ai && stats.ai.total.calls > 0 ? (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <StatCard label={t('aiCalls')} value={num(stats.ai.total.calls)} accent />
+              <StatCard label={t('aiSuccess')} value={`${stats.ai.total.successRate}%`} />
+              <StatCard label={t('aiCost')} value={usd(stats.ai.total.costUsd)} accent />
+              <StatCard label={t('aiTokens')} value={num(stats.ai.total.tokens)} />
+              <StatCard label={t('aiLatency')} value={ms(stats.ai.total.avgLatencyMs)} />
+              <StatCard label={t('aiCallsRecent')} value={`${num(stats.ai.calls1d)} / ${num(stats.ai.calls7d)}`} />
+            </div>
+            {([[t('aiByModel'), stats.ai.byModel], [t('aiByFeature'), stats.ai.byFeature]] as const).map(
+              ([title, rows]) => rows.length > 0 && (
+                <div key={title} className="card">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">{title}</h3>
+                  <ul className="space-y-2">
+                    {rows.map(r => (
+                      <li key={r.key} className="text-sm">
+                        <div className="flex justify-between gap-2">
+                          <span className="text-gray-700 font-medium truncate">{r.key}</span>
+                          <span className="text-gray-500 tabular-nums shrink-0">{num(r.calls)}</span>
+                        </div>
+                        <div className="flex justify-between gap-2 text-[11px] text-gray-400 tabular-nums mt-0.5">
+                          <span>{r.successRate}% · {ms(r.avgLatencyMs)}</span>
+                          <span>{usd(r.costUsd)} · {num(r.tokens)} tok</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ),
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-gray-400">{t('aiNoData')}</p>
+        )}
+        <p className="text-[11px] text-gray-400">{t('aiHint')}</p>
       </section>
 
       {/* 통계 */}

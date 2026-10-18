@@ -1303,7 +1303,19 @@
     "stickiness": "끈적임 (DAU/MAU)",
     "recordingRate": "7일 기록 지속률",
     "recordsPerActive": "활성자당 기록 수(7일)",
-    "retentionHint": "기록 작성을 활동 신호로 본 추정치입니다. 활성 사용자는 해당 기간에 기록을 남긴 반려동물 소유자 기준."
+    "retentionHint": "기록 작성을 활동 신호로 본 추정치입니다. 활성 사용자는 해당 기간에 기록을 남긴 반려동물 소유자 기준.",
+    "aiTitle": "AI 사용/비용",
+    "aiCalls": "호출 (30일)",
+    "aiCallsRecent": "호출 (1일/7일)",
+    "aiSuccess": "성공률",
+    "aiCost": "비용 (30일)",
+    "aiTokens": "토큰 (30일)",
+    "aiLatency": "평균 지연",
+    "aiByModel": "모델별",
+    "aiByFeature": "기능별",
+    "aiCostUnknown": "단가 미설정",
+    "aiNoData": "아직 기록된 AI 호출이 없습니다.",
+    "aiHint": "ai_events 텔레메트리 기준. 비용은 단가가 설정된 모델만 합산되며, 단가 미설정 모델은 '—'로 표시됩니다."
   },
   "quickLog": {
     "sectionTitle": "오늘의 기록",
