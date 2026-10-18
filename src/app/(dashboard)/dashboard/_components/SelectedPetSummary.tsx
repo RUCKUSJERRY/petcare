@@ -17,6 +17,7 @@ import { AchievementShareButton } from '@/components/ui/AchievementShareButton'
 import { pickShareableAchievement } from '@/lib/achievement'
 import { petMood, petSpeech } from '@/lib/petMood'
 import { computeTodayCare } from '@/lib/todayCare'
+import { invalidateRecordCaches } from '@/lib/queryInvalidation'
 import type { CareAlert, Pet } from '@/types'
 
 /**
@@ -55,16 +56,10 @@ export function SelectedPetSummary({
   const pet = pets.find(p => p.id === selectedPetId)
   if (!pet) return null
 
-  const afterRecord = () => {
-    qc.invalidateQueries({ queryKey: ['today-timeline', pet.id] })
-    qc.invalidateQueries({ queryKey: ['record-feed', pet.id] })
-    qc.invalidateQueries({ queryKey: ['care-schedule'] })
-    // 이 카드의 표정·말풍선·'오늘 돌봄 완료' 리본은 ['today-log'·'today-walk', pet.id] 에서
-    // 파생한다 — 상세 입력 모달(밥·물·배변·체중 등)로 기록해도 즉시 갱신되도록 함께 무효화한다.
-    // (다른 기록 경로와 동일 기준. 예전엔 안쪽 RecordForm 의 광범위 무효화에 우연히 의존했다.)
-    qc.invalidateQueries({ queryKey: ['today-log', pet.id] })
-    qc.invalidateQueries({ queryKey: ['today-walk', pet.id] })
-  }
+  // 상세 입력 모달(밥·물·배변·체중 등)로 기록해도 이 카드의 표정·말풍선·'오늘 돌봄 N/4'(today-log)와
+  // 피드·예정·생활패턴·주간/월간이 즉시 갱신되도록 공용 기록 캐시를 무효화한다(단일 출처).
+  // 산책 체크(today-walk)는 기록으로 바뀌지 않으므로 넣지 않는다 — 산책 로그 경로가 따로 무효화한다.
+  const afterRecord = () => invalidateRecordCaches(qc, pet.id)
 
   const age = calcPetAge(pet.birth_year, pet.birth_month, pet.species)
   // D-day 계산은 KST '오늘' 기준으로 통일한다. (인자를 비우면 기기 로컬 시간대로 계산돼,

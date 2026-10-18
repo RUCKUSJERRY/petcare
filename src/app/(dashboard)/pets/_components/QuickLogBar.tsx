@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { careCategoryIcon } from '@/lib/utils'
 import { CATEGORY_GROUPS, CATEGORY_CONFIG } from '@/lib/records'
 import { logDailyRecord } from '@/lib/careActions'
+import { invalidateRecordCaches } from '@/lib/queryInvalidation'
 import { useTodayLog } from '@/hooks/useTodayActivity'
 import type { RecordCategory } from '@/types'
 
@@ -74,26 +75,9 @@ export function QuickLogBar({
     else stat.set(r.category, { count: 1, last: r.event_at })
   }
 
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['today-log', petId] })
-    qc.invalidateQueries({ queryKey: ['today-timeline', petId] })
-    qc.invalidateQueries({ queryKey: ['record-feed', petId] })
-    // '전체 아이'(null 스코프) 타임라인·피드도 함께 갱신 — 일정 '오늘' 탭과 홈(선택 없음)에서
-    // TodayTimeline/RecordFeed 가 petId=null 로 쓰이는데, 특정 아이로 원탭 기록하면 이 캐시가
-    // 남아 최대 60초간 새 기록이 안 보였다(다른 기록 경로와 동일하게 null 키까지 무효화).
-    qc.invalidateQueries({ queryKey: ['today-timeline', null] })
-    qc.invalidateQueries({ queryKey: ['record-feed', null] })
-    qc.invalidateQueries({ queryKey: ['care-schedule'] })
-    if (petId) {
-      // 홈 생활 패턴 카드(최근 14일 추이·공백)도 새 기록 즉시 반영되도록 갱신
-      qc.invalidateQueries({ queryKey: ['life-pattern', petId] })
-      // 홈 주간 리포트(7일 활동·성장 레벨)·월간 회고도 이 기록을 집계원으로 쓴다 — 함께 무효화해야
-      // 원탭 기록 직후 옛값(레벨·활동 합계)이 staleTime 만큼 남지 않는다. (키 접두 매칭으로
-      // ['monthly-recap', petId, 시작일] 도 함께 무효화됨.)
-      qc.invalidateQueries({ queryKey: ['weekly-report', petId] })
-      qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
-    }
-  }
+  // 공용 기록 캐시 무효화 — 원탭 저장·되돌리기 양쪽에서 쓴다. 집합은 queryInvalidation 단일 출처.
+  // (아이 상세의 카드 전용 키 pet-streak·pet-care-points 는 onLogged 로 그 화면이 덧붙인다.)
+  const invalidate = () => invalidateRecordCaches(qc, petId)
 
   // 최근 되돌리기 토스트를 몇 개까지 쌓아둘지 — 연속 원탭을 각각 되돌릴 수 있게 하되,
   // 화면을 덮지 않도록 상한을 둔다. 상한을 넘으면 가장 오래된 것부터 흘려보낸다.

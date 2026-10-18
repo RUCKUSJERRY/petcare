@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { logManualWalk } from '@/lib/careActions'
+import { invalidateWalkCaches } from '@/lib/queryInvalidation'
 
 /**
  * 오늘 산책 원탭 기록 액션 + 선택 시트('지금 시작 GPS' / '산책했어요 기록만').
@@ -38,17 +39,9 @@ export function WalkQuickLog({
     const { error } = await logManualWalk(supabase, petId)
     setBusy(false)
     setSheet(false)
-    if (!error) {
-      qc.invalidateQueries({ queryKey: ['today-walk', petId] })
-      qc.invalidateQueries({ queryKey: ['weekly-report', petId] })
-      // 수동 산책도 산책 목록(mine/shared)에 남으므로 목록 캐시를 무효화한다(['walks',...] 프리픽스).
-      qc.invalidateQueries({ queryKey: ['walks'] })
-      qc.invalidateQueries({ queryKey: ['walk-goal'] })
-      // 회고 거리 합산 반영 (산책 저장 경로와 동일 기준)
-      qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
-      // 아이 상세 성장 레벨(PetCharacterCard)은 산책 수도 반영 — 저장·삭제 경로와 동일 기준.
-      qc.invalidateQueries({ queryKey: ['pet-care-points', petId] })
-    }
+    // 수동 산책도 저장·삭제 경로와 완전히 같은 캐시(목록·목표·오늘 산책·주간·월간·성장레벨)를
+    // 무효화해야 홈 요약·주간/월간·성장 레벨이 즉시 반영된다 — 세 경로 공통의 단일 출처를 쓴다.
+    if (!error) invalidateWalkCaches(qc, petId)
   }
 
   const btnCls = onP

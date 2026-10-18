@@ -10,6 +10,7 @@ import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useStickyBanner } from '@/contexts/StickyBannerContext'
 import { useTour } from '@/contexts/TourContext'
 import { cn } from '@/lib/utils'
+import { invalidateRecordCaches } from '@/lib/queryInvalidation'
 import { PetAvatar } from './PetAvatar'
 import { QuickLogBar } from '@/app/(dashboard)/pets/_components/QuickLogBar'
 import { RecordEntryModals } from '@/app/(dashboard)/pets/_components/RecordEntryModals'
@@ -44,11 +45,10 @@ export function QuickRecordFab() {
   // 비용 빠른입력 → 자세히 입력 전환 시 이미 고른 금액·항목·날짜를 전체 폼에 이어받게 한다.
   const [costDraft, setCostDraft] = useState<{ amount: string; category: RecordCategory; date: string } | null>(null)
 
-  const afterRecord = () => {
-    qc.invalidateQueries({ queryKey: ['today-timeline', selectedPetId] })
-    qc.invalidateQueries({ queryKey: ['record-feed', selectedPetId] })
-    qc.invalidateQueries({ queryKey: ['care-schedule'] })
-  }
+  // 상세 입력(직접·스캔) 저장 후 공용 기록 캐시 무효화. 예전엔 today-timeline·record-feed·
+  // care-schedule 만 손으로 나열해, 이 시트로 밥·물·배변을 기록하면 홈 '오늘 돌봄 N/4'·기분·연속
+  // (today-log)·생활패턴·주간리포트·월간회고가 최대 staleTime 동안 옛값으로 남았다 - 단일 출처로 교정.
+  const afterRecord = () => invalidateRecordCaches(qc, selectedPetId)
 
   // 시트가 열려 있는 동안 배경 스크롤 잠금 + Esc 닫기
   useEffect(() => {

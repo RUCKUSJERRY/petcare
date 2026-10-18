@@ -11,6 +11,7 @@ import type { Breed, Pet } from '@/types'
 import { ImagePicker } from '@/components/ui/ImagePicker'
 import { PetAvatar } from '@/components/ui/PetAvatar'
 import { deleteImageByUrl } from '@/lib/upload'
+import { invalidateRecordCaches } from '@/lib/queryInvalidation'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useUnsavedGuard } from '@/hooks/useUnsavedGuard'
 import { WeightSection } from '../_components/WeightSection'
@@ -134,17 +135,12 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     }
   }, [pet])
 
-  // 기록(원탭·직접·스캔) 후 이 아이의 오늘/피드/예정 캐시를 갱신
+  // 기록(원탭·직접·스캔) 후 이 아이의 오늘/피드/예정/생활패턴/주간/월간 등 공용 기록 캐시를 갱신하고,
+  // 이 화면의 캐릭터·성장 카드 전용 키(기분·연속·레벨)는 공용 집합에 없으므로 여기서 덧붙인다.
   const afterRecord = () => {
-    queryClient.invalidateQueries({ queryKey: ['today-timeline', params.id] })
-    queryClient.invalidateQueries({ queryKey: ['today-log', params.id] })
-    queryClient.invalidateQueries({ queryKey: ['record-feed', params.id] })
-    queryClient.invalidateQueries({ queryKey: ['care-schedule'] })
-    // 캐릭터·성장 카드(기분·연속·레벨)와 생활 패턴 카드도 이 페이지에서 기록하면 즉시 반영되도록
-    // 함께 무효화한다(카드 전용 키 + 공용 생활패턴 키).
+    invalidateRecordCaches(queryClient, params.id)
     queryClient.invalidateQueries({ queryKey: ['pet-streak', params.id] })
     queryClient.invalidateQueries({ queryKey: ['pet-care-points', params.id] })
-    queryClient.invalidateQueries({ queryKey: ['life-pattern', params.id] })
   }
 
   const handleSave = async () => {

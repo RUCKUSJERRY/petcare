@@ -14,6 +14,7 @@ import type { WalkPoint } from '@/types'
 import { WalkPhotoComposer } from '../_components/WalkPhotoComposer'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { deleteImageByUrl } from '@/lib/upload'
+import { invalidateWalkCaches } from '@/lib/queryInvalidation'
 import { useInterstitialAd } from '@/hooks/useInterstitialAd'
 import {
   saveWalkSession,
@@ -385,21 +386,8 @@ export default function WalkTrackPage() {
     }
     clearWalkSession() // 저장 완료 → 복구본 정리
     // 방금 저장한 산책이 앱 전반의 캐시(기본 staleTime 60s)에 즉시 반영되도록 무효화한다.
-    // (편집·삭제 경로는 이미 ['walks']를 무효화하는데, 최초 저장 경로만 누락돼 있어 목록·홈
-    //  요약·주간 리포트에서 새 산책이 최대 60초간 보이지 않았다.)
-    qc.invalidateQueries({ queryKey: ['walks'] }) // 목록(mine/shared) 프리픽스 매칭
-    qc.invalidateQueries({ queryKey: ['walk-goal'] }) // 이번 주 산책 목표 진행도
-    if (petId) {
-      qc.invalidateQueries({ queryKey: ['today-walk', petId] }) // 홈 '오늘의 돌봄' 산책 체크·기분
-      qc.invalidateQueries({ queryKey: ['weekly-report', petId] }) // 주간 리포트 활동 합계
-      // 지난달 회고 카드는 산책 거리를 합산한다. 편집·삭제 경로(walks/[id])는 이미 무효화하는데
-      // 최초 저장 경로만 누락돼, 새 산책이 회고 거리에 최대 60초간 반영되지 않았다.
-      qc.invalidateQueries({ queryKey: ['monthly-recap', petId] })
-      // 아이 상세의 성장 레벨 카드(PetCharacterCard)는 기록 수 + 산책 수로 레벨을 계산한다.
-      // 기록 경로만 이 키를 무효화하고 산책 경로들은 누락돼, 산책 직후 아이 상세를 열면
-      // 레벨/포인트가 최대 60초간 옛 산책 수를 반영했다 — 저장·삭제·수동 산책 3경로에 함께 추가.
-      qc.invalidateQueries({ queryKey: ['pet-care-points', petId] })
-    }
+    // 저장·삭제([id])·수동(WalkQuickLog) 세 경로가 정확히 같은 집합을 쓰도록 단일 출처를 호출한다.
+    invalidateWalkCaches(qc, petId)
     router.replace(`/walks/${(data as { id: string }).id}`)
   }
 
