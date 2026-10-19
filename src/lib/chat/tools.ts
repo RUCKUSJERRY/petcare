@@ -5,6 +5,10 @@ import type { RecordCategory } from '@/types'
 import { RECORD_CATEGORIES, DAILY_LOG_SET } from '@/lib/records'
 import { logManualWalk } from '@/lib/careActions'
 import { todayKST } from '@/lib/utils'
+import { summarizeWalks, type WalkLike } from '@/lib/walkStats'
+import { aggregateCostStats, type CostRecord } from '@/lib/costStats'
+import { computeUpcoming, type ScheduleRow } from '@/lib/schedule'
+import { formatWalkSummary, formatCostStats, formatUpcoming, formatRecentRecords, type RecentRecordRow } from './readTools'
 
 export type ChatToolPet = { id: string; name: string }
 
@@ -90,6 +94,78 @@ export function buildChatTools(supabase: SupabaseClient, pets: ChatToolPet[]) {
         const { error } = await logManualWalk(supabase, r.pet.id)
         if (error) return { ok: false, message: '산책 기록에 실패했어요.' }
         return { ok: true, petName: r.pet.name }
+      },
+    }),
+
+    // ── 읽기 툴(3단계) — 사용자의 실제 기록/통계에 근거해 답하기 위함 ──
+    // 모두 사용자 세션으로 조회하므로 RLS 로 본인 데이터만 읽는다. 집계는 테스트된 공용 lib 를,
+    // 표시는 순수 포매터(readTools)를 재사용한다. 결과 text 를 모델이 그대로 근거로 답한다.
+
+    getWalkSummary: tool({
+      description: '반려동물의 산책 요약(이번 주/이번 달/전체 횟수·거리)을 조회한다. "이번 주 산책 몇 번", "얼마나 걸었어" 등에 호출.',
+      inputSchema: z.object({ petName: z.string().optional().describe('반려동물 이름. 한 마리뿐이면 생략 가능') }),
+      execute: async ({ petName }) => {
+        const r = resolvePet(petName)
+        if ('error' in r) return { ok: false, message: r.error }
+        const { data, error } = await supabase
+          .from('walks').select('started_at, distance_m, duration_s').eq('pet_id', r.pet.id)
+        if (error) return { ok: false, message: '산책 기록을 불러오지 못했어요.' }
+        return { ok: true, text: formatWalkSummary(r.pet.name, summarizeWalks((data ?? []) as WalkLike[])) }
+      },
+    }),
+
+    getCostSummary: tool({
+      description: '반려동물의 연간 비용 요약(총액·지출 큰 항목)을 조회한다. "지난달/올해 병원비 얼마", "비용 얼마 썼어" 등에 호출.',
+      inputSchema: z.object({
+        petName: z.string().optional().describe('반려동물 이름. 한 마리뿐이면 생략 가능'),
+        year: z.number().optional().describe('연도(YYYY). 생략하면 올해'),
+      }),
+      execute: async ({ petName, year }) => {
+        const r = resolvePet(petName)
+        if ('error' in r) return { ok: false, message: r.error }
+        const today = todayKST()
+        const yr = Number.isInteger(year) ? (year as number) : Number(today.slice(0, 4))
+        const { data, error } = await supabase
+          .from('records').select('category, event_on, cost').eq('pet_id', r.pet.id).not('cost', 'is', null)
+        if (error) return { ok: false, message: '비용 기록을 불러오지 못했어요.' }
+        return { ok: true, text: formatCostStats(r.pet.name, aggregateCostStats((data ?? []) as CostRecord[], yr, today)) }
+      },
+    }),
+
+    getUpcomingCare: tool({
+      description: '반려동물의 다가오는 건강 관리 일정(접종·구충·심장사상충·건강검진 등)을 조회한다. "다음 접종 언제", "예정된 거 뭐 있어" 등에 호출.',
+      inputSchema: z.object({ petName: z.string().optional().describe('반려동물 이름. 한 마리뿐이면 생략 가능') }),
+      execute: async ({ petName }) => {
+        const r = resolvePet(petName)
+        if ('error' in r) return { ok: false, message: r.error }
+        const { data, error } = await supabase
+          .from('records').select('id, pet_id, category, title, event_on, next_due_on, recur_rule, created_at')
+          .eq('pet_id', r.pet.id)
+          .order('event_on', { ascending: false }).order('created_at', { ascending: false })
+        if (error) return { ok: false, message: '일정을 불러오지 못했어요.' }
+        const rows = (data ?? []) as (ScheduleRow & { created_at: string })[]
+        return { ok: true, text: formatUpcoming(r.pet.name, computeUpcoming(rows), todayKST()) }
+      },
+    }),
+
+    getRecentRecords: tool({
+      description: '반려동물의 최근 기록을 조회한다. "최근에 뭐 했어", "마지막 미용 언제" 등에 호출.',
+      inputSchema: z.object({
+        petName: z.string().optional().describe('반려동물 이름. 한 마리뿐이면 생략 가능'),
+        category: z.string().optional().describe('특정 종류만(예: 식사, 미용, 진료). 생략하면 전체'),
+        limit: z.number().optional().describe('개수(기본 7, 최대 20)'),
+      }),
+      execute: async ({ petName, category, limit }) => {
+        const r = resolvePet(petName)
+        if ('error' in r) return { ok: false, message: r.error }
+        const n = Number.isInteger(limit) ? Math.min(Math.max(limit as number, 1), 20) : 7
+        let q = supabase
+          .from('records').select('category, event_on, title, memo').eq('pet_id', r.pet.id)
+        if (category && CATSET.has(category)) q = q.eq('category', category)
+        const { data, error } = await q
+          .order('event_on', { ascending: false }).order('created_at', { ascending: false }).limit(n)
+        if (error) return { ok: false, message: '기록을 불러오지 못했어요.' }
+        return { ok: true, text: formatRecentRecords(r.pet.name, (data ?? []) as RecentRecordRow[]) }
       },
     }),
   }

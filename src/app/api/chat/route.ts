@@ -6,6 +6,7 @@ import { buildSystemPrompt, type ChatPetContext } from '@/lib/chat/context'
 import { buildChatTools } from '@/lib/chat/tools'
 import { todayKST, parseSettingInt } from '@/lib/utils'
 import { recordAiEvent } from '@/lib/ai/telemetry'
+import { retrieveGrounding, groundingText } from '@/lib/chat/grounding'
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
@@ -70,7 +71,13 @@ export async function POST(req: Request) {
   // 컨텍스트: 사용자의 반려동물 요약(멤버십 RLS 로 본인 아이만 조회됨). id 는 도구(기록 생성)에 필요.
   const { data: pets } = await supabase.from('pets').select('id, name, species, birth_year, birth_month')
   const petRows = (pets ?? []) as Array<{ id: string; name: string } & ChatPetContext>
-  const system = buildSystemPrompt(petRows as ChatPetContext[])
+
+  // 마지막 사용자 메시지 — RAG 근거 검색 + 대화 저장에 쓴다.
+  const lastMsg = messages[messages.length - 1]
+  const userText = lastMsg?.role === 'user' ? uiMessageText(lastMsg) : ''
+
+  // RAG 근거 주입(3단계): 질문과 관련된 앱 가이드 구절을 시스템 프롬프트에 덧붙여 답을 앱 정보에 정렬한다.
+  const system = buildSystemPrompt(petRows as ChatPetContext[]) + groundingText(retrieveGrounding(userText))
   const tools = buildChatTools(supabase, petRows.map(p => ({ id: p.id, name: p.name })))
 
   // 사용량 1건 기록(best-effort — 테이블 없거나 실패해도 대화는 진행)
@@ -78,8 +85,6 @@ export async function POST(req: Request) {
     .then(({ error }) => { if (error) console.error('[chat] usage insert failed', error) })
 
   // ── 대화 저장(2단계) — 모두 best-effort. 테이블 미적용/실패해도 스트리밍은 정상 진행 ──
-  const lastMsg = messages[messages.length - 1]
-  const userText = lastMsg?.role === 'user' ? uiMessageText(lastMsg) : ''
   if (threadId) {
     try {
       // 첫 사용자 메시지면 스레드 제목을 만든다(그 메시지 앞부분).
