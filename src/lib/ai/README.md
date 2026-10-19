@@ -1,141 +1,150 @@
 # petcare AI 아키텍처
 
-이 앱에 들어간 AI 기능을 한 장으로 정리한 문서. 세부는 각 하위 폴더 README 참고
-(`models/` `rag/` `agents/` `mcp/` `eval/`). 모든 핵심 로직은 순수 함수로 테스트 고정,
-네트워크/DB 호출은 얇게 분리, 비용/품질 수치는 추정 없이 측정하는 것을 공통 원칙으로 함.
+펫케어 앱에 들어간 AI 기능의 구현/학습/운영 테스트를 한 장으로 정리한 문서.
+핵심 로직은 순수 함수로 테스트 고정, 네트워크/DB 는 얇게 분리, 비용/품질은 추정 없이 측정하는 것이 공통 원칙임.
 
-## 1. 적용 기술 한눈에
+이 문서로 알 수 있는 것:
 
-| 영역 | 위치 | 확인 |
-|---|---|---|
-| 옵저버빌리티 / 비용 | `telemetry.ts` `cost.ts` `usage.ts` `stats.ts`, `ai_events` 테이블, `/admin` 패널 | `npx vitest run src/lib/ai` |
-| LLM 평가(Eval) | `eval/` (OCR 추출), `rag/evalRetrieval.ts` (검색) | `npm run eval:ocr`, `npm run rag:eval` |
-| 멀티모델 / 오픈소스 LLM | `models/registry.ts` `models/routing.ts` | `npm run eval:ocr -- --live` |
-| RAG(검색 증강) | `rag/` (코퍼스/청킹/BM25/벡터/RRF/리랭킹) | `npm run rag:demo`, `npm run rag:eval` |
-| 멀티에이전트 오케스트레이션 | `agents/` | `npm run agents:demo` |
-| MCP(에이전트 프로토콜) | `mcp/`, `/api/mcp` (공개 지식 + 토큰 인증 시 개인 데이터) | `npm run mcp:demo`, `npm run smoke` |
-| 실제 챗봇 연결 | `chat/` (`route.ts` `tools.ts` `grounding.ts` `readTools.ts`) | `/chat` 화면, `/api/chat` |
-| 운영 라이브 점검(관리자) | `/api/admin/ai/health`, `/api/admin/ai/rag`, `/api/admin/ai/agents` | 5절 참고 |
-
-기반: Vercel AI SDK(`ai`), OpenAI 호환 어댑터(`@ai-sdk/openai-compatible`), Supabase. 비밀키는 env 에만 둠.
-
-오프라인 vs 온라인(중요): 위 '확인'의 테스트/데모 CLI 는 일부러 키 없이 결정적으로 돌게 만든 것임
-(CI 통과용). 반대로 운영 경로(`/api/chat`, `/api/medical/ocr`, `/api/mcp`, `/api/admin/*`)는 env 에
-모델 키가 있으면 실제 모델로 온라인 동작함. 운영환경에서 직접 확인하는 방법은 아래 6절 참고.
-
-## 2. 기술별 구현 방식과 확인 방법
-
-### 2.1 옵저버빌리티 / 비용
-- 구현: 완료된 LLM 호출 1건을 `ai_events` 1행으로 남김(provider/model/토큰/지연/비용/성공/트레이스ID).
-  토큰 정규화(`usage.ts`)는 provider 3형태(AI SDK/OpenAI/Gemini)를 하나로 모으고, 비용(`cost.ts`)은
-  토큰 x 단가로 계산하되 단가 미상이면 `null`(날조 금지). 집계(`stats.ts`)는 provider/model/feature 별
-  호출수/성공률/비용/지연. 챗/OCR 라우트가 best-effort 로 기록하고 `/admin` 이 보여줌.
-- 확인: `npx vitest run src/lib/ai/cost.test.ts src/lib/ai/usage.test.ts src/lib/ai/telemetry.test.ts src/lib/ai/stats.test.ts`.
-  실데이터는 챗/스캔 사용 후 `/admin` 의 'AI 사용/비용' 패널.
-
-### 2.2 LLM 평가(Eval)
-- 구현: 두 평가. (1) OCR 구조화추출 - 레코드 정렬(greedy) 후 레코드 P/R/F1 + 필드 정확도
-  (`eval/ocrScore.ts`), 합성 골드셋(`eval/dataset/ocr.json`), 예측기만 바꿔 끼우는 러너
-  (`eval/runOcrEval.ts`), 실제 모델 예측기(`eval/livePredictor.ts`). (2) 검색 품질 - recall@k/
-  precision@k/MRR/nDCG(`rag/evalRetrieval.ts`), 질의>관련문서 라벨셋(`rag/dataset/retrieval.json`).
-- 확인: `npm run eval:ocr` (오프라인 고정 스냅샷 채점), `npm run rag:eval` (현재 lexical recall@5 약 83%).
-  키가 있으면 `-- --live` 로 실제 모델 비교.
-
-### 2.3 멀티모델 / 오픈소스 LLM
-- 구현: Upstage/OpenAI/Groq/Together/OpenRouter/Ollama/Gemini 가 모두 OpenAI 호환 엔드포인트를
-  제공하는 점을 이용해 `createOpenAICompatible` 하나로 연결(`models/registry.ts`). 오픈소스 모델
-  (Llama/Qwen/Mistral)은 Groq/Together/Ollama/OpenRouter 경유로 같은 경로. env 에 키가 있는 provider 만
-  '구성됨'으로 잡힘. 작업(chat/extract/classify)별 선호순 라우팅 + 폴백 + override(`models/routing.ts`).
-  챗 provider 선택이 이 위에 얹혀 동작(기존 Upstage 단독 환경은 그대로 유지).
-- 확인: `npx vitest run src/lib/ai/models`. 비교는 `npm run eval:ocr -- --live`(모델별 F1/비용/지연 표).
-
-### 2.4 RAG(검색 증강)
-- 구현: 앱 큐레이션 콘텐츠(돌봄/사료/증상/계절 가이드)를 코퍼스로 문서화(`rag/corpus.ts`) > 문단 경계+
-  overlap 청킹(`rag/chunk.ts`) > 검색 세 축: BM25(한글 어절+bigram 토큰, `rag/lexical.ts`), 코사인
-  벡터(`rag/vector.ts`), 하이브리드 RRF 융합(`rag/fuse.ts`). 임베딩은 주입식이라 코어는 순수
-  (`rag/retriever.ts`), 실제 임베딩은 OpenAI 호환 embeddings 로 연결(`rag/embed.ts`). 하이브리드 상위
-  후보를 LLM 으로 재정렬하는 리랭킹(`rag/rerank.ts`).
-- 확인: `npx vitest run src/lib/ai/rag`. `npm run rag:demo "질의"` (lexical 검색 시연),
-  `npm run rag:eval [-- --live]` (단계별 recall@k).
-
-### 2.5 멀티에이전트 오케스트레이션
-- 구현: '케어 코디네이터'가 요청을 분석해 전문 에이전트(증상 트리아지/기록 분석/영양/일정)에 위임하고
-  결과를 합침(`agents/`). 각 에이전트는 역할/안전수칙/모델작업/근거 RAG 소스를 가짐(`agents/registry.ts`).
-  라우팅(키워드+LLM, `agents/router.ts`)과 제어 흐름(위임/합성/부분 실패 허용, `agents/orchestrator.ts`)은
-  주입식이라 모크로 결정적 테스트. 에이전트 간 메시지는 A2A 스타일 엔벨로프(`agents/types.ts`).
-- 확인: `npx vitest run src/lib/ai/agents`. `npm run agents:demo` (라우팅+위임+RAG 근거 end-to-end, 키 불필요).
-
-### 2.6 MCP(Model Context Protocol)
-- 구현: 위 RAG/트리아지를 MCP 툴로 노출(`mcp/tools.ts`)해 외부 MCP 클라이언트가 '우리 돌봄 지식'을 쓰게 함.
-  JSON-RPC 2.0 디스패처(initialize/tools.list/tools.call, 전송 무관, `mcp/server.ts`)와 HTTP 전송
-  (`/api/mcp`) 분리. 읽기전용 공개 지식만 다뤄 인증/PII 없음.
-- 확인: `npx vitest run src/lib/ai/mcp`. `npm run mcp:demo` (JSON-RPC 교환 시연). HTTP 는
-  `curl -s -X POST http://localhost:3000/api/mcp -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`.
-
-### 2.7 실제 챗봇 연결(위 조각들의 결합)
-- 구현: 챗 라우트(`chat/route.ts`)가 쓰기 툴(기록/산책 생성)에 더해 읽기 툴(산책/비용/일정/최근기록 조회,
-  RLS 로 본인 데이터만, 테스트된 통계 lib 재사용, `chat/tools.ts`+`chat/readTools.ts`)을 갖고, 마지막
-  질문으로 RAG 근거를 검색해 시스템 프롬프트에 주입(`chat/grounding.ts`). 모델은 멀티모델 라우팅으로
-  고르고, 모든 호출은 `ai_events` 로 계측됨.
-- 확인: `npx vitest run src/lib/chat`. 실제 동작은 `/chat`(모델 키 필요).
-
-## 3. 공통 설계 원칙
-- 순수/부수효과 분리: 알고리즘(채점/검색/라우팅/집계)은 순수 함수로 테스트 고정, DB/네트워크는 얇은 래퍼.
-- 측정 우선: 품질은 Eval(F1/recall@k), 비용/지연은 `ai_events`. 추정이 아니라 수치로 판단.
-- 날조 금지: 단가/토큰 미상은 `null` 로 남겨 '모름'과 '0' 을 구분.
-- 비파괴/게이팅: 기존 동작(Upstage 단독, 레이트리밋, 스트리밍)은 유지, 키 없는 환경은 오프라인 경로로 폴백.
-- 키는 env 에만, 외부 노출(MCP)은 공개 지식만.
-
-## 4. 이 앱에서 한 경험(학습 목표 대비)
-
-| 해보고 싶던 것 | 이 앱에서 한 것 |
+| 질문 | 바로 |
 |---|---|
-| 멀티에이전트 오케스트레이션 | 코디네이터 + 전문 에이전트 4종 위임/합성, A2A 엔벨로프, 부분 실패 허용 |
-| MCP / A2A 등 에이전트 프로토콜 | JSON-RPC MCP 서버로 툴 노출(`/api/mcp`), A2A 스타일 메시지 경계 설계 |
-| RAG 고도화(파싱/청킹/임베딩/벡터/하이브리드/리랭킹) | 코퍼스화 > 청킹 > BM25 + 벡터 + RRF 하이브리드 > LLM 리랭킹, recall@k 로 단계 검증 |
-| LLM 평가(Eval) 체계 | OCR 추출 채점(P/R/F1/필드) + 검색 recall@k, 데이터셋/러너/CLI |
-| LLM 옵저버빌리티 / 비용 관리 | `ai_events` 텔레메트리 + 토큰/비용 계산 + 관리자 패널 |
-| 다양한 오픈소스 LLM 활용 | OpenAI 호환 레지스트리로 상용+오픈소스를 한 틀에, 작업별 라우팅 |
+| 무슨 AI 기술을 구현했나 | 1절 |
+| 이 앱으로 뭘 배웠나 | 2절 |
+| 운영환경에서 어떻게 써보나 | 3절 |
 
-핵심 정리: '멀티모델 사용'은 부품(모델 라우팅), '오케스트레이션'은 조립 패턴(역할 분담 에이전트)이고,
-이 앱에선 둘을 합쳐 각 에이전트가 작업에 맞는 모델로 라우팅되는 구조까지 경험함. 또한 측정(옵저버빌리티)>
-평가(Eval)>선택(멀티모델)>검색 고도화(RAG)>조립(에이전트)>노출(MCP)의 순서로, 각 단계가 다음 단계의
-근거가 되도록 쌓음.
+세부는 하위 폴더 README 참고: `models/` `rag/` `agents/` `mcp/` `eval/`.
+기반: Vercel AI SDK(`ai`) + OpenAI 호환 어댑터(`@ai-sdk/openai-compatible`) + Supabase. 비밀키는 env 에만 둠.
 
-## 5. 운영환경 테스트(온라인)
+---
 
-테스트/데모(오프라인) 말고 '실제로 떠 있는 앱'에서 AI 가 온라인으로 도는지 확인하는 방법.
-먼저 env 에 모델 키를 설정함(최소 하나): `UPSTAGE_API_KEY` 또는 `OPENAI_API_KEY`(챗/추출),
-`OPENAI_API_KEY`(임베딩 = RAG hybrid), 선택적으로 `GROQ_API_KEY`/`OLLAMA_BASE_URL` 등. 상세는
-`.env.local.example` 의 '멀티 provider' 참고. `BASE_URL` 은 배포 주소 또는 로컬 `npm run dev`.
+## 1. 구현한 AI 기술
 
-### 5.1 스모크(공개 MCP, 자동)
+| # | 기술 | 한 일 | 핵심 위치 |
+|---|---|---|---|
+| 1 | 옵저버빌리티 / 비용 | LLM 호출 1건 = `ai_events` 1행(토큰/지연/비용/성공). 단가 미상은 null(날조 금지) | `telemetry.ts` `cost.ts` `usage.ts` `stats.ts` |
+| 2 | 평가(Eval) | OCR 추출 채점(P/R/F1/필드) + 검색 품질(recall@k/MRR/nDCG) | `eval/` `rag/evalRetrieval.ts` |
+| 3 | 멀티모델 / 오픈소스 | OpenAI 호환 하나로 7개 provider 연결(OSS 포함) + 작업별 라우팅 | `models/registry.ts` `models/routing.ts` |
+| 4 | RAG | 코퍼스 > 청킹 > BM25 + 벡터 + RRF 하이브리드 > LLM 리랭킹 | `rag/` |
+| 5 | 멀티에이전트 | 코디네이터가 전문 에이전트 4종에 위임/합성(A2A 엔벨로프) | `agents/` |
+| 6 | MCP | 기능을 JSON-RPC 툴로 노출(공개 지식 + 토큰 시 개인 데이터) | `mcp/` `/api/mcp` |
+| - | 실제 연결 | 챗봇에 RAG 근거 + 읽기/쓰기 툴 + 멀티모델 + 계측 결합 | `chat/` `/api/chat` |
+
+provider 매트릭스(모두 OpenAI 호환 경로):
+
+| 종류 | provider | 대표 모델 |
+|---|---|---|
+| 상용 | upstage, openai, gemini | solar-pro2, gpt-4o-mini, gemini-3.6-flash |
+| 오픈소스 | groq, together, openrouter, ollama | Llama 3.3, Qwen 2.5, Mistral 등 |
+
+---
+
+## 2. 이 앱으로 학습한 것
+
+| 해보고 싶던 것 | 이 앱에서 한 것 | 대표 산출물 |
+|---|---|---|
+| 멀티에이전트 오케스트레이션 | 코디네이터 + 전문 에이전트 4종, 부분 실패 허용 | `agents/orchestrator.ts` |
+| MCP / A2A 프로토콜 | JSON-RPC MCP 서버(공개+개인 토큰), A2A 메시지 경계 | `mcp/server.ts` `/api/mcp` |
+| RAG 고도화 | 파싱/청킹/임베딩/벡터/하이브리드/리랭킹 + recall@k 검증 | `rag/` |
+| LLM 평가 체계 | OCR/검색 두 축 채점 + 데이터셋/러너/CLI | `eval/` `rag/evalRetrieval.ts` |
+| 옵저버빌리티 / 비용 | `ai_events` + 토큰/비용 계산 + 관리자 패널 | `telemetry.ts` `/admin` |
+| 다양한 오픈소스 LLM | 레지스트리로 상용+OSS 한 틀, 작업별 라우팅 | `models/` |
+
+쌓은 순서(각 단계가 다음의 근거):
+
 ```
+측정(옵저버빌리티) > 평가(Eval) > 모델 선택(멀티모델) > 검색 고도화(RAG) > 조립(에이전트) > 노출(MCP)
+```
+
+한 줄 통찰: '멀티모델'은 부품(모델 라우팅), '오케스트레이션'은 조립 패턴(역할 분담 에이전트).
+이 앱은 둘을 합쳐 각 에이전트가 작업에 맞는 모델로 라우팅되는 구조까지 경험함.
+
+---
+
+## 3. 운영환경에서 써보기
+
+테스트/데모(1절, 5절)는 키 없이 도는 오프라인 경로임. 아래는 '실제로 떠 있는 앱'에서 온라인으로 확인하는 법.
+
+### 3.1 준비 (env 키 > 켜지는 기능)
+
+| env | 켜지는 기능 |
+|---|---|
+| `UPSTAGE_API_KEY` 또는 `OPENAI_API_KEY` | 챗봇 / OCR / 추출(실모델) |
+| `OPENAI_API_KEY` | 임베딩 > RAG 벡터/하이브리드 |
+| `GROQ_API_KEY` / `TOGETHER_API_KEY` / `OPENROUTER_API_KEY` / `OLLAMA_BASE_URL` | 오픈소스 모델 라우팅 |
+| (키 없음) | 공개 지식 / 오프라인 경로만 |
+
+상세는 `.env.local.example` 의 '멀티 provider'. `BASE_URL` 은 배포 주소 또는 로컬 `npm run dev`.
+
+### 3.2 엔드포인트
+
+| 경로 | 메서드 | 인증 | 용도 |
+|---|---|---|---|
+| `/chat` | 화면 | 로그인 | 챗봇(데이터 질문=읽기 툴, 일반 질문=RAG 근거) |
+| `/api/mcp` | POST | 없음 / Bearer | MCP 툴(공개 지식 / 토큰 시 개인 데이터) |
+| `/api/mcp/tokens` | POST/GET/DELETE | 로그인 | 개인 MCP 토큰 발급/목록/폐기 |
+| `/api/admin/ai/health?ping=1` | GET | 관리자 | provider/임베딩 구성 + 실모델 핑 |
+| `/api/admin/ai/rag` | POST | 관리자 | 라이브 검색(`mode: "hybrid"`) |
+| `/api/admin/ai/agents` | POST | 관리자 | 라이브 오케스트레이션(`live: true`) |
+| `/admin` | 화면 | 관리자 | AI 사용/비용 패널 |
+
+### 3.3 빠른 점검
+
+```
+# 공개 MCP 자동 점검(HTTP)
 BASE_URL=https://<배포주소> npm run smoke
-# 개인 데이터 툴까지: MCP_TOKEN=pck_... BASE_URL=... npm run smoke
-```
-공개 MCP(헬스/tools.list/tools.call)와, 토큰을 주면 개인 데이터 툴(get_my_pets 등)까지 HTTP 로 점검.
 
-### 5.2 MCP 공개 지식(curl)
-```
+# MCP 공개 지식 호출
 curl -s -X POST $BASE_URL/api/mcp -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_pet_care_knowledge","arguments":{"query":"양치"}}}'
+
+# 관리자: 실모델 연결/지연 확인 (관리자 로그인 쿠키 필요)
+curl -s "$BASE_URL/api/admin/ai/health?ping=1"
 ```
 
-### 5.3 개인 데이터 MCP(토큰)
-1. 로그인 상태에서 토큰 발급: `POST /api/mcp/tokens` (응답의 `token` 은 1회만 노출). 폐기는 `DELETE /api/mcp/tokens?id=...`.
-2. `Authorization: Bearer <token>` 로 `/api/mcp` 호출 시 `get_my_walk_summary`/`get_my_costs`/`get_my_upcoming_care` 노출.
-   데이터는 토큰 주인이 구성원인 반려동물로만 격리됨.
+### 3.4 개인 데이터 MCP (3단계)
 
-### 5.4 관리자 라이브 엔드포인트(실모델 호출, 관리자 로그인 필요)
-- `GET /api/admin/ai/health?ping=1` : 구성된 provider/임베딩 + 모델 핑(지연).
-- `POST /api/admin/ai/rag` `{ "query":"여름 산책", "mode":"hybrid" }` : 라이브 검색(hybrid 는 임베딩 키 필요).
-- `POST /api/admin/ai/agents` `{ "query":"...", "live":true }` : 라이브 멀티에이전트 오케스트레이션.
+```
+1) 로그인 상태에서  POST /api/mcp/tokens   > 응답의 token 은 1회만 노출(pck_...)
+2) MCP_TOKEN=pck_... BASE_URL=... npm run smoke   > 개인 데이터 툴까지 점검
+3) 외부 클라이언트는 Authorization: Bearer pck_... 로 /api/mcp 호출
+```
 
-### 5.5 챗봇
-`/chat` 에서 직접 대화. 데이터 질문("이번 주 산책 몇 번")은 읽기 툴, 일반 질문은 RAG 근거가 붙음.
-모든 호출은 `ai_events` 에 기록되어 `/admin` 의 'AI 사용/비용' 패널에서 토큰/비용/지연 확인 가능.
+데이터는 토큰 주인이 구성원인 반려동물(`pet_members`)로만 격리됨(타 사용자 차단).
+
+---
+
+## 4. 아키텍처 흐름
+
+```
+사용자 질문
+  |
+  +-- /chat      > RAG 근거주입(grounding) + 읽기/쓰기 툴(tools) + 멀티모델(models) > 답변
+  |
+  +-- /api/mcp   > MCP 툴 (공개 지식 / 토큰 시 개인 데이터)
+  |
+  +-- 코디네이터(agents) > 전문 에이전트 > RAG(rag) + 모델
+
+  [공통] 모든 LLM 호출 > ai_events(telemetry) > /admin 비용/품질 패널
+```
+
+---
+
+## 5. 테스트 / 품질
+
+| 영역 | 명령 |
+|---|---|
+| 전체 단위 테스트 (467건) | `npm test` |
+| OCR 추출 Eval | `npm run eval:ocr` ( `-- --live` 로 모델 비교) |
+| RAG 검색 Eval (recall@k) | `npm run rag:eval` ( `-- --live` ) |
+| RAG 검색 데모 | `npm run rag:demo "질의"` |
+| 멀티에이전트 데모 | `npm run agents:demo` |
+| MCP 데모 | `npm run mcp:demo` |
+| 운영 스모크 (HTTP) | `BASE_URL=... npm run smoke` |
+
+현재 lexical 검색 베이스라인 recall@5 약 83%. 임베딩 키가 있으면 `--live` 로 vector/hybrid/rerank 대비 확인.
+
+---
 
 ## 6. 남은 선택지(미구현)
-- pgvector 영속화: 현재 정적 코퍼스(약 50청크)는 인메모리로 충분. 대규모/사용자 문서 확장 시 도입.
+- pgvector 영속화: 정적 코퍼스(약 50청크)는 인메모리로 충분. 대규모/사용자 문서 확장 시 도입.
 - 단가 라이브 관리: `cost.ts` 기본 단가를 `app_settings` 로 옮겨 관리자 화면에서 갱신.
+- 토큰 발급 UI: 현재 `/api/mcp/tokens` API 만 있음. 프로필 화면에 발급/폐기 UI 추가 여지.
