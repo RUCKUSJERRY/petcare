@@ -13,10 +13,15 @@
 | 멀티모델 / 오픈소스 LLM | `models/registry.ts` `models/routing.ts` | `npm run eval:ocr -- --live` |
 | RAG(검색 증강) | `rag/` (코퍼스/청킹/BM25/벡터/RRF/리랭킹) | `npm run rag:demo`, `npm run rag:eval` |
 | 멀티에이전트 오케스트레이션 | `agents/` | `npm run agents:demo` |
-| MCP(에이전트 프로토콜) | `mcp/`, `/api/mcp` | `npm run mcp:demo` |
+| MCP(에이전트 프로토콜) | `mcp/`, `/api/mcp` (공개 지식 + 토큰 인증 시 개인 데이터) | `npm run mcp:demo`, `npm run smoke` |
 | 실제 챗봇 연결 | `chat/` (`route.ts` `tools.ts` `grounding.ts` `readTools.ts`) | `/chat` 화면, `/api/chat` |
+| 운영 라이브 점검(관리자) | `/api/admin/ai/health`, `/api/admin/ai/rag`, `/api/admin/ai/agents` | 5절 참고 |
 
 기반: Vercel AI SDK(`ai`), OpenAI 호환 어댑터(`@ai-sdk/openai-compatible`), Supabase. 비밀키는 env 에만 둠.
+
+오프라인 vs 온라인(중요): 위 '확인'의 테스트/데모 CLI 는 일부러 키 없이 결정적으로 돌게 만든 것임
+(CI 통과용). 반대로 운영 경로(`/api/chat`, `/api/medical/ocr`, `/api/mcp`, `/api/admin/*`)는 env 에
+모델 키가 있으면 실제 모델로 온라인 동작함. 운영환경에서 직접 확인하는 방법은 아래 6절 참고.
 
 ## 2. 기술별 구현 방식과 확인 방법
 
@@ -97,7 +102,40 @@
 평가(Eval)>선택(멀티모델)>검색 고도화(RAG)>조립(에이전트)>노출(MCP)의 순서로, 각 단계가 다음 단계의
 근거가 되도록 쌓음.
 
-## 5. 남은 선택지(미구현)
-- 사용자 데이터 MCP 툴: 인증(OAuth/토큰) + RLS 경유로 기록/통계를 MCP 로도 노출(공개 지식과 분리).
+## 5. 운영환경 테스트(온라인)
+
+테스트/데모(오프라인) 말고 '실제로 떠 있는 앱'에서 AI 가 온라인으로 도는지 확인하는 방법.
+먼저 env 에 모델 키를 설정함(최소 하나): `UPSTAGE_API_KEY` 또는 `OPENAI_API_KEY`(챗/추출),
+`OPENAI_API_KEY`(임베딩 = RAG hybrid), 선택적으로 `GROQ_API_KEY`/`OLLAMA_BASE_URL` 등. 상세는
+`.env.local.example` 의 '멀티 provider' 참고. `BASE_URL` 은 배포 주소 또는 로컬 `npm run dev`.
+
+### 5.1 스모크(공개 MCP, 자동)
+```
+BASE_URL=https://<배포주소> npm run smoke
+# 개인 데이터 툴까지: MCP_TOKEN=pck_... BASE_URL=... npm run smoke
+```
+공개 MCP(헬스/tools.list/tools.call)와, 토큰을 주면 개인 데이터 툴(get_my_pets 등)까지 HTTP 로 점검.
+
+### 5.2 MCP 공개 지식(curl)
+```
+curl -s -X POST $BASE_URL/api/mcp -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_pet_care_knowledge","arguments":{"query":"양치"}}}'
+```
+
+### 5.3 개인 데이터 MCP(토큰)
+1. 로그인 상태에서 토큰 발급: `POST /api/mcp/tokens` (응답의 `token` 은 1회만 노출). 폐기는 `DELETE /api/mcp/tokens?id=...`.
+2. `Authorization: Bearer <token>` 로 `/api/mcp` 호출 시 `get_my_walk_summary`/`get_my_costs`/`get_my_upcoming_care` 노출.
+   데이터는 토큰 주인이 구성원인 반려동물로만 격리됨.
+
+### 5.4 관리자 라이브 엔드포인트(실모델 호출, 관리자 로그인 필요)
+- `GET /api/admin/ai/health?ping=1` : 구성된 provider/임베딩 + 모델 핑(지연).
+- `POST /api/admin/ai/rag` `{ "query":"여름 산책", "mode":"hybrid" }` : 라이브 검색(hybrid 는 임베딩 키 필요).
+- `POST /api/admin/ai/agents` `{ "query":"...", "live":true }` : 라이브 멀티에이전트 오케스트레이션.
+
+### 5.5 챗봇
+`/chat` 에서 직접 대화. 데이터 질문("이번 주 산책 몇 번")은 읽기 툴, 일반 질문은 RAG 근거가 붙음.
+모든 호출은 `ai_events` 에 기록되어 `/admin` 의 'AI 사용/비용' 패널에서 토큰/비용/지연 확인 가능.
+
+## 6. 남은 선택지(미구현)
 - pgvector 영속화: 현재 정적 코퍼스(약 50청크)는 인메모리로 충분. 대규모/사용자 문서 확장 시 도입.
 - 단가 라이브 관리: `cost.ts` 기본 단가를 `app_settings` 로 옮겨 관리자 화면에서 갱신.

@@ -14,7 +14,8 @@
     "rag:demo": "node scripts/rag-demo.mjs",
     "rag:eval": "node scripts/rag-eval.mjs",
     "agents:demo": "node scripts/agents-demo.mjs",
-    "mcp:demo": "node scripts/mcp-demo.mjs"
+    "mcp:demo": "node scripts/mcp-demo.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.66",
