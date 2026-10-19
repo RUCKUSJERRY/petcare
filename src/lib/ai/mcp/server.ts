@@ -1,4 +1,5 @@
-import { MCP_TOOLS, getMcpTool } from './tools'
+import { buildMcpTools, getMcpTool } from './tools'
+import type { McpUserContext } from './userData'
 
 /**
  * MCP(Model Context Protocol) JSON-RPC 디스패처 (순수, 전송 무관).
@@ -34,15 +35,16 @@ function fail(id: JsonRpcRequest['id'], code: number, message: string): JsonRpcR
   return { jsonrpc: '2.0', id: id ?? null, error: { code, message } }
 }
 
-/** tools/list 결과(스키마 포함). 핸들러는 노출하지 않는다. */
-function toolList() {
-  return { tools: MCP_TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }
+/** tools/list 결과(스키마 포함). 핸들러는 노출하지 않는다. 인증 시 사용자 데이터 툴도 포함. */
+function toolList(ctx?: McpUserContext | null) {
+  return { tools: buildMcpTools(ctx).map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }
 }
 
 /**
  * 한 JSON-RPC 요청을 처리한다. 알림(notification: id 없음)에는 null 을 돌려줘 호출부가 응답을 생략하게 한다.
+ * ctx 가 있으면(Bearer 토큰 검증 성공) 그 사용자의 데이터 툴이 추가로 노출/호출된다.
  */
-export async function handleMcpRequest(req: JsonRpcRequest): Promise<JsonRpcResponse | null> {
+export async function handleMcpRequest(req: JsonRpcRequest, ctx?: McpUserContext | null): Promise<JsonRpcResponse | null> {
   if (!req || req.jsonrpc !== '2.0' || typeof req.method !== 'string') {
     return fail(req?.id ?? null, ERR.invalidRequest, 'invalid JSON-RPC request')
   }
@@ -63,10 +65,10 @@ export async function handleMcpRequest(req: JsonRpcRequest): Promise<JsonRpcResp
     case 'ping':
       return ok(req.id, {})
     case 'tools/list':
-      return ok(req.id, toolList())
+      return ok(req.id, toolList(ctx))
     case 'tools/call': {
       const name = typeof req.params?.name === 'string' ? req.params.name : ''
-      const tool = getMcpTool(name)
+      const tool = getMcpTool(name, ctx)
       if (!tool) return fail(req.id, ERR.invalidParams, `unknown tool: ${name || '(none)'}`)
       const args = (req.params?.arguments as Record<string, unknown>) ?? {}
       try {

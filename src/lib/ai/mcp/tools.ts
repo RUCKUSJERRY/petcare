@@ -1,6 +1,7 @@
 import { buildRagIndex, type RagIndex } from '../rag/retriever'
 import { makeGroundedMockRunner } from '../agents/runner'
 import { getAgent } from '../agents/registry'
+import { type McpUserContext, myPetsText, myWalkSummaryText, myCostsText, myUpcomingCareText } from './userData'
 
 /**
  * MCP 툴 — petcare 의 '공개 반려동물 지식'을 외부 MCP 클라이언트(Claude Desktop 등)에 노출한다.
@@ -34,7 +35,8 @@ const asInt = (v: unknown, def: number): number => {
   return Number.isFinite(n) && n > 0 ? Math.min(n, 10) : def
 }
 
-export const MCP_TOOLS: McpToolDef[] = [
+/** 공개 지식 툴(인증 불필요). 누구나 쓸 수 있는 큐레이션 콘텐츠 기반. */
+export const PUBLIC_TOOLS: McpToolDef[] = [
   {
     name: 'search_pet_care_knowledge',
     description: '반려동물 돌봄 지식(양치·사료·증상·계절 케어 등)을 큐레이션 코퍼스에서 검색해 관련 구절과 출처 링크를 돌려준다.',
@@ -106,6 +108,53 @@ export const MCP_TOOLS: McpToolDef[] = [
   },
 ]
 
-export function getMcpTool(name: string): McpToolDef | undefined {
-  return MCP_TOOLS.find(t => t.name === name)
+/** 하위호환: 기존 참조는 공개 툴 집합을 가리킨다. */
+export const MCP_TOOLS = PUBLIC_TOOLS
+
+/**
+ * 사용자 데이터 툴(인증 필요). 토큰 주인(ctx.userId)이 구성원인 반려동물로만 엄격히 범위 제한
+ * (userData 모듈이 pet_members 기준으로 격리). ctx 없으면 노출되지 않는다.
+ */
+function userTools(ctx: McpUserContext): McpToolDef[] {
+  return [
+    {
+      name: 'get_my_pets',
+      description: '토큰 주인의 반려동물 목록을 돌려준다.',
+      inputSchema: { type: 'object', properties: {} },
+      handler: () => myPetsText(ctx),
+    },
+    {
+      name: 'get_my_walk_summary',
+      description: '내 반려동물의 산책 요약(이번 주/이번 달/전체)을 돌려준다.',
+      inputSchema: { type: 'object', properties: { petName: { type: 'string', description: '선택: 아이 이름(여러 마리면 필요)' } } },
+      handler: args => myWalkSummaryText(ctx, asString(args.petName) || undefined),
+    },
+    {
+      name: 'get_my_costs',
+      description: '내 반려동물의 연간 비용 요약(총액·지출 큰 항목)을 돌려준다.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          petName: { type: 'string', description: '선택: 아이 이름' },
+          year: { type: 'integer', description: '선택: 연도(기본 올해)' },
+        },
+      },
+      handler: args => myCostsText(ctx, asString(args.petName) || undefined, typeof args.year === 'number' ? args.year : undefined),
+    },
+    {
+      name: 'get_my_upcoming_care',
+      description: '내 반려동물의 다가오는 건강 관리 일정(접종·구충·심장사상충 등)을 돌려준다.',
+      inputSchema: { type: 'object', properties: { petName: { type: 'string', description: '선택: 아이 이름' } } },
+      handler: args => myUpcomingCareText(ctx, asString(args.petName) || undefined),
+    },
+  ]
+}
+
+/** 요청 컨텍스트에 맞는 전체 툴 목록(공개 + 인증 시 사용자 데이터). */
+export function buildMcpTools(ctx?: McpUserContext | null): McpToolDef[] {
+  return ctx ? [...PUBLIC_TOOLS, ...userTools(ctx)] : PUBLIC_TOOLS
+}
+
+export function getMcpTool(name: string, ctx?: McpUserContext | null): McpToolDef | undefined {
+  return buildMcpTools(ctx).find(t => t.name === name)
 }

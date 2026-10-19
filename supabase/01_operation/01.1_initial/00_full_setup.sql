@@ -2,7 +2,7 @@
 --  00_full_setup.sql  — 신규 DB 통합 세팅본 (자동 생성)
 --  ⚠ 직접 수정하지 마세요. supabase/02_final/* 를 수정한 뒤
 --     `npm run db:build` 로 재생성합니다.
---  생성 시각: 2026-10-16T16:27:44.004Z
+--  생성 시각: 2026-10-19T02:33:41.766Z
 -- =============================================================
 
 
@@ -224,6 +224,19 @@ create table if not exists public.map_favorites (
   place_url   text,
   created_at  timestamptz not null default now(),
   unique (user_id, place_id)
+);
+
+-- ── 02.1_table/mcp_tokens.sql ──
+-- mcp_tokens : 개인 MCP 액세스 토큰 (외부 MCP 클라이언트가 본인 데이터 툴을 쓰기 위한 인증)
+-- 토큰 평문은 저장하지 않고 sha256 해시만 보관한다. 발급 시 1회만 평문을 돌려준다.
+create table if not exists public.mcp_tokens (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null,
+  token_hash   text not null unique,     -- sha256(평문) hex
+  label        text,                     -- 사용자 식별용 메모(예: "Claude Desktop")
+  created_at   timestamptz not null default now(),
+  last_used_at timestamptz,
+  revoked      boolean not null default false
 );
 
 -- ── 02.1_table/notifications.sql ──
@@ -672,6 +685,15 @@ alter table public.map_favorites add constraint map_favorites_user_id_fkey
   foreign key (user_id) references public.profiles(id) on delete cascade;
 
 create index if not exists idx_map_fav_user on public.map_favorites (user_id, created_at desc);
+
+-- ── 02.2_index_fk/mcp_tokens.sql ──
+-- mcp_tokens : 외래키 + 인덱스
+alter table public.mcp_tokens drop constraint if exists mcp_tokens_user_id_fkey;
+alter table public.mcp_tokens add constraint mcp_tokens_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
+-- 토큰 검증(해시 조회)은 token_hash unique 인덱스가 담당. 사용자별 목록 조회용 인덱스 추가.
+create index if not exists idx_mcp_tokens_user on public.mcp_tokens (user_id, created_at desc);
 
 -- ── 02.2_index_fk/notifications.sql ──
 -- notifications : 외래키 + 인덱스
@@ -1466,6 +1488,18 @@ drop policy if exists "map_fav_delete_own" on public.map_favorites;
 create policy "map_fav_select_own" on public.map_favorites for select using (auth.uid() = user_id);
 create policy "map_fav_insert_own" on public.map_favorites for insert with check (auth.uid() = user_id);
 create policy "map_fav_delete_own" on public.map_favorites for delete using (auth.uid() = user_id);
+
+-- ── 02.6_policy/mcp_tokens.sql ──
+-- mcp_tokens : RLS (본인 토큰만 관리). 토큰 검증(해시 조회)은 service role 로 RLS 우회해 수행한다.
+alter table public.mcp_tokens enable row level security;
+drop policy if exists "mcp_tokens_select_own" on public.mcp_tokens;
+drop policy if exists "mcp_tokens_insert_own" on public.mcp_tokens;
+drop policy if exists "mcp_tokens_update_own" on public.mcp_tokens;
+drop policy if exists "mcp_tokens_delete_own" on public.mcp_tokens;
+create policy "mcp_tokens_select_own" on public.mcp_tokens for select using (auth.uid() = user_id);
+create policy "mcp_tokens_insert_own" on public.mcp_tokens for insert with check (auth.uid() = user_id);
+create policy "mcp_tokens_update_own" on public.mcp_tokens for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "mcp_tokens_delete_own" on public.mcp_tokens for delete using (auth.uid() = user_id);
 
 -- ── 02.6_policy/notifications.sql ──
 -- notifications : RLS (수신자 본인만 조회/수정/삭제, insert는 트리거로만)

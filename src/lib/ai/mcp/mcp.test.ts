@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { handleMcpRequest, SERVER_INFO } from './server'
-import { MCP_TOOLS, getMcpTool } from './tools'
+import { MCP_TOOLS, getMcpTool, buildMcpTools } from './tools'
+import type { McpUserContext } from './userData'
+
+// 인증 컨텍스트 모크 — 툴 '목록 노출' 게이팅만 검증(핸들러 실행=DB 는 통합 테스트 영역).
+const fakeCtx: McpUserContext = { userId: 'u1', admin: {} as unknown as SupabaseClient }
 
 describe('MCP tools', () => {
   it('세 툴을 노출하고 각 필수 필드/스키마를 갖는다', () => {
@@ -82,6 +87,33 @@ describe('handleMcpRequest (JSON-RPC)', () => {
     const r = res!.result as { isError: boolean }
     expect(r.isError).toBe(true)
     expect(res!.error).toBeUndefined()
+  })
+
+  it('인증 컨텍스트 없으면 사용자 데이터 툴은 노출 안 됨', async () => {
+    const res = await handleMcpRequest({ jsonrpc: '2.0', id: 7, method: 'tools/list' })
+    const names = (res!.result as { tools: { name: string }[] }).tools.map(t => t.name)
+    expect(names).not.toContain('get_my_pets')
+    expect(names).toHaveLength(3)
+  })
+
+  it('인증 컨텍스트 있으면 공개 + 사용자 데이터 툴 노출', async () => {
+    const res = await handleMcpRequest({ jsonrpc: '2.0', id: 8, method: 'tools/list' }, fakeCtx)
+    const names = (res!.result as { tools: { name: string }[] }).tools.map(t => t.name)
+    expect(names).toContain('get_my_pets')
+    expect(names).toContain('get_my_walk_summary')
+    expect(names.length).toBe(7)
+  })
+
+  it('getMcpTool 은 ctx 없으면 사용자 툴을 못 찾고, ctx 있으면 찾음', () => {
+    expect(getMcpTool('get_my_pets')).toBeUndefined()
+    expect(getMcpTool('get_my_pets', fakeCtx)).toBeDefined()
+    expect(buildMcpTools(null)).toHaveLength(3)
+    expect(buildMcpTools(fakeCtx)).toHaveLength(7)
+  })
+
+  it('ctx 없이 사용자 툴 호출 시도 > invalidParams(노출 안 되므로 미지정 툴 취급)', async () => {
+    const res = await handleMcpRequest({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'get_my_pets' } })
+    expect(res!.error!.code).toBe(-32602)
   })
 
   it('모르는 method > methodNotFound', async () => {
