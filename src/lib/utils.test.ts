@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   calcPetAge,
+  calcHumanAge,
   daysUntil,
   ddayBadge,
   elapsedBadge,
@@ -95,6 +96,52 @@ describe('calcPetAge', () => {
     expect(cat.lifeStage).toBe('성묘')
     // 월만 미상(연도 있음)이면 1월로 간주해 정상 계산
     expect(calcPetAge(2024, null, 'dog').unknown).toBe(false)
+  })
+})
+
+describe('calcHumanAge', () => {
+  it('0 이하 개월은 0살', () => {
+    expect(calcHumanAge(0, 'dog')).toBe(0)
+    expect(calcHumanAge(-5, 'cat')).toBe(0)
+  })
+
+  it('첫 해는 0~15살로 보간(6개월≈8)', () => {
+    expect(calcHumanAge(6, 'dog')).toBe(8)   // 15*0.5=7.5 → 8
+    expect(calcHumanAge(12, 'dog')).toBe(15) // 1살=15
+    expect(calcHumanAge(12, 'cat')).toBe(15)
+  })
+
+  it('두 번째 해는 15~24살로 보간(2살=24)', () => {
+    expect(calcHumanAge(18, 'dog')).toBe(20) // 15+9*0.5=19.5 → 20
+    expect(calcHumanAge(24, 'dog')).toBe(24)
+    expect(calcHumanAge(24, 'cat')).toBe(24)
+  })
+
+  it('2살 이후 강아지는 크기별 가중(소형+4/중형+5/대형+6)', () => {
+    // 10살 = 24 + perYear*8
+    expect(calcHumanAge(120, 'dog', '소형')).toBe(56)
+    expect(calcHumanAge(120, 'dog', '중형')).toBe(64)
+    expect(calcHumanAge(120, 'dog', '대형')).toBe(72)
+    // 크기 미상 강아지는 중형(+5) 기준
+    expect(calcHumanAge(120, 'dog')).toBe(64)
+    expect(calcHumanAge(120, 'dog', null)).toBe(64)
+  })
+
+  it('고양이는 2살 이후 +4(크기 무시) — 통용 환산표와 일치', () => {
+    expect(calcHumanAge(120, 'cat')).toBe(56)       // 10살 = 24 + 4*8
+    expect(calcHumanAge(180, 'cat')).toBe(76)       // 15살 = 24 + 4*13
+    expect(calcHumanAge(240, 'cat')).toBe(96)       // 20살 = 24 + 4*18
+    // 크기를 넘겨도 고양이는 영향 없음
+    expect(calcHumanAge(120, 'cat', '대형')).toBe(56)
+  })
+
+  it('나이가 많을수록 사람 나이도 단조 증가', () => {
+    let prev = -1
+    for (const m of [0, 6, 12, 18, 24, 36, 60, 120, 180]) {
+      const h = calcHumanAge(m, 'dog', '중형')
+      expect(h).toBeGreaterThanOrEqual(prev)
+      prev = h
+    }
   })
 })
 

@@ -1062,6 +1062,7 @@
     "birthdayValue": "{month}월 {day}일",
     "birthdayDday": "🎂 생일 {dday}",
     "together": "함께한 지 {days}일째",
+    "humanAge": "사람 나이 약 {years}살",
     "gender": "성별",
     "genderMale": "♂ 수컷",
     "genderFemale": "♀ 암컷",

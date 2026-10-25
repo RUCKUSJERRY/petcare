@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { calcPetAge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, ddayBadge, todayKST } from '@/lib/utils'
+import { calcPetAge, calcHumanAge, lifeStageColor, stageLabel, nextAnniversary, daysTogether, ddayBadge, todayKST } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -314,6 +314,13 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
             </p>
             {pet.weight_kg && <p className="text-sm text-gray-400 mt-0.5">{pet.weight_kg}kg</p>}
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {/* 사람 나이 환산 — 생년이 있을 때만. 강아지는 품종 크기(소형/중형/대형)를 반영한다.
+                  '지금 몇 살쯤일까'를 직관적으로 보여줘 건강 관리 감각을 돕는 정보성 칩('약'=근삿값). */}
+              {!age.unknown && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
+                  <span aria-hidden>👤</span> {t('humanAge', { years: calcHumanAge(age.months, pet.species, pet.breed?.size_category) })}
+                </span>
+              )}
               {pet.birth_month && pet.birth_day && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 font-medium">
                   {t('birthday')} {t('birthdayValue', { month: pet.birth_month, day: pet.birth_day })}

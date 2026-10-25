@@ -1,4 +1,4 @@
-import type { PetAge, Species } from '@/types'
+import type { PetAge, SizeCategory, Species } from '@/types'
 
 /**
  * 생년월로부터 현재 개월 수, 나이 단계 등을 계산
@@ -43,6 +43,36 @@ export function calcPetAge(
 /** 생애단계 배지 라벨 — 나이 미상이면 '미상'. */
 export function stageLabel(age: PetAge): PetAge['lifeStage'] | '미상' {
   return age.unknown ? '미상' : age.lifeStage
+}
+
+/**
+ * 반려동물 나이를 '사람 나이'로 환산한 근삿값(살). 생애 초기에 압축적으로 늙는 특성을 반영한
+ * 수의학 통용 곡선을 쓴다(널리 퍼진 '×7' 환산은 부정확해 쓰지 않는다).
+ *
+ * - 첫 1년: 사람 약 15살에 해당(0~12개월을 0~15살로 선형 보간)
+ * - 두 번째 해: +9살(12~24개월을 15~24살로 선형) > 1살=15, 2살=24
+ * - 이후 매년: 종/크기별 가중(강아지는 대형일수록 빨리 늙는다)
+ *     고양이 +4 / 소형견 +4 / 중형견(기본) +5 / 대형견 +6
+ *
+ * 크기 미상 강아지는 중형(+5) 기준으로 본다. 개체차가 있는 일반 정보라 표시에는 '약'을 붙인다.
+ * 순수 함수(개월 수만 입력)라 현재시각/무작위에 의존하지 않고 결정적으로 테스트된다.
+ *
+ * @param months 반려동물 나이(개월). 0 이하는 0으로 본다.
+ * @param species 'dog' | 'cat'
+ * @param size 강아지 크기(소형/중형/대형). 고양이이거나 미상이면 중형(+5) 취급.
+ * @returns 사람 나이 환산값(정수, 살). months<=0 이면 0.
+ */
+export function calcHumanAge(
+  months: number,
+  species: Species = 'dog',
+  size?: SizeCategory | null,
+): number {
+  const years = months / 12
+  if (years <= 0) return 0
+  if (years <= 1) return Math.round(15 * years)
+  if (years <= 2) return Math.round(15 + 9 * (years - 1))
+  const perYear = species === 'cat' ? 4 : size === '소형' ? 4 : size === '대형' ? 6 : 5
+  return Math.round(24 + perYear * (years - 2))
 }
 
 /** 금액(원) 표기 — "12,000원". null/undefined·NaN 은 빈 문자열. */
