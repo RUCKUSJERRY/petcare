@@ -12,6 +12,7 @@ import { TodayInfoCard } from './_components/TodayInfoCard'
 import { FoodSafetySearch } from './_components/FoodSafetySearch'
 import { WeeklyReportCard } from './_components/WeeklyReportCard'
 import { MonthlyRecapCard } from './_components/MonthlyRecapCard'
+import { MemoriesCard } from './_components/MemoriesCard'
 import { PremiumUpsellCard } from '@/components/ui/PremiumUpsellCard'
 import { PushNudge } from '@/components/ui/PushNudge'
 import { SmartAffiliateCard } from '@/components/ui/SmartAffiliateCard'
@@ -183,6 +184,11 @@ export default async function DashboardPage() {
       {/* 지난달 회고 — 새 달 초반(1~7일)에만 지난 한 달을 돌아보게 하는 카드(월초 재방문 계기 +
           브랜드 이미지 공유로 자연 유입). 노출 창이 아니거나 활동이 없으면 스스로 숨김. */}
       {pets && pets.length > 0 && <MonthlyRecapCard />}
+
+      {/* 추억 다시보기 — 과거 기록/산책 중 '오늘과 같은 날짜'(지난 해들의 같은 월/일, 또는 같은
+          날짜의 지난 달들)를 "N년/개월 전 오늘"로 되살린다. 쌓인 기록을 정서적으로 꺼내 재방문·
+          체류를 유도한다(되살릴 추억이 없으면 스스로 숨김). */}
+      {pets && pets.length > 0 && <MemoriesCard />}
 
       {/* 이번 주 리포트 — 최근 7일 활동 요약 + 성장 레벨. 재방문·체류·게임화(리텐션) 유도.
           선택된 아이 기준으로 클라이언트에서 조회(활동/누적이 0이면 스스로 숨김). */}

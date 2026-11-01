@@ -32,6 +32,13 @@
     "cardMonthLabel": "{month}월 리포트",
     "shareCaption": "{name}의 {month}월 리포트 🐾 산책 {walks}회 · {days}일 함께한 한 달"
   },
+  "memories": {
+    "title": "추억 다시보기",
+    "subtitle": "{name}와의 그날, 오늘 다시 만나요",
+    "yearsAgo": "{years}년 전 오늘",
+    "monthsAgo": "{months}개월 전 오늘",
+    "walkTitle": "산책"
+  },
   "achievements": {
     "title": "성취",
     "subtitle": "{name}와 함께 쌓은 기록",
