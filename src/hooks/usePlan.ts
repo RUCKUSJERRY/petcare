@@ -20,7 +20,7 @@ const FREE: PlanState = { plan: 'free', premiumUntil: null, isPremium: false }
  */
 export function usePlan() {
   const supabase = createClient()
-  const { data } = useQuery<PlanState>({
+  const { data, isLoading } = useQuery<PlanState>({
     queryKey: ['my-plan'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -38,5 +38,7 @@ export function usePlan() {
     },
     staleTime: 5 * 60 * 1000,
   })
-  return data ?? FREE
+  // isLoading 을 함께 돌려줘, 요금제가 아직 확정되지 않은 순간(초기 FREE 폴백)과 '실제 free'를
+  // 구분할 수 있게 한다. 예: 자동 시작 광고 게이트가 프리미엄 판정 전에 오광고하지 않도록 대기.
+  return { ...(data ?? FREE), isLoading }
 }

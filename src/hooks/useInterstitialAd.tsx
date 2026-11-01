@@ -32,7 +32,7 @@ function markAdShown() {
  * - 프리미엄 사용자 / 광고 비활성화 시에는 광고 없이 즉시 행동을 실행한다.
  */
 export function useInterstitialAd(species?: Species) {
-  const { isPremium } = usePlan()
+  const { isPremium, isLoading: planLoading } = usePlan()
   const { adsEnabled, adCooldownMs } = useAppSettings()
   const [open, setOpen] = useState(false)
   const actionRef = useRef<(() => void) | null>(null)
@@ -64,5 +64,9 @@ export function useInterstitialAd(species?: Species) {
     ? <AdInterstitial species={species} onComplete={run} onCancel={cancel} />
     : null
 
-  return { requestAd, adNode }
+  // 요금제가 확정된 뒤에야 프리미엄 광고 면제 판정을 신뢰할 수 있다. 사용자가 버튼을 누르는
+  // 흐름에선 이미 확정돼 문제없지만, 자동(effect)으로 requestAd 를 부르는 쪽(산책 autostart)은
+  // 이 플래그로 '요금제 확정'을 기다려 프리미엄 사용자에게 광고가 스치는 레이스를 막는다.
+  // (설정은 환경변수 폴백이 즉시 유효하므로 요금제 로딩만 기준으로 삼는다.)
+  return { requestAd, adNode, ready: !planLoading }
 }

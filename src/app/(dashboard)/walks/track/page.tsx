@@ -115,7 +115,7 @@ export default function WalkTrackPage() {
 
   // 산책 시작 직전 전면 광고(무료 사용자) — 프리미엄/광고비활성 시 즉시 시작
   const adSpecies = pets?.find(p => p.id === petId)?.species
-  const { requestAd, adNode } = useInterstitialAd(adSpecies)
+  const { requestAd, adNode, ready: adReady } = useInterstitialAd(adSpecies)
 
   const drawPoint = (lat: number, lng: number) => {
     const maps = mapsRef.current
@@ -335,10 +335,14 @@ export default function WalkTrackPage() {
     if (autoStartedRef.current) return
     if (searchParams.get('autostart') !== '1') return
     if (phase !== 'idle' || locReady !== true || recovered || geoError) return
+    // 요금제 확정 전엔 자동 시작을 미룬다. 확정 전에 requestAd 를 부르면 프리미엄 사용자에게도
+    // (초기 free 폴백 때문에) 광고가 스칠 수 있다. adReady 가 true 가 되는 렌더에서 effect 가
+    // 다시 돌며 그때의 최신 requestAd(프리미엄 반영)를 캡처한다.
+    if (!adReady) return
     autoStartedRef.current = true
     requestAd(start)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, phase, locReady, recovered, geoError])
+  }, [searchParams, phase, locReady, recovered, geoError, adReady])
 
   // 복구가 지도 로딩보다 먼저 일어났을 수 있으므로, 지도가 준비되고 추적 중이면 경로를 다시 그린다.
   useEffect(() => {
