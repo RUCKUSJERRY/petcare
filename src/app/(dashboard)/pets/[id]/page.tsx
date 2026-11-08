@@ -35,6 +35,8 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const searchParams = useSearchParams()
   // 홈 빠른 기록 버튼에서 ?add=weight 로 진입하면 체중 폼을 펼친 채로 시작
   const addTarget = searchParams.get('add')
+  // 홈 '추억 다시보기' 기록 타일에서 ?record=id 로 진입하면 그 기록 상세 모달을 바로 연다.
+  const recordParam = searchParams.get('record')
   const weightRef = useRef<HTMLDivElement>(null)
   const membersRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -123,6 +125,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
       return () => clearTimeout(t)
     }
   }, [pet, addTarget])
+
+  // ?record=id 진입 시 그 기록 상세 모달을 연다(추억 타일 딥링크). URL 은 한 번만 반영.
+  useEffect(() => {
+    if (recordParam) setDetailId(recordParam)
+  }, [recordParam])
 
   // #members 해시로 진입(더보기 '공동 관리' 딥링크)하면 구성원 섹션으로 스크롤한다.
   // (구성원 섹션이 화면 하단이라, 바로 목적지가 보이도록 발견성을 높인다.)

@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useSelectedPet } from '@/contexts/SelectedPetContext'
 import { useMyPets } from '@/hooks/useMyPets'
 import { todayKST, isoToKstDate, careCategoryIcon } from '@/lib/utils'
-import { candidateMemoryDates, selectMemories, type Memory, type MemorySource } from '@/lib/memories'
+import { candidateMemoryDates, kstDayRanges, selectMemories, type Memory, type MemorySource } from '@/lib/memories'
 
 /**
  * 홈 '추억 다시보기' 카드 — 과거에 남긴 기록/산책 중 '오늘과 같은 날짜'(지난 해들의 같은 월/일,
@@ -32,8 +32,14 @@ export function MemoriesCard() {
     staleTime: 60 * 60 * 1000,
     queryFn: async () => {
       const dates = candidateMemoryDates(today)
+      if (dates.length === 0) return []
+      // 산책(started_at timestamptz)을 후보 KST 날짜의 하루 범위로 정확히 거르는 or 조건.
+      // '가장 최근 N건'으로 받으면 산책이 많은 사용자의 옛 추억이 전혀 안 걸린다(핵심 버그).
+      const walkOr = kstDayRanges(dates)
+        .map(r => `and(started_at.gte.${r.gte},started_at.lt.${r.lt})`)
+        .join(',')
       // 기록: '그날의 오늘' 후보 날짜에 정확히 걸리는 것만 가볍게 조회(.in).
-      // 산책: 사진이 있는 것(정서적 추억)만 받아 KST 날짜로 맞춘다(시작시각은 절대시각이라 별도 환산).
+      // 산책: 사진이 있는 것(정서적 추억)만, 후보 날짜 범위로 걸러 받는다.
       const [recRes, walkRes] = await Promise.all([
         supabase
           .from('records')
@@ -45,8 +51,8 @@ export function MemoriesCard() {
           .select('id, title, started_at, note, area_text, photo_url')
           .eq('pet_id', selectedPetId!)
           .not('photo_url', 'is', null)
-          .order('started_at', { ascending: false })
-          .limit(400),
+          .or(walkOr)
+          .limit(200),
       ])
 
       const recSources: MemorySource[] = ((recRes.data ?? []) as {
@@ -105,8 +111,9 @@ function labelFor(m: Memory, t: ReturnType<typeof useTranslations>): string {
 }
 
 function MemoryTile({ memory, petId, label }: { memory: Memory; petId: string; label: string }) {
-  // 기록은 전용 상세 페이지가 없어 아이 상세로, 산책은 산책 상세로 연결한다.
-  const href = memory.kind === 'walk' ? `/walks/${memory.id}` : `/pets/${petId}`
+  // 산책은 산책 상세로, 기록은 아이 상세의 그 기록 상세 모달로 바로 연다(?record=id).
+  // (추억 타일을 눌렀을 때 범용 프로필이 아니라 '그 추억'이 다시 보이게 — 리텐션 카드의 보상.)
+  const href = memory.kind === 'walk' ? `/walks/${memory.id}` : `/pets/${petId}?record=${memory.id}`
   const icon = memory.category ? careCategoryIcon(memory.category) : '🦮'
   const caption = (memory.memo && memory.memo.trim()) || memory.placeName || memory.title
 

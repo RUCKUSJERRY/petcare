@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { memoryAge, candidateMemoryDates, selectMemories, type MemorySource } from './memories'
+import { memoryAge, candidateMemoryDates, kstDayRanges, selectMemories, type MemorySource } from './memories'
 
 describe('memoryAge', () => {
   it('같은 월/일 지난 해면 N년 전 오늘', () => {
@@ -59,6 +59,27 @@ describe('candidateMemoryDates', () => {
     expect(dates).toContain('2025-02-28')
     expect(dates).toContain('2024-02-28')
     expect(dates).not.toContain('2023-02-29')
+  })
+})
+
+describe('kstDayRanges', () => {
+  it('각 KST 날짜를 [당일 00:00, 다음날 00:00) 범위(+09:00)로 만든다', () => {
+    expect(kstDayRanges(['2023-11-08'])).toEqual([
+      { gte: '2023-11-08T00:00:00+09:00', lt: '2023-11-09T00:00:00+09:00' },
+    ])
+  })
+
+  it('월말/연말은 다음 날로 올바르게 넘어간다', () => {
+    expect(kstDayRanges(['2024-02-29'])[0].lt).toBe('2024-03-01T00:00:00+09:00') // 윤년 2월말
+    expect(kstDayRanges(['2025-12-31'])[0].lt).toBe('2026-01-01T00:00:00+09:00') // 연말
+    expect(kstDayRanges(['2026-10-31'])[0].lt).toBe('2026-11-01T00:00:00+09:00') // 31일 월말
+  })
+
+  it('여러 날짜를 입력 순서대로 매핑한다', () => {
+    const ranges = kstDayRanges(['2025-11-08', '2024-11-08'])
+    expect(ranges).toHaveLength(2)
+    expect(ranges[0].gte).toBe('2025-11-08T00:00:00+09:00')
+    expect(ranges[1].gte).toBe('2024-11-08T00:00:00+09:00')
   })
 })
 

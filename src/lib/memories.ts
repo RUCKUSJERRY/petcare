@@ -100,6 +100,29 @@ export function candidateMemoryDates(
   return Array.from(out).sort()
 }
 
+/** KST 날짜 'YYYY-MM-DD' 의 다음 날 'YYYY-MM-DD'. (월말/연말 넘김은 UTC 조립으로 안전하게.) */
+function nextKstDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + 1))
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`
+}
+
+/**
+ * 산책(started_at 은 timestamptz = 절대시각)을 '그날의 오늘' 후보 KST 날짜들로 거르기 위한
+ * 반열림 범위 목록. 각 KST 날짜 D 에 대해 [D 00:00 KST, D+1 00:00 KST) 를 KST 오프셋(+09:00)
+ * ISO 문자열로 돌려준다. (Postgres 가 오프셋을 해석하므로 UTC 환산은 불필요.)
+ *
+ * records.event_on 은 날짜라 .in(dates) 로 바로 거르지만, 산책은 시각이라 '가장 최근 N건'으로
+ * 받으면 수백 건을 넘긴 활동적/오래된 사용자의 옛 산책 추억이 전혀 안 걸린다. 날짜 범위로 걸러야
+ * 후보 날짜의 산책만 정확히/가볍게 받는다.
+ */
+export function kstDayRanges(dates: string[]): { gte: string; lt: string }[] {
+  return dates.map(d => ({
+    gte: `${d}T00:00:00+09:00`,
+    lt: `${nextKstDate(d)}T00:00:00+09:00`,
+  }))
+}
+
 /**
  * 과거 기록/산책(sources) 중 '그날의 오늘'만 골라 라벨용 숫자를 붙이고 정렬해 상위 max 건 반환.
  * 정렬: 사진 있는 것 > 메모 있는 것 > 더 최근 날짜. (가장 정서적인 추억을 먼저 보여준다.)
