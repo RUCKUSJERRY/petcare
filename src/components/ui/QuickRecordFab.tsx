@@ -19,7 +19,8 @@ import { RecordFormModal } from '@/app/(dashboard)/pets/_components/RecordFormMo
 import type { RecordCategory } from '@/types'
 
 // FAB를 항상 숨길 화면 — 자체 하단 컨트롤이 있는 몰입형 화면
-const HIDDEN_PREFIXES = ['/map', '/walks/track']
+// (/chat: 대화 입력창의 전송 버튼이 화면 우하단 고정이라, 우측 정렬 FAB과 겹쳐 전송 버튼을 가렸다.)
+const HIDDEN_PREFIXES = ['/map', '/walks/track', '/chat']
 
 /**
  * 어느 화면에서든 떠 있는 '＋ 기록' 플로팅 버튼 + '오늘의 기록' 바텀시트.
