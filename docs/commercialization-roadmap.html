@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상용화 전략 로드맵 - 펫케어 + 하우스토리지</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#111827; --muted:#5b6472; --line:#e5e7eb;
+    --accent:#0f6e66; --accent-soft:#e3f2f0; --warn:#b54708; --warn-soft:#fdf0e6;
+    --ok:#0a7a46; --ok-soft:#e6f4ec; --chip:#eef1f4;
+    --pet:#0f6e66; --house:#9a5b00;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1117; --card:#161b22; --ink:#e6edf3; --muted:#9aa4b2; --line:#283039;
+      --accent:#49b3a6; --accent-soft:#11302c; --warn:#e8903f; --warn-soft:#2a1c0f;
+      --ok:#58c48a; --ok-soft:#10261a; --chip:#1f262e; --pet:#49b3a6; --house:#d7a24a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1117; --card:#161b22; --ink:#e6edf3; --muted:#9aa4b2; --line:#283039;
+    --accent:#49b3a6; --accent-soft:#11302c; --warn:#e8903f; --warn-soft:#2a1c0f;
+    --ok:#58c48a; --ok-soft:#10261a; --chip:#1f262e; --pet:#49b3a6; --house:#d7a24a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 16px 64px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  h2{font-size:17px;margin:34px 0 12px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  h2 .num{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);
+    width:22px;height:22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .lead{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    border-radius:16px;padding:16px 18px;font-size:15px}
+  .lead b{color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media (max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+  .prod{border-top:4px solid var(--pet)}
+  .prod.house{border-top-color:var(--house)}
+  .prod h3{margin:2px 0 10px;font-size:16px}
+  .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;display:inline-block}
+  .tag.pet{color:#fff;background:var(--pet)}
+  .tag.house{color:#fff;background:var(--house)}
+  .row{display:flex;gap:8px;font-size:13px;padding:6px 0;border-top:1px dashed var(--line)}
+  .row:first-of-type{border-top:0}
+  .row .k{color:var(--muted);flex:none;width:92px}
+  .row .v{color:var(--ink)}
+  .pill{font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px}
+  .pill.ok{color:var(--ok);background:var(--ok-soft)}
+  .pill.no{color:var(--warn);background:var(--warn-soft)}
+  ul.clean{margin:8px 0 0;padding-left:18px;font-size:13.5px}
+  ul.clean li{margin:4px 0}
+  .muted{color:var(--muted)}
+  .phase{position:relative}
+  .phase .when{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);
+    display:inline-block;padding:2px 10px;border-radius:999px;margin-bottom:8px}
+  .phase .goal{font-weight:700;font-size:14px;margin-bottom:8px}
+  .phase .block{font-size:13px;margin:8px 0}
+  .phase .block .lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:none}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .dot.pet{background:var(--pet)}.dot.house{background:var(--house)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .rank{font-weight:700;color:var(--accent)}
+  ol.dec{counter-reset:d;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:760px){ol.dec{grid-template-columns:1fr}}
+  ol.dec li{counter-increment:d;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:12px 12px 12px 42px;position:relative;font-size:13.5px}
+  ol.dec li::before{content:counter(d);position:absolute;left:12px;top:11px;width:20px;height:20px;border-radius:999px;
+    background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .foot{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+  .toggle{float:right;font-size:12px;color:var(--muted);cursor:pointer;border:1px solid var(--line);
+    background:var(--card);border-radius:999px;padding:4px 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="toggle" onclick="var r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'">명암 전환</button>
+  <h1>상용화 전략 로드맵</h1>
+  <p class="sub">펫케어 + 하우스토리지 포트폴리오 관점 / 2026-11-16 스냅샷 / 전략기획·대표 시점</p>
+
+  <div class="lead">
+    제품은 둘 다 이미 데모·시드 수준으로 충분함. 진짜 병목은 제품이 아니라
+    <b>유입(획득) / 리텐션(재방문) / 유통(채널)</b>. 지금 할 일은 새 기능이 아니라
+    <b>실사용자 + 리텐션 증거 + 반복 가능한 획득 채널 하나</b>. 투자·법인은 그 증거가 나온 뒤 결정하는 것이 비용·리스크 최저.
+  </div>
+
+  <h2><span class="num">1</span>지금 상황</h2>
+  <div class="grid2">
+    <div class="card prod">
+      <span class="tag pet">펫케어</span>
+      <h3>반려동물 건강·케어 기록 + 생활 도우미</h3>
+      <div class="row"><span class="k">성숙도</span><span class="v">높음 - 기록/일정/산책/지도/실종/비용/사료/커뮤니티/가족공유/OCR/AI챗/업적/알림</span></div>
+      <div class="row"><span class="k">수익화 레일</span><span class="v"><span class="pill ok">구축됨</span> 토스 구독결제, 제휴 태그, 광고 슬롯, OCR·PDF 등급화</span></div>
+      <div class="row"><span class="k">계기판</span><span class="v"><span class="pill ok">내장</span> DAU/WAU/MAU, 리텐션, 전환율/ARPU/ARPPU/churn</span></div>
+      <div class="row"><span class="k">스토어</span><span class="v">PWA 완비 + Capacitor 입점 로드맵(보류)</span></div>
+      <div class="row"><span class="k">위치</span><span class="v">상용화 레일을 먼저 깐 <b>선도 제품</b></span></div>
+    </div>
+    <div class="card prod house">
+      <span class="tag house">하우스토리지</span>
+      <h3>가정 재고·소모품 관리 + 소진 예측</h3>
+      <div class="row"><span class="k">성숙도</span><span class="v">중상 - 공간/품목/기록/현황판/검색/AI입력/알림/장보기/소비추이</span></div>
+      <div class="row"><span class="k">수익화 레일</span><span class="v"><span class="pill no">없음</span> 로드맵에 제휴 구매만 예정</span></div>
+      <div class="row"><span class="k">계기판</span><span class="v"><span class="pill no">미정</span> 관리자·용량 점검은 있으나 수익/리텐션 KPI 없음</span></div>
+      <div class="row"><span class="k">스토어</span><span class="v">PWA 기반, 입점 검토 전</span></div>
+      <div class="row"><span class="k">위치</span><span class="v">같은 뼈대의 <b>후발 제품</b> (petcare 벤치마킹)</span></div>
+    </div>
+  </div>
+
+  <h2><span class="num">2</span>핵심 레버리지 - 같은 뼈대</h2>
+  <div class="card">
+    두 앱은 Next.js 14 + Supabase + PWA + 알림/cron/관리자 구조가 사실상 동일.
+    상용화 공통 부품(결제·KPI·제휴/광고·Capacitor 입점·결제 정합성)을 <b>한 번 만들어 양쪽에 재사용</b> 가능.
+    솔로 운영의 최대 강점. 전략은 "제품 2개를 각각"이 아니라 <b>"플레이북 1개를 2개에 적용"</b>.
+  </div>
+
+  <h2><span class="num">3</span>무엇이 부족한가 / 개선 액션</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="lbl muted" style="font-size:12px;font-weight:700">부족한 것 (제품 아님, 사업화 요소)</div>
+      <ul class="clean">
+        <li>실사용자·트래픽 (수익화·광고·제휴 모두 규모 전제)</li>
+        <li>리텐션 증거 (계기판은 있으나 채울 사용자 없음)</li>
+        <li>저CAC 획득 채널 (반복 가능한 유입 경로 미검증)</li>
+        <li>법적·사업자 준비 (실결제 = 사업자등록 필수)</li>
+        <li class="muted">하우스토리지: 수익화 전부 + "돈 낼 이유(wedge)" 미정</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="lbl muted" style="font-size:12px;font-weight:700">개선 액션 (기능 추가는 거의 동결)</div>
+      <ul class="clean">
+        <li>계기판부터 채우기 - KPI 로 재방문·리텐션 실추적 시작</li>
+        <li>소수 실사용자 10~30명 확보 후 2~4주 리텐션 관찰</li>
+        <li>펫케어: "돈 낼 이유" 묶음 마무리(가족공유 확대), 제휴 추천 강화, 라이브 결제 준비</li>
+        <li>하우스토리지: 수익화보다 <b>육아 소모품 wedge</b> 로 리텐션 먼저 증명 > 검증되면 petcare 플레이북 이식</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="num">4</span>시장 진입 전략</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="lbl muted" style="font-size:12px;font-weight:700">사업 형태 - 언제 무엇을</div>
+      <ul class="clean">
+        <li><b>지금(검증)</b> 미등록·개인 / 무료 운영, 실결제 없음</li>
+        <li><b>첫 유료결제 직전</b> 개인사업자(간이) / 토스 라이브 필수</li>
+        <li><b>매출·투자 필요 시</b> 법인 전환 / 증거 나온 뒤</li>
+      </ul>
+      <div class="lbl muted" style="font-size:12px;font-weight:700;margin-top:12px">투자 판단</div>
+      <ul class="clean">
+        <li>지금 유치 비권장 (증거 없이는 밸류·조건 불리)</li>
+        <li>부트스트랩 먼저 - 월 고정비 ~7만, 손익분기 구독 ~19명</li>
+        <li>리텐션 곡선 + CAC&lt;LTV 채널 나오면 엔젤/시드</li>
+        <li>"수익형 소규모" 흑자 유지도 유효한 목표</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="lbl muted" style="font-size:12px;font-weight:700">수익 모델 우선순위</div>
+      <table>
+        <tr><th>모델</th><th>펫케어</th><th>하우스토리지</th><th>메모</th></tr>
+        <tr><td><span class="rank">1 제휴</span></td><td>상</td><td>상</td><td>규모 작아도 기록기반 추천 전환</td></tr>
+        <tr><td><span class="rank">2 구독</span></td><td>중상</td><td>중</td><td>가치 분명한 묶음일 때</td></tr>
+        <tr><td><span class="rank">3 광고</span></td><td>중</td><td>중</td><td>트래픽 확보 후, UX 후순위</td></tr>
+        <tr><td class="muted">리드/B2B</td><td class="muted">하~중</td><td class="muted">중</td><td class="muted">병원·호텔 / 가전·브랜드, 장기</td></tr>
+      </table>
+      <div class="lbl muted" style="font-size:12px;font-weight:700;margin-top:12px">마케팅 (저비용 유기 채널부터)</div>
+      <ul class="clean">
+        <li>콘텐츠 SEO (검색 수요 > 앱 유입, 솔로가 쓸 최장기 싼 채널)</li>
+        <li>타깃 커뮤니티 - 반려인(강사모/당근), 하우스는 맘카페/살림</li>
+        <li>메이커 - 디스콰이엇, Product Hunt. 바이럴은 가족초대/실종공유 활용</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="num">5</span>단기 · 중기 · 장기 로드맵</h2>
+  <div class="grid3">
+    <div class="card phase">
+      <span class="when">단기 0~3개월</span>
+      <div class="goal">리텐션 증거 만들기</div>
+      <div class="block"><span class="lbl">◆ 펫케어</span><br>실사용자 10~30명, KPI 재방문 추적, 수익화 묶음 다듬기</div>
+      <div class="block"><span class="lbl">◆ 하우스토리지</span><br>KPI 이식, 육아 소모품 wedge 리텐션 관찰</div>
+      <div class="block muted"><span class="lbl">◆ 사업/자금</span><br>미등록 유지, 운영비 최소, 약관·자동결제 고지 확정</div>
+    </div>
+    <div class="card phase">
+      <span class="when">중기 3~9개월</span>
+      <div class="goal">수익화 켜고 채널 1개 검증</div>
+      <div class="block"><span class="lbl">◆ 펫케어</span><br>사업자등록 > 토스 라이브, 제휴 추천, 애드센스 승인/삽입</div>
+      <div class="block"><span class="lbl">◆ 하우스토리지</span><br>검증되면 제휴(쿠팡) 먼저, 구독은 가치 분명할 때</div>
+      <div class="block muted"><span class="lbl">◆ 사업/자금</span><br>개인사업자(간이), 손익분기(구독 ~19명) 도달 시도</div>
+    </div>
+    <div class="card phase">
+      <span class="when">장기 9~24개월</span>
+      <div class="goal">확장과 선택</div>
+      <div class="block"><span class="lbl">◆ 펫케어</span><br>스토어 입점(Capacitor), B2B 제휴, 경쟁 방어</div>
+      <div class="block"><span class="lbl">◆ 하우스토리지</span><br>범위 확대(가전/주기관리), 제휴·리드 모델</div>
+      <div class="block muted"><span class="lbl">◆ 사업/자금</span><br>증거 나오면 법인/투자, 아니면 수익형 소규모 유지</div>
+    </div>
+  </div>
+  <div class="legend">
+    <span>순서 권고: 동시에 밀지 않음.</span>
+    <span><i class="dot pet"></i> petcare 로 플레이북 검증</span>
+    <span>&gt;</span>
+    <span><i class="dot house"></i> housetorage 로 복제</span>
+  </div>
+
+  <h2><span class="num">6</span>지금 정하실 5가지</h2>
+  <ol class="dec">
+    <li><b>목표 노선</b> - 투자 스케일업 vs 수익형 소규모(라이프스타일). 이게 전부를 가름</li>
+    <li><b>선도 제품</b> - petcare 집중 동의 여부</li>
+    <li><b>하우스 wedge</b> - 일반 가정 전체 vs 육아 소모품 특화</li>
+    <li><b>사업자등록 시점</b> - 첫 유료결제 직전으로 잡을지(권장)</li>
+    <li><b>마케팅 첫 채널</b> - 콘텐츠 SEO / 타깃 커뮤니티 / 디스콰이엇 중 한 곳</li>
+  </ol>
+
+  <div class="foot">
+    원문: petcare <code>docs/commercialization-roadmap.md</code>, housetorage <code>docs/11-commercialization.md</code> (같은 내용).
+    세부 비용·손익·수익화 연동은 petcare <code>docs/business-analysis.md</code>, <code>monetization-setup.md</code>, <code>mobile-app-store.md</code> 참고.
+  </div>
+</div>
+</body>
+</html>
