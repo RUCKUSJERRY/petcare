@@ -42,6 +42,17 @@ interface Stats {
   stickiness: number
   recordingRate7d: number
   recordsPerActive7d: number
+  onboarding?: {
+    windowDays: number
+    signups: number
+    withPet: number
+    firstRecord: number
+    secondDay: number
+    rates: { withPet: number; firstRecord: number; secondDay: number }
+    medianHoursToFirstRecord: number | null
+  }
+  cohorts?: { weeksAgo: number; size: number; week: (number | null)[] }[]
+  cohortTruncated?: boolean
   ai?: {
     total: AiAgg
     byProvider: AiAgg[]
@@ -276,6 +287,73 @@ export default function AdminPage() {
         </div>
         <p className="text-[11px] text-gray-400">{t('retentionHint')}</p>
       </section>
+
+      {/* 온보딩 퍼널 - 가입 후 어느 단계에서 빠지는지(첫 경험 이탈 지점 찾기) */}
+      {stats?.onboarding && (
+        <section className="space-y-3">
+          <h2 className="font-semibold text-gray-900">{t('funnelTitle', { days: stats.onboarding.windowDays })}</h2>
+          <div className="card space-y-2.5">
+            {([
+              [t('funnelSignup'), stats.onboarding.signups, 100],
+              [t('funnelPet'), stats.onboarding.withPet, stats.onboarding.rates.withPet],
+              [t('funnelFirstRecord'), stats.onboarding.firstRecord, stats.onboarding.rates.firstRecord],
+              [t('funnelSecondDay'), stats.onboarding.secondDay, stats.onboarding.rates.secondDay],
+            ] as const).map(([label, n, rate]) => (
+              <div key={label}>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-700">{label}</span>
+                  <span className="text-gray-500 tabular-nums">{n} ({stats.onboarding!.signups > 0 ? rate : 0}%)</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                  <div className="h-full bg-primary-500 rounded-full" style={{ width: `${stats.onboarding!.signups > 0 ? rate : 0}%` }} />
+                </div>
+              </div>
+            ))}
+            <p className="text-xs text-gray-500 pt-1">
+              {t('funnelMedian', {
+                v: stats.onboarding.medianHoursToFirstRecord == null ? '—' : String(stats.onboarding.medianHoursToFirstRecord),
+              })}
+            </p>
+          </div>
+          <p className="text-[11px] text-gray-400">{t('funnelHint')}</p>
+        </section>
+      )}
+
+      {/* 가입 주차 코호트 잔존 - 4주차 잔존 곡선(상용화 성공 판정의 핵심 지표) */}
+      {stats?.cohorts && (
+        <section className="space-y-3">
+          <h2 className="font-semibold text-gray-900">{t('cohortTitle')}</h2>
+          <div className="card overflow-x-auto">
+            <table className="w-full text-xs tabular-nums">
+              <thead>
+                <tr className="text-gray-400">
+                  <th className="text-left font-medium py-1">{t('cohortSignup')}</th>
+                  <th className="text-right font-medium py-1">{t('cohortSize')}</th>
+                  {stats.cohorts[0]?.week.map((_, k) => (
+                    <th key={k} className="text-right font-medium py-1">{t('cohortWeek', { k })}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {stats.cohorts.map(r => (
+                  <tr key={r.weeksAgo} className="border-t border-gray-100">
+                    <td className="py-1.5 text-gray-600">{t('cohortWeeksAgo', { n: r.weeksAgo })}</td>
+                    <td className="py-1.5 text-right text-gray-700">{r.size}</td>
+                    {r.week.map((v, k) => (
+                      <td key={k} className={`py-1.5 text-right ${v == null ? 'text-gray-300' : v >= 40 ? 'text-primary-600 font-semibold' : 'text-gray-700'}`}>
+                        {v == null || r.size === 0 ? '—' : `${v}%`}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-gray-400">
+            {t('cohortHint')}{stats.cohortTruncated ? ` ${t('cohortTruncated')}` : ''}
+          </p>
+        </section>
+      )}
 
       {/* AI 사용/비용 (ai_events 텔레메트리) */}
       <section className="space-y-3">

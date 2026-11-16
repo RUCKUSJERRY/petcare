@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateAiEvents, type AiEventRow } from '@/lib/ai/stats'
+import { computeCohortRetention, computeOnboardingFunnel, type KpiActivity } from '@/lib/kpi'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -101,6 +102,50 @@ export async function GET() {
   const recordingRate7d = totalUsers > 0 ? Math.round((activeUsers7d / totalUsers) * 1000) / 10 : 0
   const recordsPerActive7d = activeUsers7d > 0 ? Math.round((records7d / activeUsers7d) * 10) / 10 : 0
 
+  // ── 온보딩 퍼널 + 가입 주차 코호트 잔존 ─────────────────────────
+  // 최근 6주 가입자와 그 기간의 기록 전체를 페이지 단위로 받아 순수 로직(src/lib/kpi.ts)에서 계산한다.
+  // 위 리텐션 지표의 limit(최신 1만 건)과 달리 코호트 판정은 오래된 기록이 빠지면 잔존이 과소집계되므로
+  // range 로 끝까지 읽는다(상한 PAGE_MAX 페이지 - 시드/초기 규모에선 충분, 넘으면 cohortTruncated 로 표시).
+  const COHORT_WEEKS = 6
+  const cohortSince = new Date(Date.now() - COHORT_WEEKS * 7 * 24 * 60 * 60 * 1000).toISOString()
+  const PAGE = 1000, PAGE_MAX = 50
+  let cohortTruncated = false
+  const readAll = async <T,>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>) => {
+    const out: T[] = []
+    for (let i = 0; i < PAGE_MAX; i++) {
+      const { data, error } = await build(i * PAGE, (i + 1) * PAGE - 1)
+      if (error) throw error
+      const rows = (data ?? []) as T[]
+      out.push(...rows)
+      if (rows.length < PAGE) return out
+    }
+    cohortTruncated = true
+    return out
+  }
+  const cohortUsers = await readAll<{ id: string; created_at: string }>((f, t) =>
+    admin.from('profiles').select('id, created_at').gte('created_at', cohortSince).order('created_at').range(f, t))
+  const cohortIds = cohortUsers.map(u => u.id)
+  const petHolders = new Set<string>()
+  // in() 필터 URL 길이를 피하려 200명씩 나눠 조회
+  for (let i = 0; i < cohortIds.length; i += 200) {
+    const ids = cohortIds.slice(i, i + 200)
+    const [own, mem] = await Promise.all([
+      admin.from('pets').select('user_id').in('user_id', ids),
+      admin.from('pet_members').select('user_id').in('user_id', ids),
+    ])
+    if (own.error) throw own.error
+    if (mem.error) throw mem.error
+    for (const r of [...(own.data ?? []), ...(mem.data ?? [])]) petHolders.add(r.user_id as string)
+  }
+  const cohortRecs = await readAll<{ created_at: string; pet: { user_id: string } | null }>((f, t) =>
+    admin.from('records').select('created_at, pet:pets(user_id)').gte('created_at', cohortSince)
+      .order('created_at').order('id').range(f, t))
+  const cohortActs: KpiActivity[] = cohortRecs.flatMap(r =>
+    r.pet?.user_id ? [{ user_id: r.pet.user_id, created_at: r.created_at }] : [])
+  const nowMs = Date.now()
+  const onboarding = computeOnboardingFunnel(cohortUsers, petHolders, cohortActs, nowMs, 30)
+  const cohorts = computeCohortRetention(cohortUsers, cohortActs, nowMs, COHORT_WEEKS, 4)
+
   // 제휴 인기 상품 Top
   const { data: clicks, error: clicksErr } = await admin.from('affiliate_clicks').select('product_id').limit(10000)
   if (clicksErr) throw clicksErr
@@ -142,6 +187,8 @@ export async function GET() {
     // 리텐션 지표
     activeUsers1d, activeUsers7d, activeUsers30d,
     stickiness, recordingRate7d, recordsPerActive7d,
+    // 온보딩 퍼널(최근 30일 가입) + 가입 주차 코호트 0~4주차 잔존
+    onboarding, cohorts, cohortTruncated,
     // AI 옵저버빌리티/비용 (30일)
     ai,
   })
