@@ -77,6 +77,10 @@
   ol.dec li::before{content:counter(d);position:absolute;left:12px;top:11px;width:20px;height:20px;border-radius:999px;
     background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
   .foot{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+  ul.chk{list-style:none;margin:10px 0 0;padding:0;font-size:12.5px}
+  ul.chk li{position:relative;padding:5px 0 5px 22px;line-height:1.45}
+  ul.chk li::before{content:"";position:absolute;left:0;top:7px;width:13px;height:13px;border:1.6px solid var(--muted);border-radius:4px}
+  .choice{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:1px 7px;border-radius:6px}
   .toggle{float:right;font-size:12px;color:var(--muted);cursor:pointer;border:1px solid var(--line);
     background:var(--card);border-radius:999px;padding:4px 10px}
 </style>
@@ -211,14 +215,53 @@
     <span><i class="dot house"></i> housetorage 로 복제</span>
   </div>
 
-  <h2><span class="num">6</span>지금 정하실 5가지</h2>
-  <ol class="dec">
-    <li><b>목표 노선</b> - 투자 스케일업 vs 수익형 소규모(라이프스타일). 이게 전부를 가름</li>
-    <li><b>선도 제품</b> - petcare 집중 동의 여부</li>
-    <li><b>하우스 wedge</b> - 일반 가정 전체 vs 육아 소모품 특화</li>
-    <li><b>사업자등록 시점</b> - 첫 유료결제 직전으로 잡을지(권장)</li>
-    <li><b>마케팅 첫 채널</b> - 콘텐츠 SEO / 타깃 커뮤니티 / 디스콰이엇 중 한 곳</li>
-  </ol>
+  <h2><span class="num">6</span>채택안 <span style="font-size:12px;color:var(--muted);font-weight:400">2026-11-16 결정</span></h2>
+  <div class="card">
+    <table>
+      <tr><th>결정</th><th>채택</th><th>근거</th></tr>
+      <tr><td><b>1 목표 노선</b></td><td><span class="choice">수익형 소규모(부트스트랩)</span> 투자 옵션은 열어둠</td><td class="muted">증거 없이 투자 불리, 손익분기 문턱 낮음</td></tr>
+      <tr><td><b>2 선도 제품</b></td><td><span class="choice">petcare 집중</span> 하우스는 저비용 유지 + wedge 실험</td><td class="muted">수익화 레일·시장·리텐션 유리, 솔로는 집중</td></tr>
+      <tr><td><b>3 하우스 wedge</b></td><td><span class="choice">육아 소모품 특화</span> 초기 타깃/메시지</td><td class="muted">지불의사 높음, 맘카페 채널, 기능 정합</td></tr>
+      <tr><td><b>4 사업자등록</b></td><td><span class="choice">첫 유료결제 직전</span> 개인사업자(간이)</td><td class="muted">그 전 불필요한 의무, 토스 라이브 필수</td></tr>
+      <tr><td><b>5 마케팅 첫 채널</b></td><td><span class="choice">콘텐츠 SEO 메인</span> + 타깃 커뮤니티 보조</td><td class="muted">솔로 최장기 싼 채널, 커뮤니티로 초기 확보</td></tr>
+    </table>
+    <p style="margin:13px 0 0;font-size:13.5px"><b style="color:var(--accent)">한 줄 전략</b> &nbsp;petcare 를 부트스트랩으로 손익분기까지, housetorage 는 육아 소모품으로 리텐션 실험. 유입은 콘텐츠 SEO + 커뮤니티, 결제 켜는 시점에 개인사업자 등록.</p>
+    <p class="muted" style="margin:6px 0 0;font-size:13px"><b>성공 판정 3~6개월</b> &nbsp;리텐션 하나 - 제품별 4주차 잔존 우상향 + CAC&lt;LTV 반복 채널 1개.</p>
+  </div>
+
+  <h2><span class="num">7</span>단기 0~3개월 실행 체크리스트</h2>
+  <div class="grid3">
+    <div class="card">
+      <div style="font-size:12px;font-weight:700;color:var(--muted)">공통 (두 제품)</div>
+      <ul class="chk">
+        <li>KPI 계기판 확정(DAU/재방문/4주 잔존/기록 지속률). 하우스는 petcare 세트 이식</li>
+        <li>실사용자 제품별 10~30명 확보</li>
+        <li>온보딩 첫 기록까지 이탈 지점 KPI 로 찾아 수정</li>
+        <li>약관/자동결제 고지 문구 최종 점검(켜기 전 준비)</li>
+        <li>유료 전환(Vercel/Supabase Pro) 시점·트리거 정의</li>
+      </ul>
+    </div>
+    <div class="card prod">
+      <span class="tag pet">펫케어</span>
+      <ul class="chk">
+        <li>"돈 낼 이유" 묶음 마무리(가족 공동관리 무제한 확대)</li>
+        <li>기록기반 제휴 추천 1개 노출/클릭 측정(쿠팡 파트너스)</li>
+        <li>결제는 테스트 키로 플로우만 검증(라이브는 중기)</li>
+        <li>콘텐츠 SEO 글 3~5개 발행</li>
+        <li>타깃 커뮤니티 1~2곳 초기 사용자 모집 + 피드백</li>
+      </ul>
+    </div>
+    <div class="card prod house">
+      <span class="tag house">하우스토리지</span>
+      <ul class="chk">
+        <li>관리자 KPI 이식(리텐션/재방문)</li>
+        <li>육아 소모품 프리셋/문구로 초기 타깃 맞춤</li>
+        <li>맘카페/당근 초보 부모 10~30명, 소진예측/장보기/소비추이 리텐션 관찰</li>
+        <li>실환경 점검(Supabase/푸시/AI키/휴대폰) 1회 통과</li>
+        <li>수익화 보류(검증되면 제휴부터)</li>
+      </ul>
+    </div>
+  </div>
 
   <div class="foot">
     원문: petcare <code>docs/commercialization-roadmap.md</code>, housetorage <code>docs/11-commercialization.md</code> (같은 내용).
