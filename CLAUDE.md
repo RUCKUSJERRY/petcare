@@ -12,7 +12,7 @@ i18n은 next-intl(`messages/ko.json`), 상태/데이터는 TanStack Query, 지�
 - 작업이나 주간 리뷰를 시작할 때 상용화 전략 문서를 먼저 확인하고, 할 일의 우선순위를 그에 맞춤
   - `docs/commercialization-roadmap.md` (채택안, 단기 0~3개월 체크리스트). 한눈 요약은 `docs/commercialization-roadmap.html`. 세부 비용/손익은 `docs/business-analysis.md`
 - 지금 국면 원칙: 새 기능 추가보다 리텐션/유입/온보딩이 먼저. petcare 는 상용화 선도 제품으로 집중. 채택안에 어긋나는 작업은 진행 전에 보고
-- 진행하거나 완료한 체크리스트 항목은 전략 문서와 진행 기록에 반영
+- 진행하거나 완료한 체크리스트 항목은 전략 문서와 진행 기록(`docs/progress-log.md`)에 반영
 
 ## 명령어
 
